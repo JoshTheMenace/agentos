@@ -28,7 +28,7 @@ import org.json.JSONObject;
  * Built with Llama. Llama 4 is licensed under the Llama 4 Community License, Copyright (c) Meta Platforms, Inc.
  */
 final class PromptGuard {
-    static final double FLAG = 0.5;
+    static final double FLAG = 0.5, SCREEN_FLAG = 0.9; // a node alone at 0.5; the whole screen joined only when sure (split injections score ~0.97)
     private static final int WINDOW = 510, BATCH_TOKENS = 4096; // 512 positions minus [CLS]/[SEP]; tokens per batch
     // Fragments under 3 tokens (names, times, button labels) aren't scored alone: PG2-22M is unreliable on them
     // ("Unknown number" scores 0.98 even in fp32). They still count inside the whole-screen score.
@@ -113,7 +113,7 @@ final class PromptGuard {
             }
             texts.add(all.toString()); // the whole screen as one text: catches injections split across nodes
             double[] p = score(texts);
-            double max = p[p.length - 1];
+            double max = p[p.length - 1] >= SCREEN_FLAG ? p[p.length - 1] : 0; // joined UI snippets score ~0.6 (Calculator's first run)
             JSONArray flagged = new JSONArray();
             for (int i = 0; i < scored.size(); i++) {
                 scored.get(i).put("guard", round(p[i]));

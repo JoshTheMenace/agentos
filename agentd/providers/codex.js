@@ -6,7 +6,7 @@ import { mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { cfg, log } from '../config.js';
 import { SUGGEST_PROMPT, SYSTEM_PROMPT } from '../prompt.js';
-import { TOOLS, runTool } from '../tools.js';
+import { TOOLS, appList, runTool } from '../tools.js';
 
 // Turn off everything that would give the model a capability besides our tools.
 const OFF = ['shell_tool', 'unified_exec', 'apps', 'plugins', 'browser_use', 'browser_use_external', 'computer_use',
@@ -94,9 +94,13 @@ export class Codex {
       case 'turn/started': t.turnId = m.params.turn.id; break;
       case 'item/agentMessage/delta': t.ctx.emit({ type: 'text.delta', text: m.params.delta }); break;
       case 'item/completed': if (m.params.item.type === 'agentMessage') t.text = m.params.item.text; break;
-      case 'thread/tokenUsage/updated': t.usage = m.params.tokenUsage.last; break;
+      case 'thread/tokenUsage/updated': { // one per model call: the bench reads usage.calls
+        const u = (t.usage = m.params.tokenUsage.last);
+        t.calls.push({ in: u.inputTokens, cached: u.cachedInputTokens, out: u.outputTokens, reasoning: u.reasoningOutputTokens, at: Date.now() - t.t0 });
+        break;
+      }
       case 'error': t.ctx.emit({ type: 'error', message: m.params.error.message, retryable: m.params.willRetry }); break;
-      case 'turn/completed': t.done({ status: m.params.turn.status, error: m.params.turn.error?.message, usage: t.usage, text: t.text }); break;
+      case 'turn/completed': t.done({ status: m.params.turn.status, error: m.params.turn.error?.message, usage: t.usage && { ...t.usage, calls: t.calls }, text: t.text }); break;
     }
   }
 
@@ -132,7 +136,7 @@ export class Codex {
     if (!s || s.gen !== this.#gen) {
       const r = await this.#req('thread/start', {
         ...(cfg.codexModel && { model: cfg.codexModel }), cwd: cfg.codexCwd, ephemeral: true,
-        sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: SYSTEM_PROMPT,
+        sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: `${SYSTEM_PROMPT}\n\n# Apps on this phone (label=package)\n${await appList()}`,
         dynamicTools: Object.entries(TOOLS).map(([name, t]) => ({ type: 'function', name, description: t.description, inputSchema: t.schema })),
       });
       s = session.codex = { threadId: r.thread.id, gen: this.#gen };
@@ -144,8 +148,12 @@ export class Codex {
     return new Promise((resolve) => {
       // Watchdog: on a dead network Codex can wait silently for minutes. No progress for STALL_MS (approval waits
       // don't count) -> recycle app-server; the turn then fails as "exited" and run() retries it.
-      const dog = setInterval(() => { if (!t.tools && Date.now() - t.last > STALL_MS) { log('codex turn stalled; restarting app-server'); this.#proc?.kill(); } }, 5000);
-      const t = { ctx, usage: null, tools: 0, last: Date.now(), done: (r) => { clearInterval(dog); this.#turns.delete(threadId); resolve(r); } };
+      const dog = setInterval(() => {
+        if (this.#turns.get(threadId) !== t) return t.done({ status: 'failed', error: 'turn superseded' }); // orphaned: never kill app-server for it
+        if (!t.tools && Date.now() - t.last > STALL_MS) { log('codex turn stalled; restarting app-server'); this.#proc?.kill(); }
+      }, 5000);
+      const t = { ctx, usage: null, calls: [], t0: Date.now(), tools: 0, last: Date.now(), done: (r) => { clearInterval(dog); if (this.#turns.get(threadId) === t) this.#turns.delete(threadId); resolve(r); } };
+      this.#turns.get(threadId)?.done({ status: 'failed', error: 'turn superseded' }); // one live turn per thread
       this.#turns.set(threadId, t);
       ctx.signal?.addEventListener('abort', () => t.turnId && this.#req('turn/interrupt', { threadId, turnId: t.turnId }).catch(() => {}), { once: true });
       this.#req('turn/start', { threadId, ...extra, input: [{ type: 'text', text, text_elements: [] }] })
@@ -183,7 +191,7 @@ export class Codex {
 
   // Voice: a separate thread with NO tools. Delegations are handed to agentd (onEvent gets every realtime
   // notification, including itemAdded/handoff_request), which runs them as normal turns and answers with voiceSay.
-  async voiceStart(sdp, on) {
+  async voiceStart(sdp, on, extra = {}) { // extra: more thread/realtime/start params (voice.js passes its prompt)
     await this.ready();
     const { thread } = await this.#req('thread/start', { cwd: cfg.codexCwd, ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never',
       baseInstructions: 'You relay spoken requests. You have no tools; another agent does the work.', dynamicTools: [] });
@@ -191,11 +199,12 @@ export class Codex {
     answer.catch(() => {});
     try {
       await this.#req('thread/realtime/start', { threadId: thread.id, outputModality: 'audio', version: 'v3', clientManagedHandoffs: true,
-        includeStartupContext: false, transport: { type: 'webrtc', sdp } });
+        includeStartupContext: false, transport: { type: 'webrtc', sdp }, ...extra });
       return { threadId: thread.id, sdp: await answer };
     } catch (e) { this.#voice.delete(thread.id); throw e; }
   }
   voiceSay(threadId, text) { return this.#req('thread/realtime/appendSpeech', { threadId, text }); }
+  voiceText(threadId, text, role = 'user') { return this.#req('thread/realtime/appendText', { threadId, text, role }); }
   voiceStop(threadId) { return this.#req('thread/realtime/stop', { threadId }); }
 
   async stop(session) {
