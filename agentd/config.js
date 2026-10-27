@@ -22,6 +22,8 @@ export const cfg = {
   codexEffort: env.CODEX_EFFORT || 'low', // phone control wants fast steps; raise for hard tasks
   suggestModel: env.SUGGEST_MODEL || 'gpt-6-luna', // keyboard suggestions: small and fast, no tools
   suggestEffort: env.SUGGEST_EFFORT || 'low',
+  reviewModel: env.REVIEW_MODEL || 'codex-auto-review', // approval reviewer (what Codex's own Auto-review uses)
+  reviewMs: Number(env.REVIEW_MS || 4000),             // slower than this -> the human decides
   codexCwd: env.CODEX_CWD || join(STATE, 'codex-cwd'),
   claudeBin: env.CLAUDE_BIN || 'claude',            // Claude Code CLI (subscription); preferred
   claudeCliModel: env.CLAUDE_CLI_MODEL || null,

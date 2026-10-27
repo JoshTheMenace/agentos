@@ -9,6 +9,8 @@ import { classify } from './guard.js';
 import { endTurn } from './tools.js';
 import * as memory from './memory/index.js';
 import * as events from './events.js';
+import * as reviewer from './reviewer.js';
+import { tasks } from './tools.js';
 import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
 import { ClaudeCli, handleMcp } from './providers/claude-cli.js';
@@ -20,6 +22,10 @@ const codex = new Codex();
 const providers = Object.fromEntries([codex, cli.available() ? cli : new Claude(), new Local()].map((p) => [p.id, p]));
 if (cfg.provider === 'codex') codex.ready().catch(() => {}); // warm start; it also restarts itself if it crashes
 events.watch(); // broker approvals/guard/task events -> every connected UI
+if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approval card; see reviewer.js for what it may do
+  const turn = tasks.get(a.task_id);
+  reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size }, events.publish);
+});
 const VOICE_PAGE = new URL('./voice.html', import.meta.url);
 const TOKEN = Buffer.from(agentdToken());
 const PROTO = 'agentos.bearer.'; // browsers/WebViews can't set headers on a WebSocket, so they may send the token as a subprotocol
@@ -130,9 +136,7 @@ wss.on('connection', (ws) => {
   ws.on('message', async (raw) => {
     let msg; try { msg = JSON.parse(raw); } catch { return send({ type: 'error', code: 'bad_json' }); }
     switch (msg.type) {
-      case 'ask': return ask(msg.text, msg.provider); // typed text never answers an approval
-      case 'approval.tap': // launcher's mirrored Approve button; only if the broker allows "tap" for this approval
-        return send({ type: 'approval.answer', ...(await events.tap(String(msg.approval_id))) });
+      case 'ask': return ask(msg.text, msg.provider); // typed text never answers an approval (taps happen on the card)
       case 'stop':
         if (!active) return;
         active.abort.abort();

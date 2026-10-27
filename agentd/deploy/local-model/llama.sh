@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/sh
 # The on-phone model server: llama-server (OpenAI-compatible API, tool calls via --jinja) on 127.0.0.1:8081.
 # Usage: llama.sh start|stop|status          (agentd runs this too: `node providers/local.js start|stop|status`)
-# Env: LOCAL_MODEL (gguf path), LOCAL_PORT (8081), LOCAL_CTX (8192 = 2 slots x 4096), LOCAL_THREADS (4), LLAMA_SERVER
+# Env: LOCAL_MODEL (gguf path), LOCAL_PORT (8081), LOCAL_CTX (4096), LOCAL_THREADS (2), LLAMA_SERVER
 # Prefers our native build (~/agentos/llama/bin, built with -mcpu=native: uses the CPU's dot-product instructions);
 # Termux's `pkg install llama-cpp` works too but is built for baseline ARMv8 and prefill is ~3x slower.
 B=${LLAMA_SERVER:-$HOME/agentos/llama/bin/llama-server}; [ -x "$B" ] || B=llama-server
@@ -12,9 +12,10 @@ pid() { p=$(cat "$PIDF" 2>/dev/null) && kill -0 "$p" 2>/dev/null && echo "$p"; }
 case "$1" in
 start)
   up && { echo "already up on :$P"; exit 0; }
-  [ -n "$(pid)" ] || { # 2 slots: one for the agent, one for keyboard suggestions, so neither evicts the other's cache
+  [ -n "$(pid)" ] || { # 1 slot, 4096 ctx: ~650 MB anon + ~480 MB of reclaimable mmap'd model file
     cd "${PREFIX:-/usr}/lib" # Termux's build only finds its CPU backend (libggml-cpu.so) from here
-    nohup "$B" -m "$M" --host 127.0.0.1 --port "$P" -c "${LOCAL_CTX:-8192}" -np 2 -t "${LOCAL_THREADS:-4}" \
+    # 2 threads pinned to the 2 big cores (cpu6-7) beat 4-8 threads: the little cores only slow the big ones down
+    nohup $(command -v taskset >/dev/null && echo taskset c0) "$B" -m "$M" --host 127.0.0.1 --port "$P" -c "${LOCAL_CTX:-4096}" -np 1 -t "${LOCAL_THREADS:-2}" \
       --jinja --no-webui --cache-reuse 256 >"$LOG" 2>&1 &
     echo $! >"$PIDF"; }
   i=0; until up; do i=$((i + 1)); [ $i -gt 120 ] || [ -z "$(pid)" ] && { echo "failed, see $LOG"; tail -5 "$LOG"; exit 1; }; sleep 0.5; done

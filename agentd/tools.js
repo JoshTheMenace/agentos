@@ -75,12 +75,16 @@ export async function rpc(method, params = {}, ms = ACT_MS) {
 
 // Lease: one task per turn. (Re)starting a lease resets the broker's "has read the screen" taint, so if the model
 // has already seen screen text we read once more inside the new lease to keep the Rule of Two honest.
+export const tasks = new Map(); // task_id -> the turn that holds it (the reviewer reads its goal and log)
+
 async function lease(ctx, apps) {
   const turn = ctx.turn, l = turn.lease;
   if (l && apps.every((a) => l.apps.includes(a) || l.refused_apps?.includes(a))) return l;
   const r = await rpc('task.start', { goal: turn.goal.slice(0, 200), apps: [...new Set([...(l?.apps || []), ...apps])] }, 10_000);
   if (!r.task_id) throw new Error(`task.start failed: ${r.reason || r.error || 'no task_id'}`);
+  if (l) tasks.delete(l.task_id);
   turn.lease = r;
+  tasks.set(r.task_id, turn);
   if (turn.sawScreen) await rpc('screen.read', {}, 15_000);
   ctx.emit({ type: 'task.started', task_id: r.task_id, apps: r.apps, refused_apps: r.refused_apps });
   return r;
@@ -140,6 +144,7 @@ export async function runTool(name, args, ctx) {
     if (t.method === 'screen.read') r = await guardScreen(r, ctx);
     else if (r.screen) r = { ...r, screen: await guardScreen(r.screen, ctx) };
     const ok = r.ok !== false;
+    turn.log = [...(turn.log || []).slice(-7), { role: 'tool', source: `${t.method} ${turn.pkg || ''}`.trim(), text: brief(r) }];
     ctx.emit({ type: 'tool.result', name: t.method, ok, decision: r.decision, reason: r.reason, tier: r.tier, rule_of_two: r.rule_of_two, ms: Date.now() - t0 });
     return { success: ok, text: JSON.stringify(r) };
   } catch (e) {
@@ -148,6 +153,12 @@ export async function runTool(name, args, ctx) {
   }
 }
 
+// What the reviewer sees of a tool result: the screen as "id:text" pairs, other results as short JSON.
+const brief = (r) => (r.untrusted_screen_data || r.screen?.untrusted_screen_data
+  ? (r.untrusted_screen_data || r.screen.untrusted_screen_data).nodes.map((n) => `[${n.id}] ${n.text || n.desc || n.role}${n.risk ? ` (${n.risk})` : ''}`).join(' | ')
+  : JSON.stringify({ ...r, screen: undefined })).slice(0, 1200);
+
 export async function endTurn(turn) {
+  if (turn.lease) tasks.delete(turn.lease.task_id);
   if (turn.lease?.task_id) await rpc('task.stop', { task_id: turn.lease.task_id }, 5000).catch(() => {});
 }

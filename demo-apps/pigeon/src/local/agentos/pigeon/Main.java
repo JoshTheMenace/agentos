@@ -194,9 +194,11 @@ public class Main extends Activity {
     }
 
     // Keep the list out of the accessibility tree while a chat covers it.
+    // INVISIBLE too: AgentOS asks for not-important views (flagIncludeNotImportantViews), which NO_HIDE_DESCENDANTS doesn't stop.
     void hideList(boolean hide) {
-        if (listView != null) listView.setImportantForAccessibility(hide
-            ? View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS : View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+        if (listView == null) return;
+        listView.setImportantForAccessibility(hide ? View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS : View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+        listView.setVisibility(hide ? View.INVISIBLE : View.VISIBLE);
     }
 
     void closeChat() {

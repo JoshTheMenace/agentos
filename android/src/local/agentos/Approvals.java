@@ -37,26 +37,45 @@ final class Approvals {
         final String id = hex(8);
         final byte[] canonical;
         final ApprovalCard.Model model;
+        /** Who may approve this one (Broker.channels): "fingerprint" always; "tap", "voice", "reviewer" for ordinary actions. */
+        final java.util.List<String> channels;
         final CountDownLatch done = new CountDownLatch(1);
         volatile byte[] sig;
+        /** How it was approved ("fingerprint", "tap", "voice", "reviewer"), and the user's words or reviewer's rationale. */
+        volatile String channel = "", note = "";
         /** Closes the fingerprint prompt showing this request, so a late touch can't land on a dead request. */
         volatile Runnable onDone;
         volatile String reason = "timed out";
 
-        Pending(String canonical, ApprovalCard.Model model) {
+        Pending(String canonical, ApprovalCard.Model model, java.util.List<String> channels) {
             this.canonical = canonical.getBytes(StandardCharsets.UTF_8);
             this.model = model;
+            this.channels = channels;
         }
 
-        /** First answer wins (fingerprint, Deny, Stop or timeout). */
-        void finish(byte[] signature, String why) {
-            if (done.getCount() == 0) return;
+        /** Fingerprint result, Deny, Stop or timeout. First answer wins. */
+        void finish(byte[] signature, String why) { end(signature, signature != null ? "fingerprint" : "", "", why); }
+
+        /** A non-fingerprint approval; false if this channel isn't allowed for this action or it's already decided. */
+        boolean confirm(String ch, String words) { return channels.contains(ch) && end(null, ch, words, "approved by " + ch); }
+
+        private synchronized boolean end(byte[] signature, String ch, String words, String why) {
+            if (done.getCount() == 0) return false;
             sig = signature;
+            channel = ch;
+            note = words;
             reason = why != null ? why : "timed out";
             done.countDown();
             Runnable r = onDone;
             if (r != null) r.run();
+            return true;
         }
+    }
+
+    /** For the card: which channels may approve the action this card shows (empty if it isn't pending). */
+    static java.util.List<String> channelsFor(ApprovalCard.Model m) {
+        for (Pending p : pending.values()) if (p.model == m) return p.channels;
+        return java.util.Collections.emptyList();
     }
 
     /** The exact bytes that get signed: {tool, pkg, target, text, task_id, nonce} in this order. */

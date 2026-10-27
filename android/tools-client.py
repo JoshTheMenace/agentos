@@ -6,11 +6,18 @@ to Mac port $AGENTOS_PORT, default 17777).
   tools-client.py e2e [--no-firewall] [--press-approve]
                                                       Pigeon chat task (P3 block, fingerprint Send) + Beacon firewall
   tools-client.py audit [N]                            last N audit entries + offline chain check
+  tools-client.py events [SECONDS]                     print the GET /events stream (server-sent events)
+  tools-client.py settings ['{"require_user_lease":false}']
+                                                      write (as root) or, with no JSON, delete files/settings.json
+  tools-client.py approvals                            lease card, taint carry-over, approval channels + /events
 
 The bearer token is read with root from /data/data/local.agentos/files/token and never printed.
 """
+import base64
 import hashlib
+import http.client
 import json
+import queue
 import os
 import subprocess
 import sys
@@ -22,6 +29,8 @@ ADB = ["adb", "-s", "ZY22J3TK8S"]
 PORT = os.environ.get("AGENTOS_PORT", "17777")  # Mac-side port, forwarded to the phone's 7777
 PRESS = "--press-approve" in sys.argv  # operator taps the card's Approve via adb (720x1600 Moto layout)
 PIGEON, BEACON = "local.agentos.pigeon", "local.agentos.beacon"
+# Island card buttons on the 720x1600 Moto: lease "Allow", and "Approve" on a tap card with the "Untrusted content" chip.
+LEASE_ALLOW, CARD_APPROVE = os.environ.get("AGENTOS_ALLOW_XY", "580 190"), os.environ.get("AGENTOS_APPROVE_XY", "575 248")
 
 
 def adb(*args):
@@ -41,6 +50,32 @@ def call(tok, method, params=None, timeout=75):
         return json.load(r)
 
 
+def events(tok, out, stop=None):
+    """Reads GET /events and puts each (type, data) on queue `out` until `stop` is set or the stream ends."""
+    c = http.client.HTTPConnection("127.0.0.1", int(PORT), timeout=30)
+    c.request("GET", "/events", headers={"Authorization": "Bearer " + tok})
+    r = c.getresponse()
+    assert r.status == 200 and r.getheader("Content-Type") == "text/event-stream", r.status
+    name = None
+    while not (stop and stop.is_set()):
+        line = r.readline().decode().rstrip("\n")
+        if line.startswith("event:"):
+            name = line[6:].strip()
+        elif line.startswith("data:"):
+            out.put((name, json.loads(line[5:])))
+        elif line == "" and r.isclosed():
+            break
+
+
+def settings(js=None):
+    """Root-only switches: files/settings.json, owned by the app with the app's SELinux label (else the app can't read it)."""
+    f, d = "/data/data/local.agentos/files/settings.json", "/data/data/local.agentos/files"
+    if js is None:
+        return adb("shell", f"su -c 'rm -f {f}'")
+    b = base64.b64encode(json.dumps(json.loads(js)).encode()).decode()
+    adb("shell", f"su -c 'echo {b} | base64 -d > {f} && chown $(stat -c %u:%g {d}) {f} && chmod 600 {f} && chcon $(stat -c %C {d}) {f}'")
+
+
 def brief(screen):
     return f"{screen['pkg']}/{screen['activity']} secure={screen['secure']} nodes={len(screen['nodes'])}"
 
@@ -54,7 +89,7 @@ def approve(tok, method, params, press_approve=False, window=90):
     params = dict(params, approval_timeout_s=window)
     print(f"\n>>> {method} {json.dumps(params)}")
     if press_approve:  # the test operator presses Approve over adb (a human-side touch); the fingerprint stays human
-        threading.Timer(2.5, lambda: adb("shell", "input tap 468 1428")).start()
+        threading.Timer(4, lambda: adb("shell", f"input tap {CARD_APPROVE}")).start()
         threading.Timer(4, lambda: print(f">>> TOUCH SENSOR NOW (power button) -- fingerprint prompt is up, {window} s window", flush=True)).start()
     else:
         print(f">>> ON THE PHONE: tap 'Approve with fingerprint', then TOUCH SENSOR NOW ({window} s window)", flush=True)
@@ -73,6 +108,10 @@ def e2e(firewall=True):
     # Test harness (not the agent): stage a message with a one-time code in our own chat app.
     adb("shell", f"am start -n {PIGEON}/.Main --es inject 'Your Pigeon login code is 482913' --es from Alice")
     time.sleep(1.5)
+    if PRESS:  # the lease card: the test operator taps Allow over adb
+        threading.Timer(4, lambda: adb("shell", f"input tap {LEASE_ALLOW}")).start()
+    else:
+        print(">>> ON THE PHONE: tap 'Allow' on the lease card", flush=True)
     lease = call(tok, "task.start", {"goal": "e2e: tell Alice I am running late", "apps": [PIGEON, "com.android.settings"]})
     print("task.start:", lease["task_id"], lease["apps"], "refused:", lease["refused_apps"])
     s = call(tok, "open_app", {"pkg": PIGEON})["screen"]
@@ -106,6 +145,105 @@ def e2e(firewall=True):
     audit(tok, 14)
 
 
+def approvals():
+    """Lease card, taint carry-over, risk-adaptive approval channels, all watched through GET /events."""
+    tok, ev, stop = token(), queue.Queue(), threading.Event()
+    threading.Thread(target=events, args=(tok, ev, stop), daemon=True).start()
+    seen = []
+
+    def wait_for(kind, secs=20):
+        end = time.time() + secs
+        while time.time() < end:
+            try:
+                t, d = ev.get(timeout=1)
+            except queue.Empty:
+                continue
+            seen.append(t)
+            if t == kind:
+                return d
+        sys.exit(f"no {kind} event in {secs}s")
+
+    def bg(method, params, timeout=90):  # a blocking call (it waits for a card) on another thread
+        time.sleep(2.5)  # the island's close animation must finish first, or it swallows the next card (see NEEDS-UI.md)
+        box = {}
+        th = threading.Thread(target=lambda: box.update(r=call(tok, method, params, timeout)))
+        th.start()
+        return lambda: (th.join(), box["r"])[1]
+
+    print("hello event:", wait_for("hello")["approvals"])
+    # Test harness (not the agent): a clean Pigeon with a benign message from Alice, and her chat open, before any lease (a harness tap during a task auto-pauses it), so the task never
+    # reads the chat list (its seeded "Unknown number" preview is a prompt injection that Prompt Guard flags).
+    adb("shell", f"am start -n {PIGEON}/.Main --es scenario reset")
+    time.sleep(1)
+    adb("shell", f"am start -n {PIGEON}/.Main --es inject 'The meeting moved to the north gate at six tonight' --es from Alice")
+    time.sleep(1)
+    adb("shell", "input tap 360 255")  # Alice is now the top row
+    time.sleep(1)
+    settings('{"require_user_lease": true, "voice_callers": ["com.android.shell"], "reviewer_callers": ["com.android.shell"]}')
+    call(tok, "task.stop")
+    # 1. lease card: no answer -> denied; then an operator tap on Allow (adb input = a touchscreen tap, as a human's)
+    res = bg("task.start", {"goal": "approvals test", "apps": [PIGEON], "ttl_s": 120, "approval_timeout_s": 10})
+    a = wait_for("approval.shown")
+    print("lease card shown:", a["summary"], a["allowed_channels"], "caller:", a["caller"])
+    r = res()
+    print("  no tap ->", r["ok"], r.get("reason"), "| resolved:", wait_for("approval.resolved")["decision"])
+    res = bg("task.start", {"goal": "approvals test", "apps": [PIGEON], "ttl_s": 120})
+    wait_for("approval.shown")
+    time.sleep(4)  # let the island card finish opening
+    adb("shell", f"input tap {LEASE_ALLOW}")
+    r = res()
+    print("  tap Allow ->", r["ok"], "user_granted:", r.get("user_granted"), "| resolved:", wait_for("approval.resolved")["approver"])
+    # 2. taint carry-over: read the screen, then re-lease (same caller, same apps: no new card, history kept)
+    s = call(tok, "open_app", {"pkg": PIGEON})["screen"]
+    r = call(tok, "task.start", {"goal": "approvals test 2", "apps": [PIGEON], "ttl_s": 120})
+    print("re-lease:", "carried_over", r["carried_over"], "untrusted", r["untrusted"], "steps", r["steps"], "(no card:", r["user_granted"], ")")
+    print("task.state:", wait_for("task.state")["state"])
+    alice = find(s, lambda n: (n.get("text") or "").startswith("Alice"))
+    if alice is not None:
+        s = call(tok, "tap", {"id": alice})["screen"]
+    field = find(s, lambda n: "edit" in n["actions"])
+
+    def send(text, how):
+        r = call(tok, "type", {"id": field, "text": text})
+        btn = find(r["screen"], lambda n: n.get("text") == "Send" or n.get("desc") == "Send")
+        res = bg("tap", {"id": btn, "approval_timeout_s": 15})
+        a = wait_for("approval.shown")
+        print(f"\nsend {text!r}: allowed {a['allowed_channels']} because {a['fingerprint_because']}")
+        how(a)
+        r = res()
+        d = wait_for("approval.resolved")
+        print(f"  -> {r['decision']} ({r['reason']}) | resolved {d['decision']} by {d['approver']}")
+        return r
+
+    def confirm(ch, **kw):
+        return lambda a: print("  confirm", ch, "->", call(tok, "approval.confirm", dict(approval_id=a["approval_id"], channel=ch, **kw)))
+
+    send("Reviewer test: running 10 min late", confirm("reviewer", rationale="benign reply in a chat the user named"))
+    send("Voice test: running 10 min late", confirm("voice", utterance="send it"))
+    send("Tap test: running 10 min late", lambda a: (time.sleep(4), subprocess.run(ADB + ["exec-out", "screencap -p"], stdout=open("/tmp/agentos-card.png", "wb")),
+                                                       adb("shell", f"input tap {CARD_APPROVE}")))
+    send("RPC tap test", lambda a: (confirm("tap")(a), call(tok, "approval.deny", {"approval_id": a["approval_id"], "channel": "test"})))
+    # 3. copied from the screen -> fingerprint only; the reviewer and voice are refused
+    send("the north gate at six tonight", lambda a: (confirm("reviewer", rationale="x")(a), confirm("voice", utterance="send it")(a),
+                                                       call(tok, "approval.deny", {"approval_id": a["approval_id"]})))
+    # 4. not on the allow-list -> refused
+    settings('{"require_user_lease": true}')
+    r = bg("firewall.set", {"pkg": BEACON, "mode": "block", "approval_timeout_s": 15})
+    a = wait_for("approval.shown")
+    print("\nfirewall.set: allowed", a["allowed_channels"], "because", a["fingerprint_because"])
+    confirm("voice", utterance="yes")(a)
+    call(tok, "approval.deny", {"approval_id": a["approval_id"], "channel": "voice", "utterance": "no"})
+    print("  ->", r()["decision"], "| resolved", wait_for("approval.resolved")["decision"])
+    print("\ntask.stop:", call(tok, "task.stop")["reason"], "| task.state:", wait_for("task.state")["state"])
+    settings()  # back to the defaults (lease card on)
+    time.sleep(1)
+    while not ev.empty():
+        seen.append(ev.get()[0])
+    stop.set()
+    print("event types seen:", sorted(set(seen)))
+    audit(tok, 30)
+
+
 def audit(tok, n):
     a = call(tok, "audit.tail", {"n": n})
     for e in a["entries"]:
@@ -126,6 +264,19 @@ def main():
     cmd = sys.argv[1]
     if cmd == "e2e":
         e2e(firewall="--no-firewall" not in sys.argv)
+    elif cmd == "approvals":
+        approvals()
+    elif cmd == "events":
+        q, end = queue.Queue(), time.time() + (float(sys.argv[2]) if len(sys.argv) > 2 else 1e9)
+        threading.Thread(target=events, args=(token(), q), daemon=True).start()
+        while time.time() < end:
+            try:
+                t, d = q.get(timeout=1)
+                print(t, json.dumps(d, ensure_ascii=False), flush=True)
+            except queue.Empty:
+                pass
+    elif cmd == "settings":
+        settings(sys.argv[2] if len(sys.argv) > 2 else None)
     elif cmd == "audit":
         audit(token(), int(sys.argv[2]) if len(sys.argv) > 2 else 20)
     elif cmd == "call":

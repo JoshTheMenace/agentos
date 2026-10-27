@@ -39,6 +39,7 @@ final class Audit {
                 o.write((body.substring(0, body.length() - 1) + ",\"hash\":\"" + h + "\"}\n").getBytes(StandardCharsets.UTF_8));
             }
             prev = h;
+            Events.emit("audit.append", e.put("hash", h));
         } catch (Exception ex) { throw new IllegalStateException("audit write failed", ex); }
     }
 

@@ -32,7 +32,7 @@ const DECLINE = {
 
 export class Codex {
   id = 'codex';
-  #proc; #ready; #nid = 0; #pending = new Map(); #turns = new Map(); #voice = new Map(); #gen = 0; #stderr = []; #fails = 0; #sug;
+  #proc; #ready; #nid = 0; #pending = new Map(); #turns = new Map(); #voice = new Map(); #gen = 0; #stderr = []; #fails = 0; #warm = new Map();
 
   available() { return true; }
   ready() { return (this.#ready ??= this.#start()); }
@@ -154,25 +154,31 @@ export class Codex {
     });
   }
 
-  // Keyboard suggestions: one warm tool-less thread (its connection and prompt cache make turns ~1 s instead of ~3 s),
-  // one request at a time, rotated every 30 requests so its history stays small. Returns items[]; abort = stale.
-  async suggest(text, signal) {
+  // Small tool-less JSON jobs on warm threads, one per kind: the warm connection and prompt cache make a turn ~1 s
+  // instead of ~3 s. One request at a time per kind; rotated so history stays small. Returns the parsed JSON; abort = stale.
+  // job: {model, effort, prompt, schema, rotate}
+  async quick(kind, job, text, signal) {
     await this.ready();
-    let s = this.#sug;
-    if (!s || s.gen !== this.#gen || s.n >= 30) {
+    let s = this.#warm.get(kind);
+    if (!s || s.gen !== this.#gen || s.n >= job.rotate) {
       if (s) this.#req('thread/unsubscribe', { threadId: s.threadId }).catch(() => {});
-      const { thread } = await this.#req('thread/start', { ...(cfg.suggestModel && { model: cfg.suggestModel }), cwd: cfg.codexCwd,
-        ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: SUGGEST_PROMPT, dynamicTools: [] });
-      s = this.#sug = { threadId: thread.id, gen: this.#gen, n: 0, idle: Promise.resolve() };
+      const { thread } = await this.#req('thread/start', { ...(job.model && { model: job.model }), cwd: cfg.codexCwd,
+        ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: job.prompt, dynamicTools: [] });
+      this.#warm.set(kind, (s = { threadId: thread.id, gen: this.#gen, n: 0, idle: Promise.resolve() }));
     }
-    await s.idle; // the stale request's turn is being interrupted; wait for it to end
+    await s.idle; // a stale or timed-out turn is being interrupted; wait for it to end
     if (signal.aborted) throw new Error('stale');
     s.n++;
-    const turn = this.#turn(s.threadId, text, { emit: () => {}, signal }, { effort: cfg.suggestEffort, outputSchema: SUGGEST_SCHEMA });
+    const turn = this.#turn(s.threadId, text, { emit: () => {}, signal }, { effort: job.effort, outputSchema: job.schema });
     s.idle = turn;
     const r = await turn;
     if (r.status !== 'completed') throw new Error(r.error || r.status);
-    return JSON.parse(r.text).items;
+    return JSON.parse(r.text);
+  }
+
+  // Keyboard suggestions -> items[].
+  async suggest(text, signal) {
+    return (await this.quick('suggest', { model: cfg.suggestModel, effort: cfg.suggestEffort, prompt: SUGGEST_PROMPT, schema: SUGGEST_SCHEMA, rotate: 30 }, text, signal)).items;
   }
 
   // Voice: a separate thread with NO tools. Delegations are handed to agentd (onEvent gets every realtime

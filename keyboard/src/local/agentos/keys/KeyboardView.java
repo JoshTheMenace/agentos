@@ -28,13 +28,13 @@ final class KeyboardView extends View {
         void onGlobe();
     }
 
-    static final String SHIFT = "⇧", BKSP = "⌫", ENTER = "↵", SPACE = "␣", SYM = "?123", ABC = "ABC", SYM2 = "#+=", SYM1 = "123", GLOBE = "🌐";
-    private static final String BOTTOM = "?123:1.3 🌐 , ␣:4.2 . ↵:1.5";
+    static final String SHIFT = "⇧", BKSP = "⌫", ENTER = "↵", SPACE = "␣", SYM = "123", ABC = "ABC", SYM2 = "#+=", GLOBE = "🌐";
+    private static final String BOTTOM = "123:1.3 🌐 ␣:5.2 ↵:2.5"; // iOS bottom row: 123 · globe · space · return
     /** Rows as "label[:width-units] ..."; the three pages are letters, symbols, more symbols (iOS order). */
     private static final String[][] PAGES = {
         {"q w e r t y u i o p", "a s d f g h j k l", "⇧:1.5 z x c v b n m ⌫:1.5", BOTTOM},
-        {"1 2 3 4 5 6 7 8 9 0", "- / : ; ( ) $ & @ \"", "#+=:1.5 . , ? ! ' ⌫:1.5", BOTTOM.replace("?123", "ABC")},
-        {"[ ] { } # % ^ * + =", "_ \\ | ~ < > € £ ¥ •", "123:1.5 . , ? ! ' ⌫:1.5", BOTTOM.replace("?123", "ABC")},
+        {"1 2 3 4 5 6 7 8 9 0", "- / : ; ( ) $ & @ \"", "#+=:1.5 . , ? ! ' ⌫:1.5", BOTTOM.replace("123", "ABC")},
+        {"[ ] { } # % ^ * + =", "_ \\ | ~ < > € £ ¥ •", "123:1.5 . , ? ! ' ⌫:1.5", BOTTOM.replace("123", "ABC")},
     };
 
     static final class Key {
@@ -126,7 +126,7 @@ final class KeyboardView extends View {
             r.set(cx - k.r.width() * s / 2, cy - k.r.height() * s / 2, cx + k.r.width() * s / 2, cy + k.r.height() * s / 2);
             int base, pressed, fg;
             boolean dark = !k.text() && !k.label.equals(SPACE);
-            if (k.label.equals(SHIFT) && shift > 0) { base = pressed = Theme.KEY_ON; fg = Theme.ON_ACCENT; }
+            if (k.label.equals(SHIFT) && shift > 0) { base = pressed = Theme.KEY_ON; fg = Theme.ON_KEY_ON; }
             else if (k.label.equals(ENTER) && enterAccent) { base = Theme.KEY_ACCENT; pressed = Theme.KEY_ACCENT_PRESSED; fg = Theme.ON_ACCENT; }
             else if (dark) { base = Theme.KEY_DARK; pressed = Theme.KEY_DARK_PRESSED; fg = Theme.TEXT2; }
             else { base = Theme.KEY; pressed = Theme.KEY_PRESSED; fg = Theme.TEXT; }
@@ -162,7 +162,7 @@ final class KeyboardView extends View {
         }
         String s; float size; int weight; int color = fg;
         if (l.equals(ENTER)) { s = enterLabel; size = Theme.KEY_TEXT_SMALL; weight = Theme.W_LABEL; }
-        else if (l.equals(SPACE)) { s = "AgentOS"; size = Theme.KEY_TEXT_SMALL - 1; weight = Theme.W_LABEL; color = Theme.TEXT3; }
+        else if (l.equals(SPACE)) { s = Theme.SPACE_LABEL; size = Theme.KEY_TEXT_SMALL; weight = Theme.W_KEY; }
         else if (k.text()) { s = shift > 0 ? l.toUpperCase() : l; size = Theme.KEY_TEXT; weight = Theme.W_KEY; }
         else { s = l; size = Theme.KEY_TEXT_SMALL; weight = Theme.W_LABEL; }
         text.setColor(color); text.setTextSize(size * d); text.setTypeface(Theme.font(getContext(), weight));
@@ -219,7 +219,7 @@ final class KeyboardView extends View {
         else if (l.equals(ENTER)) listener.onEnter();
         else if (l.equals(SPACE)) listener.onText(" ");
         else if (l.equals(GLOBE)) listener.onGlobe();
-        else if (l.equals(SYM) || l.equals(SYM1)) setPage(1);
+        else if (l.equals(SYM)) setPage(1);
         else if (l.equals(SYM2)) setPage(2);
         else if (l.equals(ABC)) setPage(0);
         else {

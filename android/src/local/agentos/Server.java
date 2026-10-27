@@ -17,14 +17,15 @@ import java.util.concurrent.Executors;
 import org.json.JSONObject;
 
 /**
- * Tool server: POST /rpc {method, params} on 127.0.0.1:7777 with "Authorization: Bearer <files/token>".
- * Replies with the method's result object (always has "ok"). Loopback only; 64 KB body cap.
+ * Tool server on 127.0.0.1:7777, "Authorization: Bearer <files/token>" on every request. Loopback only.
+ *  POST /rpc {method, params}: replies with the method's result object (always has "ok"); 64 KB body cap.
+ *  GET /events: server-sent events (see Events).
  */
 final class Server {
     static final int PORT = 7777;
     private final Broker broker;
     private final byte[] expected;
-    private final ExecutorService pool = Executors.newFixedThreadPool(4);
+    private final ExecutorService pool = Executors.newFixedThreadPool(4 + Events.MAX_LISTENERS); // /events listeners hold a thread each
     private volatile ServerSocket ss;
 
     Server(Context c, Broker broker) throws IOException {
@@ -63,8 +64,10 @@ final class Server {
                 if (low.startsWith("content-length:")) len = Integer.parseInt(l.substring(15).trim());
                 if (low.startsWith("authorization:")) auth = l.substring(14).trim();
             }
-            if (first == null || !first.startsWith("POST /rpc ")) { reply(s, "404 Not Found", err("POST /rpc only")); return; }
+            boolean events = first != null && first.startsWith("GET /events ");
+            if (!events && (first == null || !first.startsWith("POST /rpc "))) { reply(s, "404 Not Found", err("POST /rpc or GET /events only")); return; }
             if (!MessageDigest.isEqual(expected, auth.getBytes(StandardCharsets.UTF_8))) { reply(s, "401 Unauthorized", err("bearer token required")); return; }
+            if (events) { s.setSoTimeout(0); Events.stream(s.getOutputStream(), broker.approvals()); return; }
             if (len <= 0 || len > 65536) { reply(s, "400 Bad Request", err("body must be 1..65536 bytes")); return; }
             byte[] body = new byte[len];
             in.readFully(body);
@@ -72,13 +75,30 @@ final class Server {
             try {
                 JSONObject req = new JSONObject(new String(body, StandardCharsets.UTF_8));
                 JSONObject params = req.optJSONObject("params");
-                res = broker.call(req.getString("method"), params == null ? new JSONObject() : params);
+                String m = req.getString("method");
+                int uid = m.equals("task.start") || m.equals("approval.confirm") ? callerUid(s) : -1; // only these care who asks
+                res = broker.call(m, params == null ? new JSONObject() : params, uid);
             } catch (Exception e) {
                 Log.w("AgentOS", "rpc error", e);
                 res = err(e.getMessage() == null ? e.toString() : e.getMessage());
             }
             reply(s, "200 OK", res);
         } catch (Exception e) { Log.w("AgentOS", "request failed: " + e); }
+    }
+
+    /**
+     * Which app is on the other end? Root reads the kernel's socket table (/proc/net/tcp*): the caller's row has its
+     * port as the local port, ours (7777 = 1E61) as the remote one, and its uid in column 8. -1 if unknown (no root).
+     */
+    static int callerUid(Socket s) {
+        String mine = String.format(":%04X", s.getPort()), ours = String.format(":%04X", PORT);
+        try {
+            for (String line : Root.run("cat /proc/net/tcp /proc/net/tcp6; true").split("\n")) {
+                String[] f = line.trim().split("\\s+");
+                if (f.length > 7 && f[1].endsWith(mine) && f[2].endsWith(ours)) return Integer.parseInt(f[7]);
+            }
+        } catch (Exception e) { Log.w("AgentOS", "caller lookup failed: " + e); }
+        return -1;
     }
 
     private static JSONObject err(String msg) {

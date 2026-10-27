@@ -65,13 +65,25 @@ final class Agent {
             JSONObject r = new JSONObject(slurp(h.getInputStream()));
             if (r.optBoolean("secure")) { s.secure = true; return s; }
             JSONArray flaggedIds = r.optJSONObject("guard") != null ? r.getJSONObject("guard").optJSONArray("flagged_node_ids") : null;
+            // Nodes come top-down. A jump back up starts another "layer" (Pigeon keeps its hidden list in the tree under the chat).
+            // We keep the layer that holds the text field being typed in; if none does, the first one.
             JSONArray nodes = r.optJSONArray("nodes");
+            List<List<String>> layers = new ArrayList<>(); List<int[]> flaggedPer = new ArrayList<>();
+            int maxTop = Integer.MIN_VALUE, chosen = -1;
             for (int i = 0; nodes != null && i < nodes.length(); i++) {
                 JSONObject n = nodes.getJSONObject(i);
-                if (!n.optString("src").startsWith("APP:") || !n.has("text") || n.optBoolean("hint") || n.optString("role").contains("Edit")) continue;
-                if (contains(flaggedIds, n.optInt("id", -1))) { s.flagged++; continue; }
-                s.lines.add(n.getString("text"));
+                if (!n.optString("src").startsWith("APP:")) continue;
+                int top = n.optJSONArray("bounds") != null ? n.getJSONArray("bounds").optInt(1) : maxTop;
+                if (layers.isEmpty() || top < maxTop - 600) { layers.add(new ArrayList<String>()); flaggedPer.add(new int[1]); maxTop = top; }
+                maxTop = Math.max(maxTop, top);
+                String role = n.optString("role");
+                if (role.contains("Edit")) { if (chosen < 0) chosen = layers.size() - 1; continue; }
+                if (!n.has("text") || n.optBoolean("hint") || role.contains("Button")) continue;
+                if (contains(flaggedIds, n.optInt("id", -1))) { flaggedPer.get(flaggedPer.size() - 1)[0]++; continue; }
+                String t = n.getString("text").trim();
+                if (t.length() > 1) layers.get(layers.size() - 1).add(t); // skip avatar initials
             }
+            if (!layers.isEmpty()) { int k = Math.max(chosen, 0); s.lines.addAll(layers.get(k)); s.flagged = flaggedPer.get(k)[0]; }
             while (s.lines.size() > 12) s.lines.remove(0); // keep the newest ~12 lines (~2 KB)
         } catch (Exception e) { Log.w(TAG, "screen.read failed: " + e); }
         return s;

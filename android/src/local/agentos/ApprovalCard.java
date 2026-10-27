@@ -1,152 +1,260 @@
 package local.agentos;
 
-import android.accessibilityservice.AccessibilityService;
-import android.graphics.PixelFormat;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Outline;
+import android.graphics.drawable.Drawable;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowManager;
-import android.widget.Button;
+import android.view.ViewOutlineProvider;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+import static local.agentos.Island.*;
 
 /**
- * The native approval card, drawn as TYPE_ACCESSIBILITY_OVERLAY (above status bar, nav bar and other apps' overlays).
- * Everything visual is in this class so a designer can restyle it. Hooks:
- *  - Model: the structured fields to show (never model prose).
- *  - Listener: approve()/deny(); the card itself never grants anything (Approve only opens the fingerprint prompt).
- *  - Style constants and the build/header/row/chips/chip/buttons/button methods.
- * Touches injected by accessibility services (MotionEvent flag 0x800) are ignored, so the agent can't press it.
+ * The native cards that open out of the Island (TYPE_ACCESSIBILITY_OVERLAY; AI or web content can never draw them).
+ * Progressive disclosure: each card shows only the essentials; a tap on the card body reveals the details.
+ *  - show(Model, Listener): approval. App + exact action (+ the exact text as a blue bubble), Deny / Approve.
+ *    Approve only calls Listener.approve(); the card itself never grants anything.
+ *  - alert(...): prompt injection caught. One headline, the source app, Block / OK; score and snippet behind a tap.
+ *  - lease(...): "Allow agent in <app> for N min?" Deny / Allow.
+ *  - task(): the task sheet behind a pill tap, with the always-available Stop.
+ *  - autoApproved(action, why): a quiet "Auto-approved" moment on the pill; a tap reveals why.
+ * Broker-facing API (Model, Listener, show, hide) is unchanged; all policy stays in Broker.
  */
 final class ApprovalCard {
     static final class Model {
         String title = "", app = "", target = "", text = "", task = "", tier = "", reason = "";
         boolean untrusted, priv, outward;
+        /** Fallback when the broker hasn't registered channels for this model (demo cards): true = say "Fingerprint required". */
+        boolean fingerprint = true;
     }
 
     interface Listener { void approve(); void deny(); }
+    interface AlertListener { void block(); void ok(); }
 
-    // ---- style hooks
-    static int BG = 0xF2141820, FG = 0xFFF4F6F8, MUTED = 0xFF9AA4B2, CHIP_ON = 0xFFD64545, CHIP_OFF = 0xFF2C333D,
-            APPROVE = 0xFF2E8B57, DENY = 0xFF3A414B, RADIUS_DP = 20, PAD_DP = 18;
-    private static final int FLAG_FROM_ACCESSIBILITY = 0x800;
+    private final AgentA11y svc;
+    private String autoState, autoLabel, autoAction, autoWhy; private int autoPct;
+    private long shownAt; // buttons accept only real finger touches made >= 500 ms after this (HumanTouch)
 
-    private final AccessibilityService svc;
-    private View view;
-
-    ApprovalCard(AccessibilityService svc) { this.svc = svc; }
+    ApprovalCard(AgentA11y svc) {
+        this.svc = svc;
+        svc.island.onPillTap = this::task;
+    }
 
     /** Main thread. Replaces any card already showing. */
     void show(Model m, Listener l) {
-        hide();
-        view = build(m, l);
-        WindowManager.LayoutParams p = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, PixelFormat.TRANSLUCENT);
-        p.gravity = Gravity.BOTTOM;
-        p.y = dp(56);
-        svc.getSystemService(WindowManager.class).addView(view, p);
+        java.util.List<String> ch = Approvals.channelsFor(m);
+        boolean finger = ch.isEmpty() ? m.fingerprint : !ch.contains("tap"); // ordinary actions: a real tap is the approval
+        LinearLayout f = face(appIcon(m.app), appLabel(m.app), headline(m.title), BLUE, true);
+        if (!m.text.isEmpty()) f.addView(bubble(m.text));
+        if (m.untrusted) f.addView(chips(new String[]{"Untrusted content"}, new boolean[]{true}, ORANGE), margin(0, dp(10)));
+        View details = col();
+        details.setVisibility(View.GONE);
+        ((LinearLayout) details).addView(text(m.task + "\n" + m.tier + " · " + m.reason, 11, 500, L3), margin(0, dp(10)));
+        ((LinearLayout) details).addView(chips(new String[]{"Untrusted input", "Private data", "Outward action"},
+                new boolean[]{m.untrusted, m.priv, m.outward}, BLUE), margin(0, dp(8)));
+        f.addView(details);
+        View hint = finger ? hint("finger", BLUE, "Fingerprint required") : new View(svc);
+        f.addView(acts(hint, button("Deny", FILL14, L1, l::deny), button("Approve", BLUE, L1, l::approve)));
+        disclose(f, details);
+        open(f, BLUE);
     }
 
-    /** Main thread. */
-    void hide() {
-        if (view == null) return;
-        try { svc.getSystemService(WindowManager.class).removeView(view); } catch (Exception ignored) {}
-        view = null;
+    /** Main thread. Closes the card (the pill stays while a task is active). */
+    void hide() { svc.island.collapse(); }
+
+    /** Prompt injection caught in `app` (sender may be empty). */
+    void alert(String app, String sender, String snippet, float score, AlertListener l) {
+        LinearLayout f = face(glyphIcon("shield", RED), appLabel(app) + (sender.isEmpty() ? "" : " · " + sender),
+                "Ignored instructions in a message", RED, false);
+        LinearLayout details = col();
+        details.setVisibility(View.GONE);
+        details.addView(text("Prompt Guard " + String.format(Locale.US, "%.2f", score) + " · blocked · logged "
+                + new SimpleDateFormat("H:mm:ss", Locale.US).format(new Date()), 11, 500, L3), margin(0, dp(10)));
+        TextView q = text("“" + snippet + "”", 12.5f, 400, L2);
+        q.setMaxLines(3); q.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        details.addView(q, margin(0, dp(6)));
+        details.addView(chips(new String[]{"Untrusted input", "Private data", "Outward action"}, new boolean[]{true, true, true}, RED), margin(0, dp(8)));
+        f.addView(details);
+        f.addView(acts(text("Details", 12, 600, L3), button("Block", FILL14, L1, l::block), button("OK", RED, L1, l::ok)));
+        disclose(f, details);
+        svc.island.set("alert", "Blocked a message", -1);
+        open(f, RED);
     }
 
-    View build(Model m, Listener l) {
-        LinearLayout card = new LinearLayout(svc);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(PAD_DP), dp(PAD_DP), dp(PAD_DP), dp(PAD_DP));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(BG);
-        bg.setCornerRadius(dp(RADIUS_DP));
-        card.setBackground(bg);
-        card.addView(header(m));
-        card.addView(row("App", m.app));
-        card.addView(row("Target", m.target));
-        if (!m.text.isEmpty()) card.addView(row("Text", "“" + m.text + "”"));
-        card.addView(row("Task", m.task));
-        card.addView(row("Why", m.tier + " · " + m.reason));
-        card.addView(chips(m));
-        card.addView(buttons(l));
-        LinearLayout outer = new LinearLayout(svc);
-        outer.setPadding(dp(10), 0, dp(10), 0);
-        outer.addView(card, new LinearLayout.LayoutParams(-1, -2));
-        return outer;
+    /** Task lease (LeaseCard delegates here): let the agent act in `apps` (labels) for `minutes`. Caller is behind a tap. */
+    void lease(String apps, String minutes, String goal, String caller, Listener l) {
+        LinearLayout f = face(glyphIcon("clock", BLUE), goal, "Allow agent in " + apps + " for " + minutes + " min?", BLUE, true);
+        LinearLayout details = col();
+        details.setVisibility(View.GONE);
+        details.addView(text("Asked by " + caller, 11, 500, L3), margin(0, dp(10)));
+        f.addView(details);
+        f.addView(acts(new View(svc), button("Not now", FILL14, L1, l::deny), button("Allow", BLUE, L1, l::approve)));
+        disclose(f, details);
+        open(f, BLUE);
     }
 
-    View header(Model m) {
-        TextView t = text("AgentOS wants to: " + m.title, 18, FG);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        t.setPadding(0, 0, 0, dp(8));
-        return t;
+    /** The task sheet (pill tap): goal, step, progress, Hide / Stop. */
+    void task() {
+        Island i = svc.island;
+        if (autoLabel != null) { why(); return; }
+        LinearLayout f = face(glyphIcon("stop", i.accent()), "AgentOS · " + i.state, i.goal.isEmpty() ? "Working" : i.goal, i.accent(), true);
+        f.addView(text(i.label.getText(), 13, 500, L2), margin(0, dp(10)));
+        if (i.pct >= 0) f.addView(new Bar(svc, i.accent(), i.pct / 100f), new LinearLayout.LayoutParams(-1, dp(4)) {{ topMargin = dp(10); }});
+        f.addView(acts(new View(svc), button("Hide", FILL14, L1, i::collapse), button("Stop", RED, L1, () -> { if (i.onStop != null) i.onStop.run(); i.collapse(); })));
+        open(f, i.accent());
     }
 
-    View row(String k, String v) {
-        TextView t = text(k + "   " + v, 14, FG);
-        t.setPadding(0, dp(2), 0, dp(2));
-        return t;
+    /** A quiet moment: the pill turns green and says "Auto-approved"; a tap reveals why. Restores the task pill after 2.6 s. */
+    void autoApproved(String action, String why) {
+        Island i = svc.island;
+        if (autoLabel == null) { autoState = i.state; autoLabel = i.label.getText().toString(); autoPct = i.pct; }
+        autoAction = action; autoWhy = why;
+        i.set("done", "Auto-approved ✓", -1);
+        i.postDelayed(this::restore, 2600);
     }
 
-    /** The Rule-of-Two chips: red when that property holds for this action. All three red = the dangerous combination. */
-    View chips(Model m) {
-        LinearLayout r = new LinearLayout(svc);
-        r.setPadding(0, dp(10), 0, dp(4));
-        r.addView(chip("untrusted input", m.untrusted));
-        r.addView(chip("private data", m.priv));
-        r.addView(chip("outward", m.outward));
+    /** Back to the task pill (or let the "done" pill auto-hide when there was no task). */
+    private void restore() {
+        if (autoLabel == null) return;
+        if (!"idle".equals(autoState) && !"done".equals(autoState)) svc.island.set(autoState, autoLabel, autoPct);
+        autoLabel = null;
+    }
+    private void why() {
+        LinearLayout f = face(glyphIcon("finger", GREEN), "Reviewer model · auto-approved", headline(autoAction), GREEN, false);
+        f.addView(text(autoWhy, 13, 400, L2), margin(0, dp(10)));
+        f.addView(acts(new View(svc), button("OK", FILL14, L1, () -> { svc.island.collapse(); restore(); })));
+        open(f, GREEN);
+    }
+
+    private void open(View f, int accent) { shownAt = SystemClock.uptimeMillis(); svc.island.expand(f, accent); }
+
+    // ---------------------------------------------------------------- pieces
+
+    /** Card scaffold: icon, source line, headline, optional breathing orb at the end. */
+    private LinearLayout face(View icon, String src, String title, int accent, boolean orb) {
+        LinearLayout f = col();
+        f.setPadding(dp(18), dp(16), dp(18), dp(16));
+        LinearLayout hd = row();
+        hd.addView(icon, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        LinearLayout tt = col();
+        tt.addView(text(src, 12, 500, L2));
+        tt.addView(text(title, 17, 600, L1));
+        hd.addView(tt, new LinearLayout.LayoutParams(0, -2, 1) {{ leftMargin = dp(11); }});
+        if (orb) hd.addView(new Orb(svc, accent), new LinearLayout.LayoutParams(dp(12), dp(12)) {{ leftMargin = dp(10); }});
+        f.addView(hd);
+        return f;
+    }
+
+    /** Tap on the card body toggles the details block; the island re-fits its height. */
+    private void disclose(View f, View details) {
+        f.setOnClickListener(v -> {
+            boolean show = details.getVisibility() != View.VISIBLE;
+            details.setVisibility(show ? View.VISIBLE : View.GONE);
+            if (show) { details.setAlpha(0); details.animate().alpha(1).setDuration(260).start(); }
+            svc.island.refit();
+        });
+    }
+
+    private View bubble(String s) {
+        TextView t = text(s, 14, 500, L1);
+        t.setBackground(capsule(svc, BLUE, 0, 18));
+        t.setPadding(dp(13), dp(8), dp(13), dp(8));
+        t.setMaxWidth(Math.round(dp(CARD_W - 36) * .88f));
+        FrameLayout w = new FrameLayout(svc);
+        w.addView(t, new FrameLayout.LayoutParams(-2, -2, Gravity.END));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
+        p.topMargin = dp(9);
+        w.setLayoutParams(p);
+        return w;
+    }
+
+    private View chips(String[] labels, boolean[] lit, int accent) {
+        LinearLayout r = row();
+        for (int i = 0; i < labels.length; i++) {
+            TextView t = text("● " + labels[i], 10.5f, 600, lit[i] ? accent : L3);
+            t.setBackground(capsule(svc, lit[i] ? (accent & 0x00FFFFFF) | 0x24000000 : 0, lit[i] ? (accent & 0x00FFFFFF) | 0x73000000 : 0x1AFFFFFF, 0));
+            t.setPadding(dp(8), dp(4), dp(8), dp(4));
+            r.addView(t, margin(i == 0 ? 0 : dp(6), 0));
+        }
         return r;
     }
 
-    View chip(String label, boolean on) {
-        TextView t = text((on ? "● " : "○ ") + label, 12, on ? FG : MUTED);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(on ? CHIP_ON : CHIP_OFF);
-        bg.setCornerRadius(dp(12));
-        t.setBackground(bg);
-        t.setPadding(dp(10), dp(4), dp(10), dp(4));
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2);
-        p.rightMargin = dp(6);
-        t.setLayoutParams(p);
-        return t;
-    }
-
-    View buttons(Listener l) {
-        LinearLayout r = new LinearLayout(svc);
-        r.setPadding(0, dp(12), 0, 0);
-        r.addView(button("Deny", DENY, l::deny), new LinearLayout.LayoutParams(0, dp(48), 1));
-        View gap = new View(svc);
-        r.addView(gap, new LinearLayout.LayoutParams(dp(10), 1));
-        r.addView(button("Approve with fingerprint", APPROVE, l::approve), new LinearLayout.LayoutParams(0, dp(48), 2));
+    private View hint(String glyph, int color, String s) {
+        LinearLayout r = row();
+        r.addView(new Glyph(svc, glyph, color), new LinearLayout.LayoutParams(dp(22), dp(22)));
+        r.addView(text(s, 12, 600, L2), margin(dp(8), 0));
         return r;
     }
 
-    Button button(String label, int color, Runnable onTap) {
-        Button b = new Button(svc);
-        b.setText(label);
-        b.setAllCaps(false);
-        b.setTextColor(FG);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(color);
-        bg.setCornerRadius(dp(14));
-        b.setBackground(bg);
+    private View acts(View left, View... buttons) {
+        LinearLayout r = row();
+        r.addView(left, new LinearLayout.LayoutParams(0, -2, 1));
+        for (View b : buttons) r.addView(b, new LinearLayout.LayoutParams(-2, dp(40)) {{ leftMargin = dp(8); }});
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
+        p.topMargin = dp(14);
+        r.setLayoutParams(p);
+        return r;
+    }
+
+    private TextView button(String label, int bg, int fg, Runnable onTap) {
+        TextView b = text(label, 15, 600, fg);
+        b.setGravity(Gravity.CENTER);
+        b.setPadding(dp(18), 0, dp(18), 0);
+        b.setBackground(capsule(svc, bg, 0, 0));
         b.setFilterTouchesWhenObscured(true);
-        b.setOnTouchListener((v, e) -> (e.getFlags() & FLAG_FROM_ACCESSIBILITY) != 0); // swallow agent-made touches
+        b.setOnTouchListener((v, e) -> { // only a real finger, >= 500 ms after the card appeared, reaches onClick (HumanTouch)
+            if (!HumanTouch.real(e, shownAt)) return true;
+            int a = e.getActionMasked();
+            if (a == MotionEvent.ACTION_DOWN) v.animate().scaleX(.94f).scaleY(.94f).setDuration(120).start(); // iOS press
+            else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) v.animate().scaleX(1).scaleY(1).setDuration(260).setInterpolator(SPRING).start();
+            return false;
+        });
         b.setOnClickListener(v -> onTap.run());
         return b;
     }
 
-    TextView text(String s, int sp, int color) {
-        TextView t = new TextView(svc);
-        t.setText(s);
-        t.setTextSize(sp);
-        t.setTextColor(color);
-        return t;
+    private View appIcon(String pkg) {
+        ImageView iv = new ImageView(svc);
+        Drawable d;
+        try { d = svc.getPackageManager().getApplicationIcon(pkg); } catch (Exception e) { d = svc.getPackageManager().getDefaultActivityIcon(); }
+        iv.setImageDrawable(d);
+        iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        iv.setOutlineProvider(new ViewOutlineProvider() { @Override public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), dp(10)); } });
+        iv.setClipToOutline(true);
+        return iv;
     }
 
-    int dp(int v) { return Math.round(v * svc.getResources().getDisplayMetrics().density); }
+    private View glyphIcon(String kind, int color) {
+        FrameLayout f = new FrameLayout(svc);
+        f.setBackground(capsule(svc, (color & 0x00FFFFFF) | 0x33000000, 0, 10));
+        f.addView(new Glyph(svc, kind, color), new FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER));
+        return f;
+    }
+
+    private String appLabel(String pkg) {
+        try { return String.valueOf(svc.getPackageManager().getApplicationLabel(svc.getPackageManager().getApplicationInfo(pkg, 0))); }
+        catch (Exception e) { return pkg; }
+    }
+
+    /** Broker's action string ("tap \"Send\"") as a headline: Tap “Send”? */
+    private static String headline(String s) {
+        if (s == null || s.isEmpty()) return "Approve?";
+        StringBuilder b = new StringBuilder();
+        boolean openQuote = true;
+        for (char c : s.toCharArray()) { if (c == '"') { b.append(openQuote ? '“' : '”'); openQuote = !openQuote; } else b.append(c); }
+        return Character.toUpperCase(b.charAt(0)) + b.substring(1) + "?";
+    }
+
+    private TextView text(CharSequence s, float sp, int weight, int color) { return Island.text(svc, s, sp, weight, color); }
+    private LinearLayout row() { LinearLayout l = new LinearLayout(svc); l.setGravity(Gravity.CENTER_VERTICAL); return l; }
+    private LinearLayout col() { LinearLayout l = new LinearLayout(svc); l.setOrientation(LinearLayout.VERTICAL); return l; }
+    private int dp(float v) { return svc.island.dp(v); }
 }

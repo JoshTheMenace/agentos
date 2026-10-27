@@ -89,9 +89,9 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         strip.setMode(mode);
         lastKey = "";
         if (privateField) {
-            strip.setContext(password ? "Password field · nothing sent" : "Private field · nothing sent", Theme.CORAL, "");
+            strip.setContext(password ? "Password field · nothing sent" : "Private field · nothing sent", Theme.CORAL);
             strip.setItems(new ArrayList<String>(), false);
-        } else request(); // prefetch on focus: replies are usually ready before the user looks down
+        } else { ui.removeCallbacks(debounced); ui.postDelayed(debounced, Theme.FOCUS_SETTLE); } // prefetch on focus (after the app's screen settles)
     }
 
     @Override public void onFinishInputView(boolean finishingInput) {
@@ -114,7 +114,14 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     private String after(int n) { InputConnection ic = getCurrentInputConnection(); CharSequence s = ic == null ? null : ic.getTextAfterCursor(n, 0); return s == null ? "" : s.toString(); }
 
     // ---- keys ----
-    @Override public void onText(String t) { InputConnection ic = getCurrentInputConnection(); if (ic != null) ic.commitText(t, 1); }
+    private long lastSpace;
+    @Override public void onText(String t) {
+        InputConnection ic = getCurrentInputConnection(); if (ic == null) return;
+        long now = android.os.SystemClock.uptimeMillis();
+        if (t.equals(" ") && now - lastSpace < Theme.DOUBLE_TAP && before(2).matches("\\w ")) { ic.deleteSurroundingText(1, 0); t = ". "; } // iOS: double space = period
+        lastSpace = t.equals(" ") ? now : 0;
+        ic.commitText(t, 1);
+    }
     @Override public void onBackspace() {
         InputConnection ic = getCurrentInputConnection(); if (ic == null) return;
         CharSequence sel = ic.getSelectedText(0);
@@ -146,7 +153,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         final int g = ++gen;
         final String b = before(MAX_BEFORE), a = after(MAX_AFTER);
         if (mode != MODE_REPLY && b.trim().isEmpty() && a.trim().isEmpty()) {
-            strip.setContext(app + " · empty draft", Theme.IDLE, "");
+            strip.setContext(app + " · empty draft", Theme.IDLE);
             strip.setItems(Arrays.asList(mode == MODE_REWRITE ? "Type a draft to rewrite" : "Type a draft to fix"), false);
             return;
         }
@@ -168,8 +175,9 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
             final int redacted = red[0];
             List<String> hit;
             synchronized (cache) { hit = cache.get(cacheKey); }
-            if (hit != null) { final List<String> h = hit; ui.post(() -> { if (g == gen) { strip.setContext(ctxLabel, Theme.GREEN, "cached"); strip.setItems(h, true); } }); return; }
-            ui.post(() -> { if (g == gen) strip.setContext(ctxLabel, Theme.AMBER, "thinking"); });
+            if (hit != null) { final List<String> h = hit; ui.post(() -> { if (g == gen) { strip.setContext(ctxLabel + " · cached", Theme.GREEN); strip.setItems(h, true); } }); return; }
+            ui.post(() -> { if (g == gen) strip.setContext(ctxLabel + " · thinking", Theme.AMBER); });
+            Log.d(Agent.TAG, "context " + ctxLabel + " before=\"" + b + "\" screen=" + lines);
             try {
                 JSONObject ctx = new JSONObject().put("pkg", pkg).put("app", app).put("hint", hint).put("inputType", inputType).put("before", Agent.redact(b, red)).put("after", Agent.redact(a, red))
                     .put("screen", lines).put("redacted", redacted).put("untrusted", true);
@@ -179,13 +187,13 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
                 ui.post(() -> {
                     if (g != gen) return;
                     String label = r.flagged > 0 && sc.flagged == 0 ? ctxLabel + " · " + r.flagged + " flagged" : ctxLabel; // agentd's guard withheld lines
-                    strip.setContext(label, r.items.isEmpty() ? Theme.CORAL : Theme.GREEN, String.format("%s %.1fs", r.how, r.ms / 1000.0));
+                    strip.setContext(label + String.format(" · %s %.1fs", r.how, r.ms / 1000.0), r.items.isEmpty() ? Theme.CORAL : Theme.GREEN);
                     strip.setItems(r.items.isEmpty() ? Arrays.asList("No suggestion") : r.items, !r.items.isEmpty());
                 });
             } catch (Exception e) {
                 Log.w(Agent.TAG, "suggest failed", e);
                 lastKey = ""; // let the next edit retry
-                ui.post(() -> { if (g == gen) { strip.setContext(app + " · agentd offline", Theme.CORAL, ""); strip.setItems(Arrays.asList(String.valueOf(e.getMessage())), false); } });
+                ui.post(() -> { if (g == gen) { strip.setContext(app + " · agentd offline", Theme.CORAL); strip.setItems(Arrays.asList(String.valueOf(e.getMessage())), false); } });
             }
         });
     }

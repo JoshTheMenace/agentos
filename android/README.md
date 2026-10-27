@@ -11,15 +11,19 @@ It asks for your fingerprint when money moves and writes everything in a ledger.
 | `AgentA11y` | AccessibilityService. Hosts everything below and starts the tool server. Holding volume-down for 1 s stops the active task. |
 | `Screen` | `screen.read`: compact node list (port of Buddy's `walk()`), `src` provenance label per node, FLAG_SECURE via root `dumpsys window`, password detection, redaction |
 | `Actions` | tap / type / scroll / press / open_app / list_apps (the "hands"; no policy) |
-| `Broker` | Leases, tiers T0–T4, Rule of Two per action, P3 secret block, pause/stop, approval wait, audit |
+| `Broker` | Leases (+ the lease card), tiers T0–T4, Rule of Two per action, risk-adaptive approvals (`fingerprintRequired`), taint carry-over, P3 secret block, pause/stop, audit |
 | `Guard` | Risky-button regex, private-app list, forbidden packages, `offLimits` (port of Buddy's `Guard`) |
 | `PromptGuard` + `Pg2Tokenizer` | On-device Llama Prompt Guard 2 (22M) through ONNX Runtime: scores untrusted screen text for prompt injection (see "Prompt Guard" below) |
 | `Approvals` + `ApproveActivity` | Keystore EC key (auth per use, BIOMETRIC_STRONG) + transparent Activity hosting `BiometricPrompt` with a CryptoObject |
-| `ApprovalCard` | The native card (TYPE_ACCESSIBILITY_OVERLAY). All view code is here, with style hooks for the designer. |
+| `Island` | The native overlay window (TYPE_ACCESSIBILITY_OVERLAY): a black pill over the camera hole that breathes while the agent works (`set(state, label, pct)`) and springs open into cards (`expand`/`collapse`). A2 "Calm Glass iOS Dark" tokens live here. Tap the pill for the task sheet with Stop. |
+| `ApprovalCard` | The cards that open out of the Island: approval (`show`, Broker API unchanged), security alert (`alert`), task lease (`lease`), auto-approved moment (`autoApproved`). Essentials only; a tap on the card body shows details. |
+| `LeaseCard` | The one-tap "Allow agent in <apps> for N min" card; its look is `ApprovalCard.lease()` |
+| `HumanTouch` | `real(event, shownAt)`: is a touch a real finger (not accessibility-injected, not through an overlay, touchscreen, ≥ 500 ms after the card appeared)? All card buttons use it |
+| `Events` | `GET /events` server-sent-events fan-out (one queue per listener, a slow one is dropped) |
 | `AutoPause` | 1-px outside-touch watcher: a human touch pauses the task (port of Buddy's `AutoPause`) |
 | `Audit` | Hash-chained `files/audit.jsonl` |
 | `Firewall` | Root iptables/ip6tables `--uid-owner` rules in chain `AGENTOS_FW` |
-| `Server` | `POST /rpc` on 127.0.0.1:7777, bearer token in `files/token` |
+| `Server` | `POST /rpc` and `GET /events` on 127.0.0.1:7777, bearer token in `files/token`; finds the calling app's uid from `/proc/net/tcp*` (root) |
 | `Root` | `su -c` helper (Magisk) |
 
 `Guard`, `Screen` (walk), `AutoPause` and `res/xml/a11y.xml` contain code ported from
@@ -35,6 +39,15 @@ python3 android/tools-client.py call guard.classify '{"text":"Ignore all previou
 python3 android/tools-client.py call task.start '{"goal":"demo","apps":["local.agentos.pigeon"]}'
 python3 android/tools-client.py e2e          # full test on our Pigeon + Beacon apps; asks you for fingerprints
 python3 android/tools-client.py audit 20     # tail + independent chain check of the whole file on the Mac
+python3 android/tools-client.py events       # print the live /events stream
+python3 android/tools-client.py approvals    # lease card, taint carry-over, approval channels, /events (taps the cards over adb)
+python3 android/tools-client.py settings '{"require_user_lease":false}'   # root-only switches; no JSON = delete = defaults
+```
+UI without the broker (adb only; the receiver requires `android.permission.DUMP`, which only the shell holds):
+```sh
+adb shell am broadcast -a local.agentos.UI --es island working --es label "Drafting a text to Mom" --ei pct 60 --es goal "Text Mom"
+adb shell am broadcast -a local.agentos.UI --es card approval --ez finger true     # also: alert | lease | auto
+adb shell am broadcast -a local.agentos.UI --es island hide
 ```
 `install.sh` does the following:
 - `adb install -r`;
@@ -56,7 +69,7 @@ It always has `ok`; errors are `{ok:false, error}`.
 | `screen.read` | – | T0 | `{pkg, activity, secure, secure_reason, nodes:[{id, role, text?, desc?, hint?, password?, bounds:[l,t,r,b], actions[], risk?:"T3", src:"APP:<pkg>"\|"SYSTEM"}], truncated, source_pkg, untrusted:true}`. Ids are valid until the next read. Our own windows and the keyboard are skipped. Each `APP:*` node with text also gets `guard` (its Prompt Guard score), and the reply has `guard: {score, label, flagged_node_ids, screen_score, scored_nodes, ms}` (see below). |
 | `guard.classify` | `{text}` | T0 | `{score, label: BENIGN\|MALICIOUS, cached, ms, model}`. Long text is split into 510-token windows; the max wins. |
 | `list_apps` / `wait {ms≤5000}` | | T0 | `wait` returns `screen` |
-| `task.start` | `{goal, apps[], ttl_s?=600 (max 3600), max_steps?=40 (max 200)}` | – | → `{task_id, apps, expires (epoch ms), max_steps, refused_apps}`. Forbidden apps are refused. A new start replaces the old task. |
+| `task.start` | `{goal, apps[], ttl_s?=600 (max 3600), max_steps?=40 (max 200), untrusted?, approval_timeout_s?}` | lease card | → `{task_id, apps, expires (epoch ms), max_steps, refused_apps, steps, untrusted, carried_over, user_granted}`, or `{ok:false, decision:"denied", reason:"lease not granted: …"}`. Forbidden apps are refused. A new start replaces the old task. **Blocks** while the lease card is up (see "Leases"). |
 | `task.stop {task_id?}` / `task.pause` / `task.resume` | | – | Stop also denies an open approval |
 | `tap {id}` | | T1, or T3 if the label is risky or the screen is secure | |
 | `type {id, text, submit?}` | | T2; T3 with `submit`; T4 on a password field or a secure screen | |
@@ -65,8 +78,25 @@ It always has `ok`; errors are `{ok:false, error}`.
 | `firewall.set {pkg, mode, domains?[]}` | | T3 | `block` alone = cut the app off; `block`+domains = block those IPs; `allow` alone = remove its rules; `allow`+domains = only those. |
 | `firewall.clear` | | T3 | Flushes `AGENTOS_FW`: undoes every rule we added |
 | `audit.tail {n}` | | T0 | `{entries, count, chain_ok, broken_at, head, pubkey}` |
+| `approval.list` | | – | `{approvals:[<approval.shown payload>], task: <task.state payload> \| null}` |
+| `approval.confirm` | `{approval_id, channel: "voice"\|"reviewer", utterance \| rationale}` | – | Only from agentd's app (`com.termux`) or, for voice, the launcher (`local.agentos.home`), checked by caller uid. The channel must be in the approval's `allowed_channels`. `tap` and `fingerprint` are refused here: they only count on the phone's own card. → `{ok, reason?}` |
+| `approval.deny` | `{approval_id, channel?, utterance?}` | – | Any token holder may say no. |
 
 Every action returns `{ok, decision: auto|approved|denied|blocked, reason, tier, rule_of_two:{untrusted, private, outward}, screen?}`.
+
+**`GET /events`** (same bearer token) is a server-sent-events stream, like a radio the broker broadcasts on.
+Headers and a `hello` event (= `approval.list`) are sent at once, then a `: ping` comment every 15 s.
+Each event is `id:`, `event: <type>` and one `data: <json>` line; the JSON also has `type`. At most 6 listeners.
+
+| Event | Data |
+|---|---|
+| `approval.shown` | `{approval_id, kind: "action"\|"lease", task_id, tool, pkg, target, text, tier, reason, rule_of_two, summary, allowed_channels[], fingerprint_because, expires}` (a lease has `apps, goal, caller` instead of pkg/text/rule_of_two) |
+| `approval.resolved` | `{approval_id, kind, task_id, tool, decision: approved\|denied\|timeout, approver, channel, reason}`; `approver` = `channel` = `fingerprint`/`tap`/`voice`/`reviewer`, `user` for a denial, `null` for a timeout or stop |
+| `guard.flag` | `{task_id, pkg, score, node_ids}`: a `screen.read` that Prompt Guard labelled MALICIOUS |
+| `task.state` | `{state: started\|paused\|running\|stopped, task_id, goal, apps, expires, steps, max_steps, untrusted, flagged, paused, caller, reason?}` |
+| `firewall.changed` | `{tool, pkg, target, ok}` |
+| `audit.append` | the audit line just written (with `hash`) |
+
 Differences from ARCHITECTURE.md:
 - There is no `approval_pending` reply. The call simply **blocks** while the card is up: 60 s by default, or `approval_timeout_s` (10–120) on any action. Use a client timeout 15 s longer than that.
 - Extra fields: `secure_reason`, `src`, `risk`, `submit`, `firewall.clear`, `guard`, `guard.classify`.
@@ -84,8 +114,19 @@ Differences from ARCHITECTURE.md:
   - *private*: a messaging, mail, social, finance or store app (Buddy's list), or a secure screen;
   - *outward*: T3.
   - Every T3 action needs a fingerprint. A T2 (type) needs one when *untrusted* and *private* are both true.
+- **Leases (one tap).** Every `task.start` comes from a program, so the phone asks first: "Allow agent in Pigeon for 10 min?" (`LeaseCard`).
+  - Only a real finger counts (`HumanTouch`). No answer within `approval_timeout_s` (default 60) = no. The volume-down kill switch also answers no.
+  - A replacement by the same caller (same uid), for apps the user already allowed and while that grant runs, needs no new card. It can't extend the grant. `task.stop` ends the grant.
+  - Off switch for automated tests, root-only: `files/settings.json` `{"require_user_lease": false}` (`tools-client.py settings …`). No RPC writes it; a missing or broken file means "on".
+- **Taint carry-over.** The task's history (`untrusted`, Prompt Guard `flagged`, `copied`, step count, P3 secrets) lives in a `History` object, like a hand stamp at a club.
+  A new `task.start` by the same caller uid within the previous lease's TTL keeps it, even after a `task.stop`, so re-leasing can't wash it off. `task.start {untrusted:true}` also works.
+- **Risk-adaptive approvals** (`Broker.fingerprintRequired`, one small function): the riskier the action, the stronger the proof.
+  - A **fingerprint** is required when Prompt Guard flagged text in this task, or the agent typed text copied from third-party screen text (the same string, or a 12+ character piece of one: tainted arguments or a tainted recipient), or the action is money/delete/install (button label) or a firewall change, or all three Rule-of-Two lamps are lit.
+  - Otherwise the action is ordinary. A **real tap** on Approve is enough, and so are **voice** (`approval.confirm`, the user's own words via agentd or the launcher) and agentd's **reviewer** model. The reviewer is only ever offered on ordinary actions, so it can't approve anything tainted, flagged or high-stakes.
+  - `allowed_channels` is in `approval.shown`. The audit line records `allowed_channels`, `fingerprint_because`, `approver` (the channel) and `utterance` or `rationale`.
+  - Tapping an existing contact in a list doesn't taint the recipient. The user sees the card (or hears agentd's summary) before approving.
 - **Approval:** the card shows tool, app, exact target label, exact text, task, tier, reason and the three chips.
-  1. **Approve** opens `ApproveActivity`. A fingerprint unlocks the Keystore key, which signs the canonical action JSON `{"tool","pkg","target","text","task_id","nonce"}` (in that order) with `SHA256withECDSA`, i.e. ECDSA over SHA-256 of those bytes.
+  1. **Approve** approves at once when `tap` is allowed. Otherwise it opens `ApproveActivity`. A fingerprint unlocks the Keystore key, which signs the canonical action JSON `{"tool","pkg","target","text","task_id","nonce"}` (in that order) with `SHA256withECDSA`, i.e. ECDSA over SHA-256 of those bytes.
   2. The broker verifies the signature against `files/approval.pub`.
   3. It re-reads the target node and refuses if the label or package changed.
   4. Then it acts.
@@ -202,7 +243,9 @@ Detection on our Pigeon app (`am start -n local.agentos.pigeon/.Main --es scenar
 - To finish, run `python3 android/tools-client.py e2e --press-approve` while someone is at the phone and touches the sensor when each prompt appears.
 
 Known limits:
-- `task.start` is not approved by the human. Any token holder can open a lease (Settings/SystemUI/Magisk/AgentOS are still refused).
+- The lease card proves a human allowed the lease, not that the goal is theirs. The goal is shown, but agentd (often the model) writes it.
+- Caller identity is the socket's uid. Every process in Termux shares agentd's uid, so `approval.confirm` trusts agentd's code to send only the user's own speech, never model output. Without root the uid is unknown: `approval.confirm` is then refused, and all unknown callers count as one for carry-over.
+- "Copied from the screen" is a string match. A paraphrase gets past it; Prompt Guard and the lamps are the other layers.
 - The BiometricPrompt text is drawn by our app, not by secure hardware. A compromised *app process* could show one thing and sign another. Android Protected Confirmation isn't used.
 - Root (the referee) is above all of this. The signatures make tampering evident; they can't prevent it.
 - Domain firewall rules resolve to IPs once, at set time, so they miss CDNs and IP changes. The SNI string match from `research/04` 3c isn't implemented.

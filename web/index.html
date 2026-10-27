@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>AgentOS</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M6 11a6 6 0 0 0 12 0M12 17v4m-4 0h8"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="m15 5-7 7 7 7"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12.5 12H21m-3 0v3m-3-3v2"/></symbol>
+  <symbol id="i-finger" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 11a6 6 0 0 1 12 0v2"/><path d="M9 11a3 3 0 0 1 6 0v4a6 6 0 0 1-1 3"/><path d="M12 11v6a3 3 0 0 0 3 3"/><path d="M4 14v-3a8 8 0 0 1 12-7"/><path d="M12 14v3"/></g></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l1.8 5.7L19.5 9.5l-5.7 1.8L12 17l-1.8-5.7L4.5 9.5l5.7-1.8L12 2Zm7 12 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-7-4.6-9-9.2C1.6 8.4 3.6 5 7 5c2 0 3.4 1.1 5 3 1.6-1.9 3-3 5-3 3.4 0 5.4 3.4 4 6.8C19 16.4 12 21 12 21Z"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="currentColor" d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" d="M4 6h16v14H4zM4 10h16M8 3v4m8-4v4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 3v8M6.3 7A8 8 0 1 0 17.7 7"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M7 5h4v14H7zm6 0h4v14h-4z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></symbol>
+  <symbol id="i-kbd" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M7 14h10"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path fill="none" stroke="currentColor" stroke-width="1.9" d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 3 5 6v5c0 5 3.5 8.5 7 10 3.5-1.5 7-5 7-10V6l-7-3Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 9v4m0 3h.01"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m16 16 4.5 4.5"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" d="M7 18a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.3A3.4 3.4 0 0 1 17 18H7Z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" d="M12 2.5l1.6 2.6 3-.5 1 2.9 2.9 1-.5 3L22 12l-2 2 .5 3-2.9 1-1 2.9-3-.5L12 21.5l-1.6-2.6-3 .5-1-2.9-2.9-1 .5-3L2 12l2-1.5-.5-3 2.9-1 1-2.9 3 .5z"/></symbol>
+</svg>
+
+<div class="wall"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+
+<main id="pager">
+  <!-- 1 HOME -->
+  <section class="page" id="home">
+    <div class="h-date" id="date"></div>
+    <div class="h-time title" id="time"></div>
+    <div class="h-status"><span class="orb" id="sorb"></span><span id="status">Ready</span></div>
+    <button class="glass trust" id="trust"><svg width="16" height="16"><use href="#i-key"/></svg><span id="trustTxt">No active grants</span><svg width="16" height="16"><use href="#i-chev"/></svg></button>
+    <div class="widgets">
+      <div class="glass w cal rise" id="wcal">
+        <div class="hd" style="color:var(--red)"><span class="ai" style="background:var(--red)"><svg width="10" height="10"><use href="#i-cal"/></svg></span><span id="calWhen">Next</span></div>
+        <div class="row"><div><div class="t" id="calTitle">Nothing scheduled</div><div class="s" id="calSub">This week</div></div><button class="pillbtn blue" id="calBtn" hidden>Open</button></div>
+      </div>
+      <div class="two rise" style="animation-delay:.12s">
+        <div class="glass w mini"><span class="ai" style="background:var(--pink)"><svg width="10" height="10"><use href="#i-heart"/></svg></span><b>72</b><small>bpm</small><em>demo</em></div>
+        <div class="glass w mini"><span class="ai" style="background:var(--orange)"><svg width="10" height="10"><use href="#i-bolt"/></svg></span><b>Lamp</b><small>on</small><em>demo</em></div>
+      </div>
+    </div>
+    <div class="h-foot">
+      <div class="glass cmd" id="cmd"><svg width="16" height="16" style="color:var(--blue)"><use href="#i-spark"/></svg><span>What should I do?</span><button class="mic" id="micBtn"><svg width="19" height="19"><use href="#i-mic"/></svg></button></div>
+      <div class="pagedots" id="dots"><i class="on"></i><i></i><i></i></div>
+      <div class="glass dock" id="dock"></div>
+    </div>
+  </section>
+
+  <!-- 2 COMMAND CENTER -->
+  <section class="page scroll" id="center">
+    <h2 class="title"><span class="orb" id="corb"></span>Command center<button class="kill" id="kill"><i><svg width="11" height="11"><use href="#i-power"/></svg></i>Stop all</button></h2>
+    <div class="mod rise"><div class="k">Tasks<span id="taskCount"></span></div><div id="tasks"></div></div>
+    <div class="mod rise" style="animation-delay:.08s"><div class="k">Model</div><div class="seg" id="prov"><button data-p="codex">Codex</button><button data-p="local">Local</button></div></div>
+    <div class="mod rise" style="animation-delay:.16s"><div class="k">Recent<span id="recentNote">today</span></div><ul class="log" id="recent"></ul></div>
+    <button class="mod link rise" id="toPerms" style="animation-delay:.24s"><svg width="18" height="18"><use href="#i-key"/></svg>Permissions<svg width="16" height="16" class="chev"><use href="#i-chev"/></svg></button>
+    <button class="mod link rise" id="toSettings" style="animation-delay:.3s"><svg width="18" height="18"><use href="#i-gear"/></svg>Settings<svg width="16" height="16" class="chev"><use href="#i-chev"/></svg></button>
+  </section>
+
+  <!-- 3 MEMORY -->
+  <section class="page scroll" id="memory">
+    <h2 class="title">Memory<span class="k" id="memNote"></span></h2>
+    <div class="mod graph rise"><svg id="gsvg"></svg><div class="gdet" id="gdet">Tap a person</div></div>
+    <div class="mod rise" style="animation-delay:.08s"><div class="k">Sources</div><div id="sources"></div></div>
+  </section>
+</main>
+
+<!-- PERMISSIONS -->
+<section class="over slide" id="perms">
+  <div class="bar"><button class="back" id="permsBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Permissions</h2></div>
+  <div class="scroll body">
+    <div class="mod"><div class="k">Grants<span id="grantNote"></span></div><div id="grants"></div></div>
+    <div class="mod"><div class="k">Network</div><div class="fw" id="fw"></div></div>
+    <div class="mod"><div class="k">Memory sources</div><div id="psources"></div></div>
+    <div class="mod"><div class="k">Never</div><div class="never" id="never"></div></div>
+  </div>
+</section>
+
+<!-- APP DRAWER -->
+<section class="over slide drawer" id="drawer">
+  <div class="grab"></div>
+  <label class="glass search"><svg width="18" height="18"><use href="#i-search"/></svg><input id="q" placeholder="Search" autocomplete="off" autocorrect="off"></label>
+  <div class="grid scroll" id="grid"></div>
+</section>
+
+<!-- ASK SHEET -->
+<div class="scrim" id="scrim"></div>
+<section class="over sheet glass ink" id="sheet">
+  <div class="grab"></div>
+  <div class="shd"><span class="orb" id="shorb"></span><span id="shstate">Ask</span><button class="pillbtn" id="shstop" hidden>Stop</button></div>
+  <div class="body scroll" id="shbody"></div>
+  <form class="ask" id="askForm"><input id="askIn" placeholder="What should I do?" autocomplete="off" autocorrect="off" enterkeyhint="send"><button class="send" type="submit"><svg width="18" height="18"><use href="#i-send"/></svg></button></form>
+</section>
+
+<!-- VOICE -->
+<section class="over voice" id="voice">
+  <div class="vedge"><i></i></div>
+  <div class="vglow g1"></div><div class="vglow g2"></div><div class="vglow g3"></div>
+  <div class="vstate"><span class="orb approval"></span><span id="vstate">Connecting</span></div>
+  <div class="tx"><p class="u" id="vu"></p><p class="a" id="va"></p></div>
+  <ul class="vsteps" id="vsteps"></ul>
+  <div class="sorb" id="sorbBtn"><i class="halo2"></i><i class="halo"></i><i class="core"></i></div>
+  <div class="wave" id="wave"></div>
+  <div class="vfoot"><button class="kbtn" id="vkbd"><svg width="20" height="20"><use href="#i-kbd"/></svg></button><span id="vhint">Hold the orb to talk</span><button class="kbtn red" id="vend"><svg width="18" height="18"><use href="#i-power"/></svg></button></div>
+  <audio id="spk" autoplay></audio>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>
