@@ -7,6 +7,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const N = window.Native || { // browser shims
   info: () => JSON.stringify({ pkg: 'browser', dev: true, top: 28, bottom: 0, ime: 0 }), token: () => null, launch: () => false, haptic: () => {},
   settings: () => {}, shade: () => {}, calendarNext: () => null, get: (id) => setTimeout(() => app.rpcDone(id, { ok: false, error: 'browser' })),
+  phone: (id) => setTimeout(() => app.rpcDone(id, { ok: false, error: 'browser' })), vaultAdd: () => {},
   apps: () => JSON.stringify([['local.agentos.pigeon', 'Pigeon'], ['local.agentos.beacon', 'Beacon'], ['com.android.chrome', 'Chrome'], ['com.android.camera2', 'Camera'], ['com.google.android.calendar', 'Calendar']].map(([pkg, label]) => ({ pkg, label }))),
 };
 const app = window.app = {};
@@ -40,12 +41,14 @@ connect();
 // ---------- tool server RPC through agentd's allow-listed passthrough (firewall.set waits on the native tap card) ----------
 let rid = 0; const pend = {};
 const rpc = (method, params = {}) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; if (!send({ type: 'rpc', id, method, params })) app.rpcDone(id, { ok: false, error: 'offline' }); });
+// The owner line: this app's own uid straight to the broker (Blockers taps, Passwords). The broker knows it's the owner by uid, so no card.
+const phone = (method, params = {}) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; N.phone ? N.phone(id, method, JSON.stringify(params)) : app.rpcDone(id, { ok: false, error: 'no owner line' }); });
 const nget = (path) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; N.get(id, path); }); // agentd GET via the shell (cross-origin)
 app.rpcDone = (id, r) => { pend[id]?.(r); delete pend[id]; };
 on('rpc.result', (m) => app.rpcDone(m.id, m.result));
 
 // ---------- state ----------
-const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [], sugg: [], step: null, home: null, trackers: null, tasks: new Map(), mods: null }; // tasks = agentd background workers (task.update) // active = latest task.state; home = a turn started from a home suggestion
+const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [], sugg: [], step: null, home: null, trackers: null, tasks: new Map(), mods: null, vault: null, sched: [] }; // tasks = agentd background workers (task.update) // active = latest task.state; home = a turn started from a home suggestion
 const appName = (pkg) => S.names[pkg] || (pkg || '').split('.').pop().replace(/^\w/, (c) => c.toUpperCase());
 const fmtT = (ts, sec) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}) }).replace(/\s?[AP]M/i, '');
 const short = (s, n = 48) => (s = String(s || '')).length > n ? s.slice(0, n - 1) + '…' : s;
@@ -74,6 +77,11 @@ const auditLine = (e) => {
     case 'firewall.clear': return ['Firewall cleared', e.decision === 'approved' ? 'g' : 'c'];
     case 'guard.flag': return [`Suspicious text in ${app_} · hidden from the agent`, 'c'];
     case 'tracker.blocked': return [`Blocked ${short(e.domain, 28)} · ${app_}`, 'g'];
+    case 'trackers.block': return [`Block trackers · ${app_}`, e.decision === 'approved' ? 'g' : 'c'];
+    case 'trackers.unblock': return [`Unblock trackers · ${app_}`, e.decision === 'approved' ? 'g' : 'c'];
+    case 'vault.fill': return [e.decision === 'approved' ? `Signed in to ${app_} with a saved password` : `Sign-in to ${app_} not filled`, e.decision === 'approved' ? 'g' : 'c'];
+    case 'vault.add': return [`Saved a password · ${app_}`, 'g'];
+    case 'vault.remove': return ['Removed a saved password', ''];
     case 'notifications.reply': return [`Reply ${tgt} · ${app_}`, e.decision === 'approved' ? 'g' : e.decision === 'denied' || e.decision === 'blocked' ? 'c' : 'a'];
     case 'notifications.autoreply': return [`Auto-reply ${tgt} · ${app_}`, e.decision === 'blocked' || e.decision === 'denied' ? 'c' : 'g'];
     default: return [`${e.tool.replace(/[._]/g, ' ').replace(/^\w/, (c) => c.toUpperCase())} ${tgt} ${app_ || ''}`.trim(), e.decision === 'approved' ? 'g' : e.decision === 'denied' || e.decision === 'blocked' ? 'c' : 'a'];
@@ -110,11 +118,18 @@ function workerCard(w) {
   return c;
 }
 on('task.update', (m) => { const w = m.task; if (!w?.id) return; S.tasks.set(w.id, w); if (!WORKING.has(w.state)) setTimeout(() => { if (S.tasks.get(w.id) === w) { S.tasks.delete(w.id); renderNow(); renderCenter(); } }, 20000); renderNow(); renderCenter(); });
+// Scheduled tasks (agentd schedule.js): the next ones show on Home when nothing runs; x cancels.
+on('schedule.list', (m) => { S.sched = m.items || []; renderNow(); });
+function schedCard(x) {
+  const c = el('div', 'glass now', `<div class="hd"><svg width="16" height="16" style="color:var(--blue);flex:none"><use href="#i-cal"/></svg><div><div class="t">${esc(short(x.prompt, 40))}</div><div class="s">${esc(x.next)}${x.repeat !== 'none' ? ' · ' + esc(x.repeat) : ''}</div></div><button class="ib"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`);
+  $('button', c).onclick = () => { hap(); send({ type: 'schedule.cancel', id: x.id }); };
+  return c;
+}
 on('task.list', (m) => { S.tasks = new Map((m.tasks || []).filter((w) => WORKING.has(w.state)).map((w) => [w.id, w])); renderNow(); renderCenter(); });
 function renderNow() {
   const box = $('#now'), t = S.active, h = S.home, ws_ = [...S.tasks.values()].sort((a, b) => WORKING.has(b.state) - WORKING.has(a.state) || b.created - a.created);
   if (ws_.length) return box.replaceChildren(...ws_.slice(0, 3).map(workerCard));
-  if (!t && !S.turn) { if (h?.done) { const c = el('button', 'glass now done', `<div class="hd"><span class="orb done"></span><div><div class="t">${esc(short(h.goal, 40))}</div><div class="s">${esc(short(h.text || 'Done', 60))}</div></div></div>`); c.onclick = () => { hap(); open('sheet'); }; return box.replaceChildren(c); } return box.replaceChildren(); }
+  if (!t && !S.turn) { if (h?.done) { const c = el('button', 'glass now done', `<div class="hd"><span class="orb done"></span><div><div class="t">${esc(short(h.goal, 40))}</div><div class="s">${esc(short(h.text || 'Done', 60))}</div></div></div>`); c.onclick = () => { hap(); open('sheet'); }; return box.replaceChildren(c); } return box.replaceChildren(...S.sched.slice(0, 2).map(schedCard)); }
   const goal = short(t?.goal || h?.goal || 'Thinking', 40), last = t && S.audit.filter((e) => e.task === t.task_id && !/^task\./.test(e.tool)).pop();
   const step = S.pending ? 'Waiting for you' : t?.paused ? 'Paused' : S.step || (last ? auditLine(last)[0] : 'Starting'), cls = S.pending ? 'approval' : 'working';
   const c = el('button', 'glass now ' + cls, `<div class="hd"><span class="orb ${cls}"></span><div><div class="t">${esc(goal)}</div><div class="s">${esc(step)}${t ? ' · ' + esc(t.apps.map(appName).join(', ')) : ''}</div></div>${t ? `<button class="ib" data-a="${t.paused ? 'resume' : 'pause'}"><svg width="14" height="14"><use href="#i-${t.paused ? 'play' : 'pause'}"/></svg></button>` : ''}<button class="ib red" data-a="stop"><svg width="14" height="14"><use href="#i-stop"/></svg></button></div><div class="bar2"><i></i></div>`);
@@ -209,7 +224,7 @@ function open(id) { const o = $('#' + id); if (o.classList.contains('on')) retur
 function close(id) { const o = $('#' + id); o.classList.remove('on'); const i = stack.indexOf(id); if (i >= 0) stack.splice(i, 1); if (id === 'sheet') { $('#scrim').classList.remove('on'); $('#askIn').blur(); } if (id === 'voice') voiceStop(); }
 app.back = () => { if (stack.length) close(stack[stack.length - 1]); else if (page) go(0); };
 app.home = () => { [...stack].forEach(close); go(0); };
-app.resume = () => { W = innerWidth; wsOk && refresh(); if (page === 2) loadMemory(); };
+app.resume = () => { W = innerWidth; wsOk && refresh(); if (page === 2) loadMemory(); if ($('#vault').classList.contains('on')) loadVault(); };
 $('#scrim').onclick = () => close('sheet');
 $('#permsBack').onclick = () => close('perms');
 $('#drawer .grab').onclick = () => close('drawer');
@@ -217,6 +232,9 @@ $('#toBlockers').onclick = $('#toBlockers2').onclick = () => { hap(); openBlocke
 $('#blockersBack').onclick = () => close('blockers');
 $('#toMods').onclick = () => { hap(); openMods(); };
 $('#modsBack').onclick = () => close('mods');
+$('#toVault').onclick = () => { hap(); openVault(); };
+$('#vaultBack').onclick = () => close('vault');
+$('#vaultAdd').onclick = () => { hap('heavy'); N.vaultAdd(''); };
 $('#toPerms').onclick = () => { hap(); openPerms(); };
 $('#toSettings').onclick = () => { hap(); N.settings(''); };
 $('#cmd').onclick = (e) => { if (e.target.closest('.mic')) return; hap(); open('sheet'); setTimeout(() => $('#askIn').focus(), 350); };
@@ -236,10 +254,11 @@ function renderCenter() {
   const today = new Date().setHours(0, 0, 0, 0);
   const recent = S.audit.filter((e) => e.ts >= today).slice(-60).reverse(), bad = recent.filter((e) => e.tool === 'guard.flag' || /denied|blocked/.test(e.decision || '')).length;
   $('#recentNote').textContent = recent.length ? `${recent.length} today${bad ? ` · ${bad} blocked` : ''}` : 'quiet today';
-  $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Flagged' : e.decision === 'blocked' ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (e.approver === 'reviewer' || e.channel === 'reviewer' ? 'Auto' : 'Approved') : '';
+  $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Flagged' : e.decision === 'blocked' ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (/^(reviewer|policy)$/.test(e.approver || e.channel) ? 'Auto' : 'Approved') : '';
     return el('li', c === 'c' ? 'flag' : '', `<time>${fmtT(e.ts, true)}</time><i class="${c}"></i><span>${esc(txt)}</span>${tg ? `<em class="tg ${c === 'g' ? 'g' : ''}">${tg}</em>` : ''}`); }));
   if (!recent.length) $('#recent').replaceChildren(el('li', '', `<span class="empty">Nothing yet</span>`));
   $('#modNote').textContent = S.mods?.length ? `${S.mods.length}` : '';
+  $('#vaultNote').textContent = S.vault?.length ? `${S.vault.length}` : '';
   $('#blockNote').textContent = S.trackers ? `${S.trackers.reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0)} blocked` : '';
 }
 function taskRow(t) {
@@ -276,20 +295,37 @@ async function renderFirewall() {
 }
 
 // ---------- blockers: trackers seen and blocked per app ({apps:[{pkg,label,trackers:[{domain,company,blocked,hits}]}]}) ----------
-async function openBlockers() { open('blockers'); renderBlockers(); const r = await rpc('trackers.list', {}); S.trackers = r?.apps || []; renderBlockers(); renderCenter(); }
+async function openBlockers() { open('blockers'); renderBlockers(); let r = await phone('trackers.list', {}); if (!r?.apps) r = await rpc('trackers.list', {}); S.trackers = r?.apps || []; renderBlockers(); renderCenter(); } // owner line first: works without agentd
+// Block / Unblock go over the owner line: the tap IS the approval (no card, no fingerprint). Names must be on the tracker list (the broker checks).
+async function blockApp(a, b, on) { hap('heavy'); if (b) b.textContent = on ? 'Blocking…' : 'Unblocking…'; const r = await phone(on ? 'trackers.block' : 'trackers.unblock', { pkg: a.pkg }); if (r?.decision !== 'approved') hap('heavy'); openBlockers(); }
 function renderBlockers() {
   const box = $('#blist'), apps = (S.trackers || []).filter((a) => a.trackers?.length);
   const nb = apps.reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0), ns = apps.reduce((n, a) => n + a.trackers.length, 0);
   $('#blockersNote').textContent = ns ? `${nb} of ${ns} blocked` : '';
+  const all = $('#blockAll'); all.hidden = nb >= ns; all.onclick = async () => { hap('heavy'); all.textContent = 'Blocking…'; for (const a of apps) if (a.trackers.some((t) => !t.blocked)) await phone('trackers.block', { pkg: a.pkg }); all.textContent = 'Block all'; openBlockers(); };
   if (!apps.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring"><svg width="30" height="30"><use href="#i-shield"/></svg></span>No trackers seen<small>Ask “any trackers?” in any app</small>`));
   box.replaceChildren(...apps.map((a) => {
     const open_ = a.trackers.filter((t) => !t.blocked), m = el('div', 'mod bk');
-    m.innerHTML = `<div class="hd"><span class="appic">${ICOHTML(a.pkg)}</span><div>${esc(a.label || appName(a.pkg))}<span class="s">${a.trackers.length - open_.length} blocked${open_.length ? ` · ${open_.length} open` : ''}</span></div>${open_.length ? '<button class="pillbtn blue">Block</button>' : '<span class="tag g">Protected</span>'}</div>
+    m.innerHTML = `<div class="hd"><span class="appic">${ICOHTML(a.pkg)}</span><div>${esc(a.label || appName(a.pkg))}<span class="s">${a.trackers.length - open_.length} blocked${open_.length ? ` · ${open_.length} open` : ''}</span></div>${open_.length ? '<button class="pillbtn blue">Block</button>' : '<span class="tag g">Protected</span><button class="tag unb">Unblock</button>'}</div>
       <ul>${a.trackers.map((t) => `<li class="${t.blocked ? 'off' : ''}"><i></i><b>${esc(t.domain)}</b>${t.company ? `<em>${esc(t.company)}</em>` : ''}<span>${t.hits || 0}</span></li>`).join('')}</ul>`;
-    const b = $('.pillbtn', m); if (b) b.onclick = async () => { hap(); b.textContent = 'Waiting…'; const r = await rpc('firewall.set', { pkg: a.pkg, mode: 'block', domains: open_.map((t) => t.domain) }); if (r?.decision !== 'approved') hap('heavy'); openBlockers(); };
+    const b = $('.pillbtn', m); if (b) b.onclick = () => blockApp(a, b, true);
+    const u = $('.unb', m); if (u) u.onclick = () => blockApp(a, u, false);
     return m;
   }));
 }
+// ---------- passwords: the vault ({entries:[{id, label, apps, username}]}; never the password). Add = native screen in local.agentos. ----------
+async function openVault() { open('vault'); renderVault(); await loadVault(); }
+async function loadVault() { const r = await phone('vault.list', {}); if (r?.entries) S.vault = r.entries; renderVault(); renderCenter(); }
+function renderVault() {
+  const box = $('#vlist'), es = S.vault || [];
+  $('#vaultNote2').textContent = es.length ? `${es.length} saved` : '';
+  if (!es.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring blue"><svg width="30" height="30"><use href="#i-lock"/></svg></span>No saved logins<small>Add one; agents sign you in with your fingerprint and never see it</small>`));
+  box.replaceChildren(...es.map((e, i) => { const pkg = e.apps?.[0] || ''; const r = el('div', 'glass pw', `<span class="appic">${ICOHTML(pkg)}</span><div>${esc(e.label || appName(pkg))}<span class="s">${esc(e.username || '')}</span><span class="fp"><svg width="12" height="12"><use href="#i-shield"/></svg>Fingerprint to use · only in ${esc(appName(pkg))}</span></div><button class="tag">Delete</button>`);
+    r.style.animationDelay = i * .04 + 's';
+    const b = $('button', r); b.onclick = async () => { hap(); if (b.textContent !== 'Sure?') { b.textContent = 'Sure?'; b.classList.add('c'); setTimeout(() => { b.textContent = 'Delete'; b.classList.remove('c'); }, 3000); return; } r.style.opacity = .4; await phone('vault.remove', { id: e.id }); loadVault(); };
+    return r; }));
+}
+on('vault.changed', () => { if ($('#vault').classList.contains('on')) loadVault(); });
 // ---------- mods: buttons agents added to apps ({mods:[{id, package, app, label, shown, created, by}]}) ----------
 async function openMods() { open('mods'); renderMods(); await loadMods(); }
 async function loadMods() { const r = await rpc('app.mod.list', {}); if (r?.mods) S.mods = r.mods; renderMods(); renderCenter(); }
@@ -339,7 +375,7 @@ on('approval.resolved', (m) => {
 on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" height="14"><use href="#i-shield"/></svg><span>Suspicious message in ${esc(appName(m.source_pkg))}</span>`)); scrollDown(); });
 on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; } body.append(el('div', 'msg err', esc(m.message))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
 on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
-on('ws.open', () => { refresh(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
+on('ws.open', () => { refresh(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- voice (WebRTC per agentd/voice.html; hold the orb to talk) ----------
 let pc, mic, micTrack;

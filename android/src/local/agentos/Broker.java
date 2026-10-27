@@ -56,6 +56,9 @@ final class Broker {
         final int maxSteps;
         final History h;
         volatile boolean paused, granted; // granted: a human allowed it on the lease card (cleared by stop)
+        /** asked: the founder's own request via agentd (voice, typed, or a schedule they made). relock: we unlocked the phone for it. */
+        volatile boolean asked, relock;
+        volatile String origin = "";
         /** The field this task last typed into: its live text is the message a later "Send" tap sends. */
         volatile AccessibilityNodeInfo field;
 
@@ -81,6 +84,7 @@ final class Broker {
      */
     static Object[] channels(History h, String tool, String target, boolean untrusted, boolean priv, boolean outward, boolean copied) {
         if (tool.startsWith("vault.")) return new Object[]{FINGERPRINT_ONLY, "uses a saved password"};
+        if (tool.equals("trackers.unblock")) return new Object[]{HUMAN, "undoing a protection needs a person"};
         if (MONEY.matcher(target).find()) return new Object[]{FINGERPRINT_ONLY, "money or an install"};
         if (h != null && h.flagged) return new Object[]{HUMAN, "Prompt Guard flagged text in this task"};
         if (copied || h != null && h.copied) return new Object[]{HUMAN, "the text was copied from untrusted content"};
@@ -106,7 +110,11 @@ final class Broker {
     private volatile CompletableFuture<Boolean> leaseAsk;
     /** The island pill's step label. */
     private volatile String step = "Starting";
-    private static volatile Broker self; // for Notifs.flagged
+    private static volatile Broker self; // for Notifs.flagged, Vault
+    /** VaultAddActivity (same process): the vault, or null while the service is off. */
+    static Vault vault() { Broker b = self; return b == null ? null : b.vault; }
+    /** A card is up or an agent task is running: the vault's sign-in offer stays out of the way. */
+    static boolean busy() { Broker b = self; return b == null || b.current != null || b.leaseAsk != null || b.lease != null; }
     /** Apps whose lease always needs the card (money, installs, passwords), even when the user asked by name. */
     private static final java.util.regex.Pattern SENSITIVE = java.util.regex.Pattern.compile(
             "(?i)(bank|pay|wallet|finance|credit|crypto|trading|broker|vending|packageinstaller|password|vault|bitwarden|lastpass|keepass|authenticator)");
@@ -119,6 +127,7 @@ final class Broker {
         vault = new Vault(svc, audit);
         PromptGuard.init(svc);
         Trackers.start(svc);
+        Wake.listen(svc);
         self = this;
     }
 
@@ -149,16 +158,20 @@ final class Broker {
             case "approval.confirm": return confirm(p, uid);
             case "vault.list": return vault.list();
             case "vault.fill": synchronized (actLock) { return vault.fill(p, lease); }
-            case "vault.add": case "vault.remove": // operator only: adb on the Mac (shell uid 2000), never agentd or a model tool
-                if (uid != 2000) return ok(false).put("reason", m + " only over adb (tools-client.py vault ...), not from " + who(uid));
-                return m.equals("vault.add") ? vault.add(p) : vault.remove(p.getString("id"));
+            case "vault.add": // adb only (shell uid 2000) or the owner's native screen (VaultAddActivity, in-process); never agentd or a model tool
+                if (uid != 2000) return ok(false).put("reason", "vault.add only over adb or the Passwords screen, not from " + who(uid));
+                return vault.add(p, "operator over adb");
+            case "vault.remove": // adb or the launcher's own uid (owner line); never agentd or a model tool
+                if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", "vault.remove only from the Passwords screen or adb, not from " + who(uid));
+                return vault.remove(p.getString("id"), uid == 2000 ? "operator over adb" : "owner (Passwords screen)");
             case "approval.deny": return deny(p);
+            case "schedule.alarm": return schedule(p, uid);
             case "approval.escalate": return escalate(p, uid);
             case "tap": case "type": case "scroll": case "press": case "open_app": case "intent": case "firewall.set": case "firewall.clear":
             case "trackers.block": case "trackers.unblock": case "notifications.reply":
-                synchronized (actLock) { return act(m, p); } // one action at a time; nothing else acts while a card is up
+                synchronized (actLock) { return act(m, p, uid); } // one action at a time; nothing else acts while a card is up
             case "notifications.autoreply":
-                if (p.optInt("minutes", 60) > 0) synchronized (actLock) { return act(m, p); }
+                if (p.optInt("minutes", 60) > 0) synchronized (actLock) { return act(m, p, uid); }
                 if (p.has("text")) Notifs.standing.remove(p.getString("text")); else Notifs.standing.clear(); // stopping needs no approval
                 audit.log(new JSONObject().put("task", "").put("tool", m).put("text", p.optString("text", "(all)")).put("decision", "auto").put("reason", "auto-reply stopped"));
                 return ok(true).put("decision", "auto").put("reason", "auto-reply stopped");
@@ -203,11 +216,12 @@ final class Broker {
                 granted = true;
             }
             Lease l = new Lease(goal, apps, expires, Math.min(p.optInt("max_steps", 40), 200), caller, same ? prev.h : new History());
-            l.granted = granted;
+            l.granted = granted; l.asked = asked; l.origin = p.optString("origin");
+            if (p.optBoolean("tainted")) l.h.flagged = true; // agentd's own guard flagged text in this turn: it can only add taint
             if (same && lease == null) l.h.steps = 0; // a new task after the old one stopped: keep the taint, reset the count
             if (p.optBoolean("untrusted")) l.h.untrusted = true;
             synchronized (this) {
-                if (lease != null) stop(lease.id, "replaced by a new task.start");
+                if (lease != null) { l.relock = lease.relock; stop(lease.id, "replaced by a new task.start"); }
                 lease = last = l;
             }
             svc.main.post(svc.autoPause::start);
@@ -215,6 +229,7 @@ final class Broker {
                     .put("caller", caller).put("user_granted", granted).put("by_request", asked).put("carried_over", same));
             Events.emit("task.state", task(l).put("state", "started"));
             island(l, "Starting");
+            awake(l); // a scheduled task on a locked phone: open it now, so the first screen read is the real one
             return ok(true).put("task_id", l.id).put("apps", new JSONArray(apps)).put("expires", l.expires).put("max_steps", l.maxSteps)
                     .put("refused_apps", refused).put("steps", l.h.steps).put("untrusted", l.h.untrusted).put("carried_over", same)
                     .put("user_granted", granted);
@@ -255,6 +270,7 @@ final class Broker {
         if (!taskId.isEmpty() && !taskId.equals(l.id)) return ok(false).put("reason", "task " + taskId + " is not the active task (" + l.id + ")");
         lease = null;
         l.granted = false; // a stopped grant can't be reused by a later task.start
+        if (!why.startsWith("replaced")) Wake.done(l.relock); // a replacement keeps the phone open (it inherits relock)
         svc.main.post(svc.autoPause::stop);
         audit.log(entry("task.stop", l).put("reason", why).put("steps", l.h.steps));
         Events.emit("task.state", task(l).put("state", "stopped").put("reason", why));
@@ -277,14 +293,19 @@ final class Broker {
     void humanTouched() {
         Lease l = lease;
         if (l == null || l.paused || current != null) return;
+        l.relock = false; // the owner has the phone in hand: don't lock it on them when the task ends
         try { pause(true, "auto-pause: a human touched the screen"); } catch (JSONException ignored) {}
     }
 
     // ---------------------------------------------------------------- actions
 
-    private JSONObject act(String tool, JSONObject p) throws Exception {
+    /** uid: the caller (only looked up for trackers.*): the launcher's own uid is the owner's tap, which needs no card. */
+    private JSONObject act(String tool, JSONObject p, int uid) throws Exception {
         Lease l = lease;
         boolean fw = tool.startsWith("firewall.") || tool.startsWith("trackers."), reply = tool.equals("notifications.reply"), free = fw || tool.startsWith("notifications.");
+        // Tracker blocks: the owner's tap in Blockers (launcher uid) is the approval; an agent's block is protective (tracker-list names only,
+        // the app keeps working) so it needs no card either. Unblocking from an agent still needs a person (channels()).
+        boolean owner = tool.startsWith("trackers.") && callerIn(uid, "owner_callers"), protective = tool.equals("trackers.block");
         boolean scoped = !free && !tool.equals("press"); // free: the card itself is the gate (no lease needed)
         AccessibilityNodeInfo node = p.has("id") ? svc.screen.node(p.getInt("id")) : null;
         if (node == null && (tool.equals("tap") || tool.equals("type"))) throw new IllegalArgumentException(tool + " needs an id from screen.read");
@@ -317,10 +338,10 @@ final class Broker {
             case "open_app":
                 pkg = p.getString("pkg"); target = "launch app"; tier = 1; why = "open app in lease";
                 break;
-            case "intent": // allow-listed: alarm, timer, web search (Actions.intent). A search is a draft: its words leave the phone
-                pkg = Actions.intentPkg(svc, p); target = p.getString("kind") + " " + (p.has("query") ? p.getString("query") : p.has("seconds") ? p.getInt("seconds") + " s"
-                        : String.format(java.util.Locale.US, "%02d:%02d", p.optInt("hour"), p.optInt("minute")));
-                text = p.optString("query", ""); tier = p.getString("kind").equals("search") ? 2 : 1; why = "direct " + p.getString("kind");
+            case "intent": // allow-listed: alarm, timer, web search, calendar draft, play music (Actions.intent). Words that leave the phone or go into an app are a draft
+                pkg = Actions.intentPkg(svc, p); target = p.getString("kind") + " " + (p.has("query") ? p.getString("query") : p.has("title") ? p.getString("title") + " " + p.getString("start")
+                        : p.has("seconds") ? p.getInt("seconds") + " s" : String.format(java.util.Locale.US, "%02d:%02d", p.optInt("hour"), p.optInt("minute")));
+                text = p.optString("query", p.optString("title", "")); tier = p.getString("kind").matches("alarm|timer") ? 1 : 2; why = "direct " + p.getString("kind");
                 break;
             case "firewall.set": {
                 JSONArray d = p.optJSONArray("domains");
@@ -341,8 +362,9 @@ final class Broker {
                 pkg = "*"; target = "remove all AgentOS firewall rules"; tier = 3; why = "network rule change";
         }
 
-        String block = null;
-        if (svc.getSystemService(KeyguardManager.class).isKeyguardLocked()) block = "phone is locked";
+        if (p.optBoolean("tainted") && l != null) l.h.flagged = true; // agentd's own guard flagged text in this turn
+        String block = awake(l);
+        if (block != null) { /* locked and not eligible (or the unlock failed) */ }
         else if (!free && l == null) block = "no active task: call task.start first";
         else if (!free && System.currentTimeMillis() > l.expires) block = "task lease expired";
         else if (!free && l.paused) block = "task paused (human touched the screen or task.pause): call task.resume after re-reading the screen";
@@ -367,6 +389,8 @@ final class Broker {
         if (!free) island(l, stepLabel(tool, pkg, target));
         String decision = "auto";
         if (reply && Notifs.standing(text)) { log.put("approver", "standing auto-reply"); decision = "approved"; } // the user approved this exact text once
+        else if (owner) { log.put("approver", "owner tap"); decision = "approved"; }
+        else if (protective) { log.put("approver", "policy").put("rationale", "protective: only tracker-list domains, the app keeps working"); decision = "approved"; }
         else if (tier == 3 || (tier == 2 && untrusted && priv)) {
             if (tier == 2) why += " after reading untrusted content in a private app (Rule of Two)";
             boolean copy = free && !fw && copied(Notifs.seen, text);
@@ -390,12 +414,14 @@ final class Broker {
         }
 
         if (tool.equals("type")) { l.h.typed.add(norm(text)); l.field = node; }
+        long t0 = SystemClock.uptimeMillis();
         boolean done = reply ? Notifs.reply(svc, nr, text) : execute(tool, p, node);
         if (!free && l != null) l.h.steps++;
         JSONObject res = ok(done).put("tier", TIER[tier]).put("rule_of_two", r2);
         if (fw) Events.emit("firewall.changed", new JSONObject().put("tool", tool).put("pkg", pkg).put("target", target).put("ok", done));
         if (free) return finish(log, res, decision, done ? why : "failed", null);
-        settle();
+        if (done && (tool.equals("open_app") || tool.equals("intent"))) awaitApp(pkg);
+        settle(t0);
         return finish(log, res, decision, done ? why : "Android refused the action", read());
     }
 
@@ -577,8 +603,9 @@ final class Broker {
     // ---------------------------------------------------------------- helpers
 
     private JSONObject read() throws JSONException {
-        JSONObject s = svc.screen.read(svc);
         Lease l = lease;
+        if (l != null) awake(l); // the screen locked mid-task (a long voice task): open it again if eligible
+        JSONObject s = svc.screen.read(svc);
         if (l != null) {
             History h = l.h;
             JSONArray nodes = s.getJSONArray("nodes");
@@ -602,6 +629,42 @@ final class Broker {
                     g.opt("score"), ids);
         }
         return s.put("ok", true);
+    }
+
+    /**
+     * Open the phone for this task if it is locked or asleep. Eligible: the founder's own request (agentd's user_asked:
+     * voice, typed, or a schedule they made), and nothing in the task looked like an injection (Prompt Guard, agentd's
+     * guard, or text copied from the screen). Injected or third-party text never gets here: a reply rule's turn isn't
+     * asked, and a flagged task stays flagged (History carries over). Returns null if the phone is open, else why not.
+     */
+    private String awake(Lease l) throws JSONException {
+        boolean locked = Wake.locked(svc);
+        if (!locked && !Wake.asleep(svc)) return null;
+        String no = l == null || !l.asked ? "phone is locked (only the user's own requests may unlock it)"
+                : l.h.flagged ? "phone is locked (a guard flagged text in this task, so it may not unlock)"
+                : l.h.copied ? "phone is locked (this task copied untrusted text, so it may not unlock)" : null;
+        if (no != null) return locked ? no : null; // asleep but not locked: act as before
+        no = Wake.unlock(svc);
+        if (locked) {
+            if (no == null) l.relock = true;
+            audit.log(entry("phone.unlock", l).put("goal", l.goal).put("origin", l.origin).put("decision", no == null ? "auto" : "blocked")
+                    .put("reason", no == null ? "unlocked for " + ("schedule".equals(l.origin) ? "the user's scheduled task" : "the user's own " + l.origin + " request") : no));
+        }
+        return no;
+    }
+
+    /**
+     * schedule.alarm {at, event?, id?, prompt?, when?, text?} from agentd: set the exact alarm that wakes it at `at`, audit
+     * the founder's schedule changes, and post the result of a finished scheduled task as a notification.
+     */
+    private JSONObject schedule(JSONObject p, int uid) throws JSONException {
+        if (!callerIn(uid, "lease_callers")) return ok(false).put("reason", "schedule.alarm only from agentd, not " + who(uid));
+        String ev = p.optString("event");
+        if (!ev.isEmpty()) audit.log(new JSONObject().put("task", "").put("tool", "schedule." + ev).put("id", p.optString("id"))
+                .put("goal", Guard.clip(p.optString("prompt"), 200)).put("target", p.optString("when")).put("decision", "auto")
+                .put("reason", ev.equals("created") ? "the user scheduled it" : ev));
+        if (ev.equals("done") || ev.equals("failed")) Wake.notify(svc, Guard.clip(p.optString("prompt"), 60), Guard.clip(p.optString("text"), 500));
+        return p.has("at") ? Wake.alarm(svc, p.optLong("at")) : ok(true);
     }
 
     /** A Prompt Guard hit: audited and sent as guard.flag (the launcher's log shows it). No pop-up (founder, 10-27). */
@@ -713,7 +776,7 @@ final class Broker {
     /** Is the calling app on the allow-list (settings key, else the default: agentd's Termux; plus the launcher for voice)? */
     private boolean callerIn(int uid, String key) {
         JSONArray allowed = settings().optJSONArray(key);
-        List<String> list = new java.util.ArrayList<>(Arrays.asList("com.termux"));
+        List<String> list = new java.util.ArrayList<>(Arrays.asList(key.equals("owner_callers") ? "local.agentos.home" : "com.termux")); // owner: the launcher only, never agentd
         if (key.equals("voice_callers")) list.add("local.agentos.home");
         if (allowed != null) { list.clear(); for (int i = 0; i < allowed.length(); i++) list.add(allowed.optString(i)); }
         String[] pkgs = uid < 0 ? null : svc.getPackageManager().getPackagesForUid(uid);
@@ -739,11 +802,20 @@ final class Broker {
                 .put("paused", l.paused).put("caller", l.caller);
     }
 
-    /** Wait for the screen to settle: the first event after the action, then 300 ms of quiet; at most 2 s. */
-    private void settle() throws InterruptedException {
-        long t0 = SystemClock.uptimeMillis(), now;
+    /** Wait for the screen to settle: the first event after the action (at t0), then 300 ms of quiet; at most 2 s. */
+    private void settle(long t0) throws InterruptedException {
+        long start = SystemClock.uptimeMillis(), now;
         do { Thread.sleep(50); now = SystemClock.uptimeMillis(); }
-        while (now - t0 < 2000 && (svc.lastEvent < t0 || now - svc.lastEvent < 300));
+        while (now - start < 2000 && (svc.lastEvent < t0 || now - svc.lastEvent < 300));
+    }
+
+    /** open_app / intent: a cold start draws its window over a second later, and the quiet before it fooled settle(), so the
+     *  agent got the old screen and had to read again (agentd/bench/RESULTS.md round 2). Wait (max 3 s) for the app in front. */
+    private void awaitApp(String pkg) throws InterruptedException {
+        for (long t = SystemClock.uptimeMillis(); SystemClock.uptimeMillis() - t < 3000; Thread.sleep(50)) {
+            AccessibilityNodeInfo r = svc.getRootInActiveWindow();
+            if (r != null && pkg.equals(String.valueOf(r.getPackageName()))) return;
+        }
     }
 
     private static String pkg(AccessibilityNodeInfo n) { return String.valueOf(n.getPackageName()); }

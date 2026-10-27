@@ -45,7 +45,7 @@ public class AgentA11y extends AccessibilityService {
     @Override public void onAccessibilityEvent(AccessibilityEvent e) {
         lastEvent = SystemClock.uptimeMillis();
         if (e.getEventType() != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) screen.markDirty();
-        if (broker != null) broker.mods.onEvent();
+        if (broker != null) { broker.mods.onEvent(); broker.vault.onEvent(e); }
     }
 
     @Override public void onConfigurationChanged(android.content.res.Configuration c) {

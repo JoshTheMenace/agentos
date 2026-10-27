@@ -19,9 +19,10 @@ case "${1:-}" in
 esac
 adb -s "$S" install -r build/home.apk
 uid=$(adb -s "$S" shell pm list packages -U $P | grep "^package:$P " | sed "s/.*uid://" | tr -d '\r')
-# agentd's token (Termux home; agentd also re-provisions it at start). Only root can read it; copy, chown, relabel. No :7777 token: tool calls go through agentd.
+# agentd's token (Termux home; agentd also re-provisions it at start) and the broker's :7777 token (phone.token: the "owner line",
+# used only for Blockers taps and the Passwords list/delete; the broker recognises this app by its uid). Only root can read them; copy, chown, relabel.
 D=/data/data/$P/files
-adb -s "$S" shell "su -c 'mkdir -p $D && cp /data/data/com.termux/files/home/.agentos/agentd.token $D/agentd.token && rm -f $D/phone.token && chown -R $uid:$uid $D && chmod 600 $D/*.token && restorecon -RD /data/data/$P'"
+adb -s "$S" shell "su -c 'mkdir -p $D && cp /data/data/com.termux/files/home/.agentos/agentd.token $D/agentd.token && cp /data/data/local.agentos/files/token $D/phone.token && chown -R $uid:$uid $D && chmod 600 $D/*.token && restorecon -RD /data/data/$P'"
 adb -s "$S" shell pm grant $P android.permission.RECORD_AUDIO
 adb -s "$S" shell pm grant $P android.permission.READ_CALENDAR
 [ "${1:-}" = --set ] && adb -s "$S" shell cmd package set-home-activity $P/.Home

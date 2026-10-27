@@ -6,6 +6,9 @@
   <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
   <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
+  <!-- Wake: the schedule's exact alarm (works in deep doze) and keeping the screen on while an unlocked task runs. -->
+  <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+  <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <application android:label="AgentOS" android:icon="@android:drawable/ic_lock_lock" android:allowBackup="false">
     <!-- The bouncer: reads the screen, acts, and hosts the tool server on 127.0.0.1:7777. -->
     <service android:name=".AgentA11y" android:exported="true" android:label="AgentOS"
@@ -18,6 +21,9 @@
         android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
       <intent-filter><action android:name="android.service.notification.NotificationListenerService"/></intent-filter>
     </service>
+    <!-- The owner's "Add password" screen (opened from the launcher's Passwords view). The password is typed and encrypted here, in this process. -->
+    <activity android:name=".VaultAddActivity" android:exported="true" android:excludeFromRecents="true" android:label="Add password"
+        android:windowSoftInputMode="adjustResize" android:theme="@android:style/Theme.DeviceDefault.NoActionBar"/>
     <!-- Transparent host for the fingerprint prompt that signs one exact action. -->
     <activity android:name=".ApproveActivity" android:exported="false" android:excludeFromRecents="true"
         android:noHistory="true" android:taskAffinity="local.agentos.approve"

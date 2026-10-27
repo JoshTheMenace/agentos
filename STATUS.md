@@ -24,6 +24,8 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 - agentd/memory: consent ledger, ingestion, graph.json.
 - Local model: Qwen3.5-0.8B on the phone via llama-server :8081 (off by default; `agentd/deploy/local-model/llama.sh start`). Use it for the airplane-mode demo "open Pigeon and read me the last message from Mom" (12 s from the launcher in airplane mode). The old fix-ups are done (approval wait 60 s card / 90 s RPC; localUrl 8081).
 
+- Scheduled tasks + unlock (10-27): `schedule_task`/`list_scheduled`/`cancel_scheduled` (agentd/schedule.js, `~/.agentos/schedule.json`, exact AlarmManager alarm), and the broker opens a locked phone for the founder's own clean tasks (android `Wake`, PIN in root-only `/data/adb/agentos/unlock.pin`, audited `phone.unlock`, re-locks after). Tested on the phone: locked → alarm set/deleted at the due time → re-locked; Prompt-Guard/regex-tainted tasks stay locked. Demo: "in 2 minutes, set an alarm for 6:15", lock the phone, watch. Seen: the Termux app (and so the agentd boot loop) died twice today with nothing in the logs; if agentd is down at fire time the task runs late (on restart, up to 30 min late) or is skipped. Check `pgrep -af "^node server.js$"` before demoing.
+
 ## In progress when this was written (check each folder's README/NEEDS for state)
 - launcher DONE and set as default home (launcher/README.md). Follow-ups done: home is in AGENTD_CLIENT_PKGS, agentd `rpc` passthrough (no :7777 token in the launcher), live state from agentd-forwarded broker events (no polling), inline typed approve buttons removed (the native card is the only gate). Left: memory consent toggle (launcher/NEEDS.md).
 - android/ island + approval card restyle (Fable). The island now follows task state (working/step/pause/hide, auto-approved moment, guard alert), and Send cards show the drafted message. The back-to-back card bug is fixed (android/NEEDS-UI.md).
@@ -47,6 +49,12 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 
 ## Rehearsal (10-27, pitch/rehearsal/)
 All beats ran on the phone; shots, timings and the presenter checklist are in `pitch/rehearsal/RUN.md`, open issues in `ISSUES.md`. Pass: home, ask sheet, keyboard, Pigeon task + lease tap, auto-approve ✓, trap → alert, P3 block, fingerprint card + system prompt, firewall card + root fallback, local model in airplane mode, audit chain. Needs the presenter: speaking (voice), the finger (fingerprint, firewall). Order matters: a guard flag makes every send need a fingerprint for 10 min, so auto-approve runs before the canary is staged (`--es scenario clean`).
+
+## Vault + one-tap blocks (10-27 evening, Fable; android/README.md "Password vault", launcher/README.md)
+- Fresh vault (old `test` entry wiped). Passwords view in the launcher (command center › Passwords): list, Delete, "Add password" → native A2 screen in local.agentos (password never touches the WebView/agentd/model), Save with fingerprint.
+- Sign-in offer: open an app with a saved login → card "Sign in as <user>?" → fingerprint → filled, Continue tapped. Agent "log me into Slack" → `vault_fill` → the same prompt. Accessibility path (not Autofill Framework), reasons in android/README.md.
+- Blockers: Block / Block all / Unblock are one tap (owner line: launcher uid → :7777, no card). Agent trackers.block: no card (protective). Agent trackers.unblock: human card.
+- agentd edits (events.js FORWARD `tracker.blocked`, `vault.changed`; tools.js descriptions) need an agentd restart to take effect; the launcher works without it.
 
 ## Next up
 1. Fingerprint press at the phone (beats 7, 8), and the open items in pitch/rehearsal/ISSUES.md. Update demo-script.md to the RUN.md order.

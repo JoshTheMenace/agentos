@@ -37,7 +37,7 @@ export const TASKS = {
   timer: { text: 'Start a 5 minute timer.', setup: CLEAR_CLOCK,
     check: async () => /Pause/i.test(await clock('SHOW_TIMERS')) },
   chrome: { text: 'Search Chrome for the weather in Salt Lake City.', setup: CHROME_FRESH,
-    check: async () => { const t = await screenText(); return /weather in salt lake city/i.test(t) && /AI Mode|Images|News/.test(t); } }, // results tabs = submitted
+    check: async () => { for (let i = 0; i < 6; i++, await sleep(1000)) { const t = await screenText(); if (/weather in salt lake city/i.test(t) && /AI Mode|Images|News/.test(t)) return true; } return false; } }, // results tabs = submitted (the page may still be loading when a 1-call turn ends)
   calc: { text: 'Use the Calculator app to work out 234 times 17.', setup: () => su('pm clear com.google.android.calculator'),
     check: async (r) => /3,?978/.test(r.answer) && /3,?978/.test(await screenText()) },
   reply: { text: 'Reply to Mom in Pigeon that I\'m running 10 minutes late.', setup: () => { su('am force-stop local.agentos.pigeon; am start -n local.agentos.pigeon/.Main --es scenario clean'); adb('sleep 1; input keyevent HOME'); },
@@ -48,8 +48,8 @@ export const TASKS = {
 };
 
 async function lock() {
-  for (let i = 0; i < 120; i++) { try { mkdirSync(LOCK); return; } catch { await sleep(2000); } }
-  throw new Error('device lock busy for 4 min');
+  for (let i = 0; i < 450; i++) { try { mkdirSync(LOCK); return; } catch { await sleep(2000); } }
+  throw new Error('device lock busy for 15 min');
 }
 
 function ask(text, timeoutMs = 180_000) {
@@ -80,11 +80,12 @@ async function runTask(name) {
     const act = r.events.find((e) => e.type === 'tool.request' && e.tier !== 'read');
     const calls = r.usage?.calls || [];
     let ok = false; try { ok = r.status === 'completed' && await task.check(r); } catch (e) { r.checkError = e.message; }
+    if (!ok) try { r.checkError ??= (await screenText()).slice(0, 400); } catch {}
     return { task: name, ok, status: r.status, ms: r.ms, ttfa: act?.t ?? null, calls: calls.length,
       tools: r.events.filter((e) => e.type === 'tool.request').map((e) => `${e.name}${e.args?.id != null ? '#' + e.args.id : ''}`),
       toolMs: r.events.filter((e) => e.type === 'tool.result' && e.name !== 'act').map((e) => e.ms || 0),
       approvalMs: r.events.filter((e) => e.type === 'tool.result' && /approved|denied/.test(e.decision || '')).reduce((a, e) => a + (e.ms || 0), 0),
-      inTok: calls.map((c) => c.in), callAt: calls.map((c) => c.at), outTok: calls.map((c) => c.out + (c.reasoning || 0)), answer: r.answer.slice(0, 200) };
+      inTok: calls.map((c) => c.in), callAt: calls.map((c) => c.at), outTok: calls.map((c) => c.out + (c.reasoning || 0)), answer: r.answer.slice(0, 200), checkError: r.checkError };
   } finally { leaseOn(); try { adb('input keyevent HOME'); } catch {} rmdirSync(LOCK); }
 }
 

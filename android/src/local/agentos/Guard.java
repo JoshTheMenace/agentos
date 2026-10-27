@@ -51,10 +51,11 @@ final class Guard {
 
     static boolean privateApp(String pkg) { return pkg != null && (PRIVATE.contains(pkg) || PRIVATE_NAME.matcher(pkg).find()); }
 
-    /** The agent can never touch our windows (so it can't approve for itself). */
+    /** The agent can never touch our windows (so it can't approve for itself), nor the launcher (its taps count as the owner's). */
     static boolean offLimits(AccessibilityNodeInfo n) {
         if (n == null) return true;
-        if ("local.agentos".contentEquals(String.valueOf(n.getPackageName()))) return true;
+        String p = String.valueOf(n.getPackageName());
+        if (p.equals("local.agentos") || p.equals("local.agentos.home")) return true;
         AccessibilityWindowInfo w = n.getWindow();
         return w != null && w.getType() == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY;
     }

@@ -197,22 +197,35 @@ public class Home extends Activity {
     }
     /** Async GET on agentd (the page's https origin can't fetch http://127.0.0.1 cross-origin). Reply: app.rpcDone(id, json).
      *  Tool-server calls go over agentd's WebSocket passthrough instead; this app holds no :7777 token. */
-    @JavascriptInterface public void get(String id, String path) {
+    @JavascriptInterface public void get(String id, String path) { http(id, "http://127.0.0.1:8787" + path, "agentd.token", null); }
+    /** The owner line: this app's own uid straight to the broker (:7777, files/phone.token). The broker treats it as the
+     *  owner's tap (Blockers: trackers.block/unblock without a card; Passwords: vault.list/remove). agentd (and so any
+     *  model) connects from Termux's uid and never gets that. No secrets travel here: passwords are added natively. */
+    @JavascriptInterface public void phone(String id, String method, String params) {
+      try { http(id, "http://127.0.0.1:7777/rpc", "phone.token", new JSONObject().put("method", method).put("params", new JSONObject(params == null || params.isEmpty() ? "{}" : params)).toString()); }
+      catch (Exception e) { js("window.app&&app.rpcDone(" + JSONObject.quote(id) + ",{\"ok\":false,\"error\":\"bad params\"})"); }
+    }
+    /** Add a saved password: the native screen in local.agentos (the password never enters this WebView). */
+    @JavascriptInterface public void vaultAdd(String pkg) {
+      startActivity(new Intent().setClassName("local.agentos", "local.agentos.VaultAddActivity").putExtra("pkg", pkg == null ? "" : pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+    void http(String id, String url, String tokenFile, String body) {
       new Thread(() -> {
         String out;
         try {
-          String tok = file("agentd.token");
-          if (tok == null) throw new Exception("no token (run launcher/install.sh)");
-          HttpURLConnection h = (HttpURLConnection) new URL("http://127.0.0.1:8787" + path).openConnection();
-          h.setConnectTimeout(3000); h.setReadTimeout(20_000);
+          String tok = file(tokenFile);
+          if (tok == null) throw new Exception("no " + tokenFile + " (run launcher/install.sh)");
+          HttpURLConnection h = (HttpURLConnection) new URL(url).openConnection();
+          h.setConnectTimeout(3000); h.setReadTimeout(90_000);
           h.setRequestProperty("Authorization", "Bearer " + tok);
+          if (body != null) { h.setRequestMethod("POST"); h.setDoOutput(true); h.setRequestProperty("Content-Type", "application/json"); h.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8)); }
           InputStream in = h.getResponseCode() < 400 ? h.getInputStream() : h.getErrorStream();
           ByteArrayOutputStream bo = new ByteArrayOutputStream(); byte[] buf = new byte[8192]; int n;
           while (in != null && (n = in.read(buf)) > 0) bo.write(buf, 0, n);
           out = bo.size() > 0 ? bo.toString("UTF-8") : new JSONObject().put("ok", false).put("error", "HTTP " + h.getResponseCode()).toString();
         } catch (Exception e) { out = "{\"ok\":false,\"error\":" + JSONObject.quote(String.valueOf(e.getMessage())) + "}"; }
         js("window.app&&app.rpcDone(" + JSONObject.quote(id) + "," + out + ")");
-      }, "get-" + path).start();
+      }, "http-" + id).start();
     }
   }
 }

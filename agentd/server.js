@@ -12,6 +12,7 @@ import * as events from './events.js';
 import * as reviewer from './reviewer.js';
 import * as context from './context.js';
 import * as taskman from './tasks.js';
+import * as schedule from './schedule.js';
 import { Voice } from './voice.js';
 import * as homeSuggest from './home-suggest.js'; // TODO(context): context.js replaces this stand-in
 import { Codex } from './providers/codex.js';
@@ -26,6 +27,7 @@ const providers = Object.fromEntries([codex, cli.available() ? cli : new Claude(
 if (cfg.provider === 'codex') codex.ready().catch(() => {}); // warm start; it also restarts itself if it crashes
 taskman.init(codex); // background workers for voice (and typed task.start); see tasks.js
 events.watch(); // broker approvals/guard/task events -> every connected UI
+schedule.init({ start: taskman.start, onUpdate: taskman.onUpdate, rpc, onEvent: events.onEvent, publish: events.publish, flagged: events.flagged }); // scheduled tasks
 context.start(providers[cfg.provider], codex); // notification feed -> context block, memory, reply rules
 if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approval card; see reviewer.js for what it may do
   const turn = tasks.get(a.task_id);
@@ -129,6 +131,8 @@ wss.on('connection', (ws) => {
       case 'task.start': return taskman.start(String(msg.goal || ''), { origin: 'typed' }); // background task; progress comes as task.update
       case 'task.list': return send({ type: 'task.list', tasks: taskman.list() });
       case 'task.cancel': return taskman.stop(String(msg.id || ''));
+      case 'schedule.list': return send({ type: 'schedule.list', items: schedule.list() });
+      case 'schedule.cancel': return schedule.cancel(String(msg.id || '')); // the owner's x on the home screen
       default:
         return send({ type: 'error', code: 'unknown_type', message: String(msg.type) });
     }

@@ -4,7 +4,10 @@ import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.content.Intent;
 import android.net.Uri;
+import android.app.SearchManager;
 import android.provider.AlarmClock;
+import android.provider.CalendarContract;
+import android.provider.MediaStore;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Path;
@@ -74,9 +77,11 @@ final class Actions {
     }
 
     /**
-     * Allow-listed direct intents: one call instead of a string of taps. Only these three; never arbitrary intents
+     * Allow-listed direct intents: one call instead of a string of taps. Only these kinds; never arbitrary intents
      * (no SMS/call/share intents, no URLs: an injected page can't make the agent open evil.com?data=...).
-     * kind alarm {hour, minute, label?} · timer {seconds, label?} · search {query} (Google in the browser).
+     * kind alarm {hour, minute, label?} · timer {seconds, label?} · search {query} (Google in the browser) ·
+     * event {title, start "YYYY-MM-DDTHH:MM" local, minutes?} (Calendar's new-event screen, filled in; nothing is saved
+     * until Save is tapped) · play {pkg, query} (play music from a search in that app; "" = anything).
      */
     static Intent intent(JSONObject p) throws JSONException {
         String label = p.optString("label", "");
@@ -86,18 +91,36 @@ final class Actions {
             case "timer": return new Intent(AlarmClock.ACTION_SET_TIMER).putExtra(AlarmClock.EXTRA_LENGTH, clamp(p.getInt("seconds"), 1, 86400))
                     .putExtra(AlarmClock.EXTRA_MESSAGE, label).putExtra(AlarmClock.EXTRA_SKIP_UI, false);
             case "search": return new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(p.getString("query"))));
-            default: throw new IllegalArgumentException("kind must be alarm, timer or search");
+            case "event": {
+                long t = java.time.LocalDateTime.parse(p.getString("start")).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+                return new Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI).putExtra(CalendarContract.Events.TITLE, p.getString("title"))
+                        .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, t).putExtra(CalendarContract.EXTRA_EVENT_END_TIME, t + clamp(p.optInt("minutes", 60), 5, 1440) * 60_000L);
+            }
+            case "play": return new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).putExtra(SearchManager.QUERY, p.optString("query", ""))
+                    .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*");
+            default: throw new IllegalArgumentException("kind must be alarm, timer, search, event or play");
         }
     }
 
-    /** The app that will handle it (the lease must cover it). A browser chooser falls back to Chrome. */
+    /** The app that will handle it (the lease must cover it). A browser chooser falls back to Chrome. "play" names its app. */
     static String intentPkg(AccessibilityService s, JSONObject p) throws JSONException {
-        ResolveInfo r = s.getPackageManager().resolveActivity(intent(p), PackageManager.MATCH_DEFAULT_ONLY);
+        Intent i = intent(p);
+        if (p.getString("kind").equals("play")) i.setPackage(p.getString("pkg"));
+        ResolveInfo r = s.getPackageManager().resolveActivity(i, PackageManager.MATCH_DEFAULT_ONLY);
         String pkg = r == null ? null : r.activityInfo.packageName;
+        if (i.getPackage() != null && pkg == null) throw new IllegalArgumentException(i.getPackage() + " can't play from a search");
         return pkg == null || pkg.equals("android") ? "com.android.chrome" : pkg;
     }
 
     static boolean startIntent(AccessibilityService s, JSONObject p) throws JSONException {
+        if (p.getString("kind").equals("play") && p.optString("query").isEmpty()) { // "play something": open the app, then Play (resumes its music)
+            if (!openApp(s, intentPkg(s, p))) return false;
+            android.media.AudioManager a = s.getSystemService(android.media.AudioManager.class); // the app needs 3-7 s to set up its player;
+            for (int ms = 3000; ms <= 7000; ms += 2000) // Play (not play/pause) is harmless once it is playing, so press it a few times
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> { for (int k : new int[]{android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.ACTION_UP})
+                    a.dispatchMediaKeyEvent(new android.view.KeyEvent(k, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)); }, ms);
+            return true;
+        }
         s.startActivity(intent(p).setPackage(intentPkg(s, p)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         return true;
     }

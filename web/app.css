@@ -168,6 +168,17 @@ body{position:fixed;inset:0}
 .rowi.mod{margin-bottom:6px;padding:10px 12px}
 .bempty small{color:var(--l3);font-size:12.5px}
 
+/* passwords */
+.pw{display:flex;align-items:center;gap:11px;padding:11px 13px;margin-bottom:8px;animation:rise .5s var(--soft) both}
+.pw .appic{width:40px;height:40px;border-radius:11px}
+.pw>div{min-width:0;flex:1;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.pw .s{display:block;color:var(--l2);font-size:12.5px;font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pw .tag{flex:none}.pw .tag.c{background:rgba(255,69,58,.16)}
+.pw .fp{display:flex;align-items:center;gap:5px;color:var(--l3);font-size:11px;font-weight:600;margin-top:3px}
+.addpw{flex:none;height:50px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;color:var(--blue);transition:transform .25s var(--spring)}
+.addpw:active{transform:scale(.98)}
+.bar #blockAll{margin-left:8px;padding:6px 12px;font-size:12px}
+
 /* app drawer */
 .drawer{padding-top:calc(var(--top) + 10px);gap:14px}
 .search{height:44px;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 16px;color:var(--l3)}

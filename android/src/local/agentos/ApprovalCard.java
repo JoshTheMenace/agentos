@@ -101,6 +101,13 @@ final class ApprovalCard {
         open(f, BLUE);
     }
 
+    /** Vault sign-in offer: "Sign in as <user>?" Not now / Sign in (the fingerprint prompt follows). Caller is a real tap. */
+    void offer(String pkg, String user, Listener l) {
+        LinearLayout f = face(appIcon(pkg), appLabel(pkg) + " · saved password", "Sign in as " + user + "?", BLUE, true);
+        f.addView(acts(hint("finger", BLUE, "Fingerprint"), button("Not now", FILL14, L1, l::deny), button("Sign in", BLUE, L1, l::approve)));
+        open(f, BLUE);
+    }
+
     /** The task sheet (pill tap): goal, step, progress, Hide / Stop. */
     void task() {
         Island i = svc.island;

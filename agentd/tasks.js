@@ -13,6 +13,9 @@ const BRIEF = `[Background task] The user said this to the AgentOS voice assista
 - This request is the user's go-ahead for exactly what it says (e.g. sending that reply), so don't stop to ask again. The phone shows its own approval (auto-review, a tap, or the fingerprint for payments and passwords) and your call waits for it. If it comes back denied or timed out, stop and say so.
 - Final message: one short spoken sentence, past tense, no markdown, ids or lists. E.g. "Done, I told Sam you're 10 minutes late."`;
 
+// A schedule the user made earlier (schedule.js) is now due. The phone may have been locked: the broker opened it.
+const SCHEDULED = BRIEF.replace(/^\[Background task\][^\n]*/, `[Scheduled task] The user scheduled this earlier and it is due now (it is their go-ahead). Nobody is watching: your final message is shown to them as a notification. For a reminder ("Remind me to ..."), don't touch the phone: just write the reminder as your final message.`);
+
 let codex = null;
 export const init = (c) => { codex = c; };
 const all = new Map(); // id -> task
@@ -71,14 +74,14 @@ function finish(t, state, { result, error } = {}) {
 
 async function run(t) {
   if (t.abort.signal.aborted) return finish(t, 'stopped', { error: t.stopWhy });
-  t.turn = { goal: t.goal }; // tools.js keeps the lease on this; the reviewer reads its goal and log
+  t.turn = { goal: t.goal, origin: t.origin }; // tools.js keeps the lease on this; the reviewer reads its goal and log
   Object.assign(t, { state: 'running', step: 'Starting' });
   t.timing.start_ms = Date.now() - t.heard;
   update(t, 'running');
   const ctx = { provider: 'codex', signal: t.abort.signal, turn: t.turn, emit: (m) => onWorker(t, m) };
   let r;
   const [c, a] = await Promise.all([context(t.goal), appList()]);
-  try { r = await codex.run(t.session, `${BRIEF}\n${a && `Installed apps (label=package; no need for list_apps): ${a}\n`}${c}\nRequest: ${t.goal}`, ctx); }
+  try { r = await codex.run(t.session, `${t.origin === 'schedule' ? SCHEDULED : BRIEF}\n${a && `Installed apps (label=package; no need for list_apps): ${a}\n`}${c}\nRequest: ${t.goal}`, ctx); }
   catch (e) { r = { status: 'failed', error: e.message }; }
   t.ending = true; // our own task.stop below is not the user stopping it
   await endTurn(t.turn);

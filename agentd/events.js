@@ -7,7 +7,7 @@ import { phoneAuth, rpc } from './tools.js';
 
 export const FORWARD = new Set(['mod.changed', 'approval.shown', 'approval.resolved', 'guard.flag', 'task.state', 'audit.append', 'review',
   'task.update', 'tool.request', 'tool.result', 'guard.alert', 'task.started', 'approval.needed',
-  'notification.posted', 'rule']); // 3rd line: the notification feed and reply rules (context.js) // 2nd line: background tasks (tasks.js)
+  'notification.posted', 'rule', 'tracker.blocked', 'vault.changed', 'schedule.list']); // 4th: Blockers and Passwords views refresh live // 3rd line: the notification feed and reply rules (context.js) // 2nd line: background tasks (tasks.js)
 export const pending = new Map(); // approval_id -> approval.shown payload
 export const flagged = new Set(); // task_ids the broker raised guard.flag for
 export const state = { connected: false, answeredAt: 0 };

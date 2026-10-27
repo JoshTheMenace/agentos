@@ -18,6 +18,14 @@ const TRANSIENT = /dns|lookup|resolve|ENOTFOUND|EAI_AGAIN|error sending request|
 const STALL_MS = 45_000;
 const SUGGEST_SCHEMA = { type: 'object', properties: { items: { type: 'array', items: { type: 'string' } } }, required: ['items'], additionalProperties: false };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Finishing tools (cfg.codexFinish): the model may pass its final reply as `done`. If the call succeeds (so the broker
+// allowed it), agentd shows that reply and ends the turn: the "tell the user it's done" model call (~2.5 s) is skipped.
+const FINISH = new Set(['set_alarm', 'set_timer', 'web_search', 'notifications_reply', 'act']);
+const DONE = { type: 'string', description: 'Only if this call completes the whole request and nothing is left to read or report: your final short reply to the user, e.g. "Alarm set for 7:00 AM." It is shown only if the call succeeds, and your turn ends there.' };
+const tier = () => cfg.codexTier && { serviceTier: cfg.codexTier };
+// bench/climb.js: prompt and tool-description variants, applied without a code change.
+const patch = cfg.promptPatch ? JSON.parse(Buffer.from(cfg.promptPatch, 'base64').toString()) : {};
+const patched = (p) => (patch.replace || []).reduce((a, [f, t]) => a.split(f).join(t), p) + (patch.append ? `\n${patch.append}` : '');
 
 // Codex's own approval prompts: always say no (rule 1). Shapes per request type.
 const DECLINE = {
@@ -87,7 +95,11 @@ export class Codex {
       return v.on(m);
     }
     const t = this.#turns.get(m.params?.threadId);
-    if (m.id != null) return this.#send({ id: m.id, ...(await this.#serverRequest(m, t)) });
+    if (m.id != null) {
+      this.#send({ id: m.id, ...(await this.#serverRequest(m, t)) });
+      if (t?.finish != null && t.turnId) this.#req('turn/interrupt', { threadId: m.params.threadId, turnId: t.turnId }).catch(() => {});
+      return;
+    }
     if (!t) return;
     if (m.method !== 'error') t.last = Date.now(); // "Reconnecting..." errors are not progress
     switch (m.method) {
@@ -100,16 +112,18 @@ export class Codex {
         break;
       }
       case 'error': t.ctx.emit({ type: 'error', message: m.params.error.message, retryable: m.params.willRetry }); break;
-      case 'turn/completed': t.done({ status: m.params.turn.status, error: m.params.turn.error?.message, usage: t.usage && { ...t.usage, calls: t.calls }, text: t.text }); break;
+      case 'turn/completed': if (t.finish != null) return t.done({ status: 'completed', usage: t.usage && { ...t.usage, calls: t.calls }, text: t.finish });
+        t.done({ status: m.params.turn.status, error: m.params.turn.error?.message, usage: t.usage && { ...t.usage, calls: t.calls }, text: t.text }); break;
     }
   }
 
   async #serverRequest(m, t) {
     if (m.method === 'item/tool/call') {
-      const { tool, arguments: args } = m.params;
+      const { tool } = m.params, { done, ...args } = m.params.arguments || {};
       if (!t) return { result: { success: false, contentItems: [{ type: 'inputText', text: 'No active turn' }] } };
       t.tools++;
       const r = await runTool(tool, args, t.ctx).finally(() => { t.tools--; t.last = Date.now(); });
+      if (cfg.codexFinish && FINISH.has(tool) && typeof done === 'string' && done.trim() && r.success) { t.finish = done.trim(); t.ctx.emit({ type: 'text.delta', text: t.finish }); }
       return { result: { success: r.success, contentItems: [{ type: 'inputText', text: r.text }] } };
     }
     if (DECLINE[m.method]) { log(`declined codex ${m.method}`); return { result: DECLINE[m.method] }; }
@@ -135,9 +149,10 @@ export class Codex {
     let s = session.codex;
     if (!s || s.gen !== this.#gen) {
       const r = await this.#req('thread/start', {
-        ...(cfg.codexModel && { model: cfg.codexModel }), cwd: cfg.codexCwd, ephemeral: true,
-        sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: `${SYSTEM_PROMPT}\n\n# Apps on this phone (label=package)\n${await appList()}`,
-        dynamicTools: Object.entries(TOOLS).map(([name, t]) => ({ type: 'function', name, description: t.description, inputSchema: t.schema })),
+        ...(cfg.codexModel && { model: cfg.codexModel }), ...tier(), cwd: cfg.codexCwd, ephemeral: true,
+        sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: `${patched(SYSTEM_PROMPT)}\n\n# Apps on this phone (label=package)\n${await appList()}`,
+        dynamicTools: Object.entries(TOOLS).map(([name, t]) => ({ type: 'function', name, description: patch.tools?.[name] ?? t.description,
+          inputSchema: cfg.codexFinish && FINISH.has(name) ? { ...t.schema, properties: { ...t.schema.properties, done: DONE } } : t.schema })),
       });
       s = session.codex = { threadId: r.thread.id, gen: this.#gen };
     }
@@ -170,7 +185,7 @@ export class Codex {
     let s = this.#warm.get(kind);
     if (!s || s.gen !== this.#gen || s.n >= job.rotate) {
       if (s) this.#req('thread/unsubscribe', { threadId: s.threadId }).catch(() => {});
-      const { thread } = await this.#req('thread/start', { ...(job.model && { model: job.model }), cwd: cfg.codexCwd,
+      const { thread } = await this.#req('thread/start', { ...(job.model && { model: job.model }), ...tier(), cwd: cfg.codexCwd,
         ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: job.prompt, dynamicTools: [] });
       this.#warm.set(kind, (s = { threadId: thread.id, gen: this.#gen, n: 0, idle: Promise.resolve() }));
     }
