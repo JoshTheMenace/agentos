@@ -1,0 +1,15 @@
+
+  4741ms [tool.request] {"name":"memory_entity","args":{"name":"Mom"},"tier":"read"}
+
+  4759ms [tool.result] {"name":"memory_entity","ok":true,"ms":28}
+
+  4769ms [tool.request] {"name":"memory_search","args":{"q":"Mom","limit":10},"tier":"read"}
+
+  4779ms [tool.result] {"name":"memory_search","ok":true,"ms":9}
+“Mom” is your Pigeon contact saved under that name; I don’t have her full name.
+
+You last messaged her yesterday, October 26, at 23:24 UTC: “Yes! I'll bring dessert”.
+  7717ms [turn.done] {"provider":"codex","status":"completed","usage":{"totalTokens":8050,"inputTokens":8000,"cachedInputTokens":7296,"cacheWriteInputTokens":0,"outputTokens":50,"reasoningOutputTokens":0},"ms":7456}
+first token 6711ms, total 7718ms
+graph no token: 401
+graph with token: 8 nodes, 9 edges, consents: pigeon

@@ -151,6 +151,8 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
             return;
         }
         final String key = mode + "|" + pkg + "|" + b + "|" + a;
+        if (key.equals(lastKey)) return; // cursor moved but the text didn't: nothing new to ask
+        lastKey = key;
         strip.setLoading();
         agent.cancel();
         bg.execute(() -> {
@@ -181,6 +183,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
                 });
             } catch (Exception e) {
                 Log.w(Agent.TAG, "suggest failed", e);
+                lastKey = ""; // let the next edit retry
                 ui.post(() -> { if (g == gen) { strip.setContext(app + " · agentd offline", Theme.CORAL, ""); strip.setItems(Arrays.asList(String.valueOf(e.getMessage())), false); } });
             }
         });

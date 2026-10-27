@@ -2,6 +2,7 @@
 // agentd never executes anything itself: it forwards to the Android tool server (android/README.md), which decides.
 import { cfg, phoneToken } from './config.js';
 import { classify } from './guard.js';
+import * as memory from './memory/index.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -30,6 +31,32 @@ export const TOOLS = {
   firewall_set: { method: 'firewall.set', tier: 'outward', description: 'Allow or block network access for an app (optionally only some domains). Needs the user\'s fingerprint.',
     schema: obj({ pkg: { type: 'string' }, mode: { type: 'string', enum: ['allow', 'block'] }, domains: { type: 'array', items: { type: 'string' } } }, ['pkg', 'mode']) },
   firewall_clear: { method: 'firewall.clear', tier: 'outward', schema: obj(), description: 'Remove every AgentOS firewall rule. Needs the user\'s fingerprint.' },
+};
+
+// Personal memory tools (agentd/memory): same shape, run locally by memory.call instead of the phone.
+for (const m of memory.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, memory: true };
+
+// Memory results: any text from other people (trusted:false) goes through the guard like screen text.
+async function guardMemory(x, ctx) {
+  if (Array.isArray(x)) { for (const v of x) await guardMemory(v, ctx); return x; }
+  if (!x || typeof x !== 'object') return x;
+  if (x.trusted === false && typeof x.text === 'string') {
+    const g = await classify(x.text);
+    if (g.label !== 'benign') {
+      ctx.emit({ type: 'guard.alert', source_pkg: `memory:${x.source}`, score: g.score, label: g.label, excerpt: x.text.slice(0, 160) });
+      x.text = `[withheld by guard: likely prompt injection, score ${g.score}]`;
+    }
+  }
+  for (const v of Object.values(x)) await guardMemory(v, ctx);
+  return x;
+}
+
+// consent_grant / consent_revoke / memory_forget need the user. There is no approval UI for them yet, so we show
+// approval.needed and decline; memory.call then tells the model to ask the user to do it in AgentOS.
+const memoryConfirm = (ctx) => async (summary) => {
+  ctx.emit({ type: 'approval.needed', summary: `memory: ${summary}`, rule_of_two: { untrusted: false, private: true, outward: true },
+    declined: 'no approval UI for memory changes yet; the user can do it with memory/cli.js' });
+  return false;
 };
 
 let token;
@@ -87,6 +114,11 @@ export async function runTool(name, args, ctx) {
   args = args && typeof args === 'object' ? args : {};
   const t0 = Date.now(), turn = ctx.turn;
   ctx.emit({ type: 'tool.request', name: t.method, args, tier: t.tier });
+  if (t.memory) {
+    const r = await guardMemory(await memory.call(name, args, { cloud: ctx.provider !== 'local', confirm: memoryConfirm(ctx) }), ctx);
+    ctx.emit({ type: 'tool.result', name, ok: r.ok !== false, reason: r.error, ms: Date.now() - t0 });
+    return { success: true, text: JSON.stringify(r) };
+  }
   try {
     let r, params = args;
     if (name === 'task_start') r = await lease(ctx, (args.apps || []).map(String));

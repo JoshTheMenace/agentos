@@ -7,6 +7,7 @@ import { WebSocketServer } from 'ws';
 import { agentdToken, cfg, log, provisionClients } from './config.js';
 import { classify } from './guard.js';
 import { endTurn } from './tools.js';
+import * as memory from './memory/index.js';
 import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
 import { ClaudeCli, handleMcp } from './providers/claude-cli.js';
@@ -30,6 +31,10 @@ function authorized(req) {
 
 const http = createServer((req, res) => {
   if (req.url === '/mcp') return handleMcp(req, res); // phone tools for the Claude Code CLI (per-session secret)
+  if (req.url.split('?')[0] === '/memory/graph.json') { // same bearer token as the WebSocket
+    if (!authorized(req)) return res.writeHead(401).end();
+    return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(memory.graph()));
+  }
   if (req.url.split(/[?#]/)[0] === '/voice') return res.writeHead(200, { 'content-type': 'text/html' }).end(readFileSync(VOICE_PAGE)); // no secrets in it
   res.writeHead(req.url === '/health' ? 200 : 404).end(req.url === '/health' ? 'ok\n' : '');
 });
@@ -53,7 +58,7 @@ wss.on('connection', (ws) => {
     const abort = new AbortController(), t0 = Date.now(), turn = { goal: String(text || '') };
     let said = '';
     active = { p, abort };
-    const ctx = { emit: (m) => { if (m.type === 'text.delta') said += m.text; emit(m); }, signal: abort.signal, turn };
+    const ctx = { provider: p.id, emit: (m) => { if (m.type === 'text.delta') said += m.text; emit(m); }, signal: abort.signal, turn };
     let r;
     try { r = await p.run(session, turn.goal, ctx); }
     catch (e) { r = { status: abort.signal.aborted ? 'interrupted' : 'failed', error: e.message }; }

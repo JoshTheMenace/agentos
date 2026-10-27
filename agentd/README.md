@@ -24,6 +24,7 @@ Node 22+, ESM, one runtime dependency (`ws`). `@anthropic-ai/sdk` is optional an
 | `mock-phone.js` | Fake `:7777` tool server: a small chat screen with one planted prompt injection |
 | `cli.js` | Tiny client: `node cli.js [--provider codex\|claude\|local] "text"`; keyboard test: `node cli.js --suggest reply\|rewrite\|fix [--screen "a\|b"] "text"` |
 | `voice.html` | Bare voice client served at `/voice#token=<agentd token>` (`?auto`, `?wav=<url>` for tests). Restyle freely; keep the WebRTC part |
+| `memory/` | Personal memory (SQLite + FTS5, consent ledger), owned by the memory track; wired in through `tools.js` and `/memory/graph.json` |
 | `runs/` | Recorded transcripts from the phone and voice tests |
 | `deploy/` | `tx.sh` (run in Termux from the Mac), `codex-root.sh` (root Codex fallback), `termux-boot.sh` (Termux:Boot) |
 
@@ -49,6 +50,12 @@ The model calls `task_start {apps}` first (the prompt tells it to). If it acts w
 | agentd → client | `voice.delegation {item_id, text}` · `voice.result {item_id, text}` | a spoken request ran as a normal `ask` turn (our tools, same gate, same events), and the answer was spoken with `appendSpeech` |
 
 Why the voice thread has no tools: app-server also starts its own turn on the voice thread for each delegation. agentd interrupts that turn and runs the request on the connection's normal thread instead, so the work happens once and goes through `tools.js`. When an approval is needed during a voice request, the voice says "Please approve that on your phone".
+
+### Personal memory (`memory/`, see `memory/INTEGRATION.md`)
+- The nine `memory_*`/`consent_*` tools sit in `TOOLS` next to the phone tools, so Codex, Claude and `/mcp` all get them. `runTool` sends them to `memory.call(name, args, {cloud, confirm})` instead of the phone. `cloud` is false only for the `local` provider, so cloud models see `[P:n]`/`[E:n]` pseudonyms. Text written by other people (`trusted:false`) goes through the guard like screen text.
+- `consent_grant`, `consent_revoke` and `memory_forget` need the user. agentd sends `approval.needed {summary:"memory: …", declined}` and declines, because there is no approval UI for these yet. The model then tells the user to do it themselves (`node memory/cli.js grant <source>`).
+- `GET /memory/graph.json` returns the Cytoscape graph and needs the same `Authorization: Bearer` token (401 without it).
+- Phone test (`runs/…-memory-mom-phone.txt`): `grant pigeon`, then `ingest pigeon --file <copy of chats.json>` (21 messages). "who is Mom and when did I last message her?" → `memory_entity` + `memory_search` (28 ms + 9 ms) → correct answer in 7.7 s. Over `tx.sh`, `ingest pigeon` can't read Pigeon's file itself (see the `su` capabilities gotcha), so pass `--file`.
 
 ### Keyboard suggestions (`local.agentos.keys`)
 `{type:"suggest", id, mode:"reply"|"rewrite"|"fix", before, after, field:{pkg, hint, inputType}, screen?:[lines]}` → `{type:"suggestions", id, items:[3 strings], ms}` (`items:[]` plus `error` on failure).
