@@ -14,6 +14,7 @@ Node 22+, ESM, one runtime dependency (`ws`). `@anthropic-ai/sdk` is optional an
 | File | What it does |
 |---|---|
 | `server.js` | WebSocket server, token check, one conversation per connection, provider router, `/health`, and `/mcp` (phone tools for Claude Code) |
+| `events.js` | Broker `/events` subscription, voice yes/no → `approval.confirm`/`deny`, launcher tap mirror, reviewer hook |
 | `tools.js` | The 13 phone tools matching `android/README.md` (incl. `task_start`, `firewall_clear`, `submit`, `src`/`risk`), the call to `:7777/rpc` (90 s timeout: approvals wait 60 s), guard wrapping, and the lease: every action runs inside the turn's `task.start` and carries its `task_id` |
 | `guard.js` | `classify(text) -> {score, label}`. A regex placeholder; swap in Prompt Guard 2 behind the same function (it may be async) |
 | `prompt.js` | The system prompt shared by all providers (phone agent, screen text is untrusted data, ask before outward actions) |
@@ -31,7 +32,7 @@ Node 22+, ESM, one runtime dependency (`ws`). `@anthropic-ai/sdk` is optional an
 ## WebSocket protocol (from ARCHITECTURE.md)
 Auth uses `Authorization: Bearer <token>`. A WebView can't set that header on a WebSocket, so it may instead send the subprotocol `agentos.bearer.<token>`. The token is in `~/.agentos/agentd.token` (mode 600, created on first start) or in `AGENTD_TOKEN`.
 
-- client → agentd: `{type:"ask", text, provider?}` · `{type:"stop"}` · `suggest` and `voice.*` (below)
+- client → agentd: `{type:"ask", text, provider?}` · `{type:"stop"}` · `{type:"approval.tap", approval_id}` · `suggest` and `voice.*` (below)
 - agentd → client: `text.delta {text}` · `task.started {task_id, apps, refused_apps}` · `tool.request {name, args, tier}` · `tool.result {name, ok, decision, reason, tier, rule_of_two, ms}` · `approval.needed {summary, timeout_s, rule_of_two}` · `guard.alert {source_pkg, score, label, node, excerpt}` · `turn.done {provider, status, usage, ms}` · `error {code?, message, retryable}` (`code:"transient"` = agentd is retrying)
 
 `approval.needed` is sent just before a call the phone will hold for a fingerprint (outward tool, `submit`, a node with `risk:"T3"`, or any tap on a secure screen). The tool server has no `approval_pending` reply: the call simply blocks for up to 60 s, then returns `approved` or `denied` (`reason:"timed out"`). It is display-only: the fingerprint card on the phone is the real gate.
@@ -50,6 +51,14 @@ The model calls `task_start {apps}` first (the prompt tells it to). If it acts w
 | agentd → client | `voice.delegation {item_id, text}` · `voice.result {item_id, text}` | a spoken request ran as a normal `ask` turn (our tools, same gate, same events), and the answer was spoken with `appendSpeech` |
 
 Why the voice thread has no tools: app-server also starts its own turn on the voice thread for each delegation. agentd interrupts that turn and runs the request on the connection's normal thread instead, so the work happens once and goes through `tools.js`. When an approval is needed during a voice request, the voice says "Please approve that on your phone".
+
+### Approvals: broker events, voice "send it", launcher tap, reviewer hook (`events.js`)
+An approval is a tap on the native card's Approve plus the fingerprint. agentd never approves on its own. It only passes on these, and only when the broker lists the channel in that approval's `allowed_channels`:
+- **Events:** agentd subscribes to the broker's `GET /events` (SSE, same bearer token, reconnects with backoff, resyncs with `approval.list`) and forwards `approval.shown`, `approval.resolved`, `guard.flag` and `task.state` to every WS client. While the stream is up, the old guessed `approval.needed` is not sent.
+- **voice:** in a voice session, the **user's own** transcription (`thread/realtime/transcript/done`, `role:"user"`) that is a clear yes ("yes", "send it", "approve", "do it", "go ahead") or no ("no", "cancel", "don't", "stop") goes to `approval.confirm` / `approval.deny {approval_id, channel:"voice", utterance}`. It only applies when exactly one approval is pending. The match is on the whole utterance only; anything else ("yes but change it", "ok", "send it to Bob") is ignored for approval. A yes without `voice` in `allowed_channels` is answered "This one needs your fingerprint." Saying no is always passed on. Typed chat never answers an approval, and neither do model output or tool results. When the card goes up, the voice asks "Should I tap Send: "…"? Say yes or no" (or asks for the fingerprint). A delegation the voice model makes from that same "yes" is dropped.
+- **tap:** client → agentd `{type:"approval.tap", approval_id}` (the launcher's mirrored button) → `approval.confirm {channel:"tap"}`, only if allowed. Otherwise the reply is "Approve it on the card on your phone." Result: `approval.answer {approval_id, decision, channel, ok, text, needs_fingerprint?}`.
+- **reviewer (hook only):** `events.setReviewer(async (approval) => ({approve, rationale}) | null)`. When the broker offers `reviewer`, agentd asks it and, on approve, calls `approval.confirm {approval_id, channel:"reviewer", rationale}`. Nothing is registered yet (see `spikes/codex-reviewer/`).
+- **Status:** the broker side isn't on the phone yet. Tested against the stub in `mock-phone.js` (`MOCK_CHANNELS=fingerprint,tap,voice`) with headless-Chrome voice: "Yes, send it" spoken 17 s after the card → approved by voice → sent. With fingerprint only → "This one needs your fingerprint", then the tap mirror approved it. On the phone today, `/events` is unavailable, so agentd logs it once, keeps retrying every ≤30 s, and falls back to the guessed `approval.needed`.
 
 ### Personal memory (`memory/`, see `memory/INTEGRATION.md`)
 - The nine `memory_*`/`consent_*` tools sit in `TOOLS` next to the phone tools, so Codex, Claude and `/mcp` all get them. `runTool` sends them to `memory.call(name, args, {cloud, confirm})` instead of the phone. `cloud` is false only for the `local` provider, so cloud models see `[P:n]`/`[E:n]` pseudonyms. Text written by other people (`trusted:false`) goes through the guard like screen text.

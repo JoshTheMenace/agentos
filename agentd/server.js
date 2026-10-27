@@ -8,6 +8,7 @@ import { agentdToken, cfg, log, provisionClients } from './config.js';
 import { classify } from './guard.js';
 import { endTurn } from './tools.js';
 import * as memory from './memory/index.js';
+import * as events from './events.js';
 import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
 import { ClaudeCli, handleMcp } from './providers/claude-cli.js';
@@ -18,6 +19,7 @@ const cli = new ClaudeCli();
 const codex = new Codex();
 const providers = Object.fromEntries([codex, cli.available() ? cli : new Claude(), new Local()].map((p) => [p.id, p]));
 if (cfg.provider === 'codex') codex.ready().catch(() => {}); // warm start; it also restarts itself if it crashes
+events.watch(); // broker approvals/guard/task events -> every connected UI
 const VOICE_PAGE = new URL('./voice.html', import.meta.url);
 const TOKEN = Buffer.from(agentdToken());
 const PROTO = 'agentos.bearer.'; // browsers/WebViews can't set headers on a WebSocket, so they may send the token as a subprotocol
@@ -49,6 +51,17 @@ wss.on('connection', (ws) => {
   let active = null;  // {provider, abort}
   const send = (m) => ws.readyState === 1 && ws.send(JSON.stringify(m));
   const say = (text) => session.voice && codex.voiceSay(session.voice, text).catch(() => {});
+  const offEvents = events.onEvent((e) => {
+    if (!events.FORWARD.has(e.type)) return;
+    send(e);
+    if (e.type === 'approval.shown') say(events.prompt(e));
+  });
+  // The user's own spoken words that answer the pending approval (null = not an answer; it goes on as normal input).
+  async function approvalAnswer(text) {
+    const a = await events.answer(text, 'voice');
+    if (a) { send({ type: 'approval.answer', ...a }); say(a.text); }
+    return a;
+  }
 
   // One model turn (typed, or a voice delegation). Resolves with the final text, or null if busy/unavailable.
   async function ask(text, provider, emit = send) {
@@ -74,6 +87,10 @@ wss.on('connection', (ws) => {
   async function delegate(itemId, text) {
     if (!text || delegations.has(itemId)) return; // the page and app-server's sideband may both report it
     delegations.add(itemId);
+    if (events.pending.size) { // the voice model may hand off a spoken "yes": the user's transcript answers it, not this
+      const t = Date.now();
+      return setTimeout(() => events.state.answeredAt < t && say('I am waiting for your approval. Say yes or no, or use your fingerprint.'), 3000);
+    }
     send({ type: 'voice.delegation', item_id: itemId, text });
     if (active) return say('I am still working on the last request.');
     const emit = (m) => { send(m); if (m.type === 'approval.needed') say('Please approve that on your phone with your fingerprint.'); };
@@ -83,7 +100,10 @@ wss.on('connection', (ws) => {
 
   function onVoice({ method, params: p }) { // realtime notifications for this connection's voice thread
     if (method === 'thread/realtime/started') send({ type: 'voice.started', session_id: p.realtimeSessionId });
-    else if (method === 'thread/realtime/transcript/done') send({ type: 'voice.transcript', role: p.role, text: p.text, final: true });
+    else if (method === 'thread/realtime/transcript/done') {
+      send({ type: 'voice.transcript', role: p.role, text: p.text, final: true });
+      if (p.role === 'user') approvalAnswer(p.text); // the user's words only, never the voice model's
+    }
     else if (method === 'thread/realtime/itemAdded' && p.item?.type === 'handoff_request') delegate(p.item.handoff_id, p.item.input_transcript);
     else if (method === 'thread/realtime/error') send({ type: 'voice.error', message: p.message ?? JSON.stringify(p) });
     else if (method === 'thread/realtime/closed') { session.voice = null; send({ type: 'voice.closed', reason: p.reason }); }
@@ -110,7 +130,9 @@ wss.on('connection', (ws) => {
   ws.on('message', async (raw) => {
     let msg; try { msg = JSON.parse(raw); } catch { return send({ type: 'error', code: 'bad_json' }); }
     switch (msg.type) {
-      case 'ask': return ask(msg.text, msg.provider);
+      case 'ask': return ask(msg.text, msg.provider); // typed text never answers an approval
+      case 'approval.tap': // launcher's mirrored Approve button; only if the broker allows "tap" for this approval
+        return send({ type: 'approval.answer', ...(await events.tap(String(msg.approval_id))) });
       case 'stop':
         if (!active) return;
         active.abort.abort();
@@ -132,7 +154,7 @@ wss.on('connection', (ws) => {
         return send({ type: 'error', code: 'unknown_type', message: String(msg.type) });
     }
   });
-  ws.on('close', () => { suggesting?.abort(); active?.abort.abort(); active?.p.stop?.(session); if (session.voice) codex.voiceStop(session.voice).catch(() => {}); });
+  ws.on('close', () => { offEvents(); suggesting?.abort(); active?.abort.abort(); active?.p.stop?.(session); if (session.voice) codex.voiceStop(session.voice).catch(() => {}); });
 });
 
 if (process.platform === 'android') provisionClients(agentdToken());

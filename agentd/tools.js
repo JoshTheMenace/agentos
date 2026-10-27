@@ -3,6 +3,7 @@
 import { cfg, phoneToken } from './config.js';
 import { classify } from './guard.js';
 import * as memory from './memory/index.js';
+import { state as events } from './events.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -60,11 +61,11 @@ const memoryConfirm = (ctx) => async (summary) => {
 };
 
 let token;
+export const phoneAuth = () => `Bearer ${(token ??= phoneToken())}`;
 export async function rpc(method, params = {}, ms = ACT_MS) {
-  token ??= phoneToken();
   const res = await fetch(cfg.phoneUrl, {
     method: 'POST', signal: AbortSignal.timeout(ms),
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    headers: { 'content-type': 'application/json', authorization: phoneAuth() },
     body: JSON.stringify({ method, params }),
   });
   const body = await res.json().catch(() => ({}));
@@ -129,7 +130,8 @@ export async function runTool(name, args, ctx) {
       }
       if (needsApproval(name, args, turn)) {
         params = { ...params, approval_timeout_s: APPROVAL_S };
-        ctx.emit({ type: 'approval.needed', summary: `${t.method} ${JSON.stringify(args)}${args.id != null ? ` "${turn.nodes?.get(args.id)?.text ?? ''}" in ${turn.pkg}` : ''}`, timeout_s: APPROVAL_S,
+        if (!events.connected) ctx.emit({ // a guess; with the broker's /events stream the UI gets the real approval.shown
+ type: 'approval.needed', summary: `${t.method} ${JSON.stringify(args)}${args.id != null ? ` "${turn.nodes?.get(args.id)?.text ?? ''}" in ${turn.pkg}` : ''}`, timeout_s: APPROVAL_S,
           rule_of_two: { untrusted: !!turn.sawScreen, private: null, outward: true } });
       }
       r = await rpc(t.method, params, t.tier === 'read' && name !== 'wait' ? 20_000 : ACT_MS);
