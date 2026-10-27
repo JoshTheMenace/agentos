@@ -1,0 +1,315 @@
+{
+ "pkg": "com.android.chrome",
+ "activity": "org.chromium.chrome.browser.signin.SigninAndHistorySyncActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:56",
+   "desc": "12:56 PM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Calendar notification: ‎‪Call grandma?‬‎",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    211,
+    10,
+    250,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Settings notification: Charging complete",
+   "bounds": [
+    250,
+    10,
+    289,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    263,
+    10,
+    302,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 12,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 14,
+   "role": "TextView",
+   "text": "Make Chrome your own",
+   "bounds": [
+    0,
+    567,
+    720,
+    635
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 15,
+   "role": "TextView",
+   "text": "Sign in to get your bookmarks, passwords, and more on all your devices",
+   "bounds": [
+    0,
+    635,
+    720,
+    730
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.002
+  },
+  {
+   "id": 16,
+   "role": "LinearLayout",
+   "desc": "Josh Gimenes, josh.gimenes1@gmail.com currently selected. Choose an account.",
+   "bounds": [
+    42,
+    1129,
+    678,
+    1278
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 17,
+   "role": "TextView",
+   "text": "Josh Gimenes",
+   "bounds": [
+    168,
+    1157,
+    580,
+    1206
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 18,
+   "role": "TextView",
+   "text": "josh⁠.gimenes1@gmail⁠.com",
+   "bounds": [
+    168,
+    1206,
+    580,
+    1250
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 19,
+   "role": "Button",
+   "text": "Continue as Josh",
+   "bounds": [
+    42,
+    1320,
+    678,
+    1404
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 20,
+   "role": "Button",
+   "text": "Stay signed out",
+   "bounds": [
+    42,
+    1404,
+    678,
+    1488
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.003
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.android.chrome",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.003,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.001,
+  "scored_nodes": 7,
+  "ms": 1182
+ },
+ "ok": true
+}

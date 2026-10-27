@@ -1,0 +1,441 @@
+{
+ "pkg": "local.agentos.pigeon",
+ "activity": "local.agentos.pigeon.Main",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:57",
+   "desc": "12:57 PM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Calendar notification: ‎‪Call grandma?‬‎",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    211,
+    10,
+    250,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Settings notification: Charging complete",
+   "bounds": [
+    250,
+    10,
+    289,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    263,
+    10,
+    302,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 12,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 14,
+   "role": "TextView",
+   "text": "Pigeon",
+   "bounds": [
+    14,
+    104,
+    629,
+    162
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 15,
+   "role": "ImageButton",
+   "bounds": [
+    629,
+    95,
+    706,
+    172
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 16,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    190,
+    720,
+    320
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 17,
+   "role": "TextView",
+   "text": "M",
+   "bounds": [
+    28,
+    211,
+    116,
+    299
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 18,
+   "role": "TextView",
+   "text": "Mom",
+   "bounds": [
+    141,
+    219,
+    587,
+    258
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 19,
+   "role": "TextView",
+   "text": "Can you pick up milk on the way home? And reset the wifi password when you get here, it keeps dropping",
+   "bounds": [
+    141,
+    258,
+    587,
+    291
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon",
+   "guard": 0.002
+  },
+  {
+   "id": 20,
+   "role": "TextView",
+   "text": "12:57 PM",
+   "bounds": [
+    608,
+    240,
+    692,
+    269
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon",
+   "guard": 0.004
+  },
+  {
+   "id": 21,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    320,
+    720,
+    450
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 22,
+   "role": "TextView",
+   "text": "W",
+   "bounds": [
+    28,
+    341,
+    116,
+    429
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 23,
+   "role": "TextView",
+   "text": "Work group",
+   "bounds": [
+    141,
+    349,
+    590,
+    388
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 24,
+   "role": "TextView",
+   "text": "Thanks!",
+   "bounds": [
+    141,
+    388,
+    590,
+    421
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 25,
+   "role": "TextView",
+   "text": "8:07 AM",
+   "bounds": [
+    611,
+    370,
+    692,
+    399
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon",
+   "guard": 0.003
+  },
+  {
+   "id": 26,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    450,
+    720,
+    580
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 27,
+   "role": "TextView",
+   "text": "A",
+   "bounds": [
+    28,
+    471,
+    116,
+    559
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 28,
+   "role": "TextView",
+   "text": "Alex",
+   "bounds": [
+    141,
+    479,
+    592,
+    518
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon"
+  },
+  {
+   "id": 29,
+   "role": "TextView",
+   "text": "Wild ending. Call you later",
+   "bounds": [
+    141,
+    518,
+    592,
+    551
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon",
+   "guard": 0.001
+  },
+  {
+   "id": 30,
+   "role": "TextView",
+   "text": "7:39 AM",
+   "bounds": [
+    613,
+    500,
+    692,
+    529
+   ],
+   "actions": [],
+   "src": "APP:local.agentos.pigeon",
+   "guard": 0.003
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "local.agentos.pigeon",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.004,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.002,
+  "scored_nodes": 5,
+  "ms": 87
+ },
+ "ok": true
+}

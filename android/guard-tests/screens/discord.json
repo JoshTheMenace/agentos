@@ -1,0 +1,818 @@
+{
+ "pkg": "com.discord",
+ "activity": "com.discord.main.MainDefault",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "11:50",
+   "desc": "11:50 AM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "AbsListView",
+   "bounds": [
+    0,
+    0,
+    126,
+    1600
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 12,
+   "role": "Button",
+   "desc": "Direct Messages",
+   "bounds": [
+    0,
+    77,
+    126,
+    182
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 13,
+   "role": "Button",
+   "desc": "5 mentions, Jensshum (direct message)",
+   "bounds": [
+    0,
+    182,
+    126,
+    287
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord",
+   "guard": 0.002
+  },
+  {
+   "id": 14,
+   "role": "TextView",
+   "text": "5",
+   "bounds": [
+    82,
+    248,
+    100,
+    276
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 15,
+   "role": "Button",
+   "desc": "2 mentions, Josh (direct message)",
+   "bounds": [
+    0,
+    287,
+    126,
+    392
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord",
+   "guard": 0.001
+  },
+  {
+   "id": 16,
+   "role": "TextView",
+   "text": "2",
+   "bounds": [
+    82,
+    353,
+    100,
+    381
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 17,
+   "role": "Button",
+   "desc": "Welcome to Discord",
+   "bounds": [
+    21,
+    429,
+    105,
+    525
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 18,
+   "role": "Button",
+   "desc": "Add a Server",
+   "bounds": [
+    0,
+    539,
+    126,
+    644
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 19,
+   "role": "Button",
+   "desc": "Josh, Online",
+   "bounds": [
+    49,
+    1439,
+    594,
+    1495
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 20,
+   "role": "ViewGroup",
+   "bounds": [
+    49,
+    1439,
+    105,
+    1495
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 21,
+   "role": "TextView",
+   "text": "Josh",
+   "bounds": [
+    154,
+    1439,
+    213,
+    1470
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 22,
+   "role": "TextView",
+   "text": "Online",
+   "bounds": [
+    154,
+    1471,
+    213,
+    1495
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 23,
+   "role": "Button",
+   "desc": "Notifications",
+   "bounds": [
+    615,
+    1439,
+    671,
+    1495
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 24,
+   "role": "View",
+   "text": "Messages",
+   "bounds": [
+    156,
+    107,
+    305,
+    149
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 25,
+   "role": "Button",
+   "desc": "Search",
+   "bounds": [
+    156,
+    163,
+    212,
+    219
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 26,
+   "role": "Button",
+   "desc": "Add Friends",
+   "bounds": [
+    233,
+    163,
+    615,
+    219
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 27,
+   "role": "TextView",
+   "text": "Add Friends",
+   "bounds": [
+    370,
+    178,
+    509,
+    203
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 28,
+   "role": "Button",
+   "desc": "New Message",
+   "bounds": [
+    636,
+    163,
+    692,
+    219
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 29,
+   "role": "RecyclerView",
+   "desc": "Messages",
+   "bounds": [
+    128,
+    240,
+    720,
+    1600
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 30,
+   "role": "HorizontalScrollView",
+   "desc": "Happening Now",
+   "bounds": [
+    142,
+    240,
+    720,
+    393
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 31,
+   "role": "Button",
+   "desc": "Jensshum,",
+   "bounds": [
+    156,
+    240,
+    310,
+    393
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 32,
+   "role": "Button",
+   "desc": "Josh,",
+   "bounds": [
+    324,
+    240,
+    478,
+    393
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 33,
+   "role": "Button",
+   "desc": "5 mentions, Jensshum (direct message)",
+   "bounds": [
+    142,
+    428,
+    706,
+    515
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord",
+   "guard": 0.002
+  },
+  {
+   "id": 34,
+   "role": "TextView",
+   "text": "Jensshum",
+   "bounds": [
+    233,
+    437,
+    356,
+    472
+   ],
+   "actions": [],
+   "src": "APP:com.discord",
+   "guard": 0.002
+  },
+  {
+   "id": 35,
+   "role": "TextView",
+   "text": "4mo",
+   "bounds": [
+    644,
+    440,
+    685,
+    468
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 36,
+   "role": "TextView",
+   "text": "Jensshum: 2 images",
+   "bounds": [
+    233,
+    472,
+    446,
+    508
+   ],
+   "actions": [],
+   "src": "APP:com.discord",
+   "guard": 0.001
+  },
+  {
+   "id": 37,
+   "role": "Button",
+   "desc": "2 mentions, Josh (direct message)",
+   "bounds": [
+    142,
+    524,
+    706,
+    611
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord",
+   "guard": 0.001
+  },
+  {
+   "id": 38,
+   "role": "TextView",
+   "text": "Josh",
+   "bounds": [
+    233,
+    533,
+    291,
+    568
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 39,
+   "role": "TextView",
+   "text": "4mo",
+   "bounds": [
+    644,
+    536,
+    685,
+    564
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 40,
+   "role": "TextView",
+   "text": "Josh: 1 video",
+   "bounds": [
+    233,
+    568,
+    368,
+    604
+   ],
+   "actions": [],
+   "src": "APP:com.discord",
+   "guard": 0.001
+  },
+  {
+   "id": 41,
+   "role": "Button",
+   "desc": "Invite more friends",
+   "bounds": [
+    142,
+    617,
+    400,
+    694
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 42,
+   "role": "TextView",
+   "text": "Invite more friends",
+   "bounds": [
+    156,
+    638,
+    386,
+    673
+   ],
+   "actions": [],
+   "src": "APP:com.discord",
+   "guard": 0.002
+  },
+  {
+   "id": 43,
+   "role": "Button",
+   "desc": "Share Link",
+   "bounds": [
+    566,
+    627,
+    622,
+    683
+   ],
+   "actions": [
+    "click"
+   ],
+   "risk": "T3",
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 44,
+   "role": "Button",
+   "desc": "Copy Link",
+   "bounds": [
+    636,
+    627,
+    692,
+    683
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 45,
+   "role": "ViewGroup",
+   "bounds": [
+    0,
+    0,
+    720,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 46,
+   "role": "Button",
+   "desc": "Dismiss",
+   "bounds": [
+    0,
+    77,
+    720,
+    105
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 47,
+   "role": "ViewGroup",
+   "bounds": [
+    0,
+    653,
+    720,
+    660
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 48,
+   "role": "ScrollView",
+   "bounds": [
+    0,
+    702,
+    720,
+    1600
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 49,
+   "role": "TextView",
+   "text": "We’ve Launched Additional Protections for Teens",
+   "bounds": [
+    35,
+    1003,
+    685,
+    1115
+   ],
+   "actions": [],
+   "src": "APP:com.discord",
+   "guard": 0.002
+  },
+  {
+   "id": 50,
+   "role": "TextView",
+   "text": "Your age group hasn’t been confirmed yet, so some content and settings meant for adults aren't available. Otherwise, Discord works the same. Learn more on our …",
+   "bounds": [
+    35,
+    1129,
+    685,
+    1285
+   ],
+   "actions": [],
+   "src": "APP:com.discord",
+   "guard": 0.002
+  },
+  {
+   "id": 51,
+   "role": "Button",
+   "desc": "Learn more on our blog",
+   "bounds": [
+    241,
+    1246,
+    560,
+    1285
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 52,
+   "role": "Button",
+   "desc": "View in Settings",
+   "bounds": [
+    35,
+    1327,
+    685,
+    1411
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 53,
+   "role": "TextView",
+   "text": "View in Settings",
+   "bounds": [
+    262,
+    1353,
+    458,
+    1385
+   ],
+   "actions": [],
+   "src": "APP:com.discord",
+   "guard": 0.013
+  },
+  {
+   "id": 54,
+   "role": "Button",
+   "desc": "Got It",
+   "bounds": [
+    35,
+    1425,
+    685,
+    1509
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.discord"
+  },
+  {
+   "id": 55,
+   "role": "TextView",
+   "text": "Got It",
+   "bounds": [
+    325,
+    1451,
+    395,
+    1483
+   ],
+   "actions": [],
+   "src": "APP:com.discord"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.discord",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.013,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.003,
+  "scored_nodes": 11,
+  "ms": 3806
+ },
+ "ok": true
+}

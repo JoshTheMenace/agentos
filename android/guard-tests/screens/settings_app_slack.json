@@ -1,0 +1,577 @@
+{
+ "pkg": "com.android.settings",
+ "activity": "com.android.settings.applications.InstalledAppDetails",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:56",
+   "desc": "12:56 PM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Calendar notification: ‎‪Call grandma?‬‎",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    211,
+    10,
+    250,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Settings notification: Charging complete",
+   "bounds": [
+    250,
+    10,
+    289,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    263,
+    10,
+    302,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 12,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 14,
+   "role": "ScrollView",
+   "bounds": [
+    0,
+    0,
+    720,
+    1516
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 15,
+   "role": "FrameLayout",
+   "desc": "App info",
+   "bounds": [
+    0,
+    0,
+    720,
+    390
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 16,
+   "role": "ImageButton",
+   "desc": "Navigate up",
+   "bounds": [
+    0,
+    77,
+    98,
+    175
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 17,
+   "role": "TextView",
+   "desc": "Search settings",
+   "bounds": [
+    636,
+    84,
+    720,
+    168
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 18,
+   "role": "RecyclerView",
+   "bounds": [
+    0,
+    390,
+    720,
+    1516
+   ],
+   "actions": [
+    "scroll",
+    "focused"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 19,
+   "role": "TextView",
+   "text": "Slack",
+   "bounds": [
+    319,
+    530,
+    401,
+    577
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 20,
+   "role": "Button",
+   "text": "Open",
+   "bounds": [
+    28,
+    619,
+    248,
+    772
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 21,
+   "role": "Button",
+   "text": "Uninstall",
+   "bounds": [
+    250,
+    619,
+    470,
+    772
+   ],
+   "actions": [
+    "click"
+   ],
+   "risk": "T3",
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 22,
+   "role": "Button",
+   "text": "Force stop",
+   "bounds": [
+    472,
+    619,
+    692,
+    772
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 23,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    786,
+    720,
+    923
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 24,
+   "role": "TextView",
+   "text": "Notifications",
+   "bounds": [
+    42,
+    814,
+    243,
+    861
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 25,
+   "role": "TextView",
+   "text": "Off",
+   "bounds": [
+    42,
+    861,
+    80,
+    895
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 26,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    923,
+    720,
+    1060
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 27,
+   "role": "TextView",
+   "text": "Permissions",
+   "bounds": [
+    42,
+    951,
+    232,
+    998
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 28,
+   "role": "TextView",
+   "text": "No permissions granted",
+   "bounds": [
+    42,
+    998,
+    319,
+    1032
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.998
+  },
+  {
+   "id": 29,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    1060,
+    720,
+    1197
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 30,
+   "role": "TextView",
+   "text": "Storage & cache",
+   "bounds": [
+    42,
+    1088,
+    301,
+    1135
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.003
+  },
+  {
+   "id": 31,
+   "role": "TextView",
+   "text": "222 MB used in internal storage",
+   "bounds": [
+    42,
+    1135,
+    405,
+    1169
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.003
+  },
+  {
+   "id": 32,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    1197,
+    720,
+    1334
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 33,
+   "role": "TextView",
+   "text": "Mobile data & Wi‑Fi",
+   "bounds": [
+    42,
+    1225,
+    350,
+    1272
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.002
+  },
+  {
+   "id": 34,
+   "role": "TextView",
+   "text": "No data used",
+   "bounds": [
+    42,
+    1272,
+    195,
+    1306
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.794
+  },
+  {
+   "id": 35,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    1334,
+    720,
+    1471
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 36,
+   "role": "TextView",
+   "text": "Screen time",
+   "bounds": [
+    42,
+    1362,
+    236,
+    1409
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 37,
+   "role": "TextView",
+   "text": " ",
+   "bounds": [
+    42,
+    1409,
+    49,
+    1443
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 38,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    1471,
+    720,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 39,
+   "role": "TextView",
+   "text": "Battery",
+   "bounds": [
+    42,
+    1499,
+    160,
+    1516
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.android.settings",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.998,
+  "label": "MALICIOUS",
+  "flagged_node_ids": [
+   28,
+   34
+  ],
+  "screen_score": 0.028,
+  "scored_nodes": 5,
+  "ms": 358
+ },
+ "ok": true
+}

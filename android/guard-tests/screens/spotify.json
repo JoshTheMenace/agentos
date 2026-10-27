@@ -1,0 +1,715 @@
+{
+ "pkg": "com.spotify.music",
+ "activity": "com.spotify.music.MainActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "11:49",
+   "desc": "11:49 AM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "View",
+   "bounds": [
+    14,
+    77,
+    98,
+    161
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 12,
+   "role": "View",
+   "desc": "Go to profile and settings",
+   "bounds": [
+    28,
+    91,
+    84,
+    147
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.031
+  },
+  {
+   "id": 13,
+   "role": "View",
+   "bounds": [
+    496,
+    77,
+    676,
+    161
+   ],
+   "actions": [
+    "click",
+    "unchecked"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 14,
+   "role": "TextView",
+   "text": "Audiobooks",
+   "bounds": [
+    525,
+    103,
+    647,
+    135
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 15,
+   "role": "View",
+   "bounds": [
+    333,
+    77,
+    482,
+    161
+   ],
+   "actions": [
+    "click",
+    "unchecked"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 16,
+   "role": "TextView",
+   "text": "Podcasts",
+   "bounds": [
+    362,
+    103,
+    453,
+    135
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 17,
+   "role": "View",
+   "bounds": [
+    202,
+    77,
+    319,
+    161
+   ],
+   "actions": [
+    "click",
+    "unchecked"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 18,
+   "role": "TextView",
+   "text": "Music",
+   "bounds": [
+    231,
+    103,
+    290,
+    135
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 19,
+   "role": "View",
+   "bounds": [
+    105,
+    77,
+    189,
+    161
+   ],
+   "actions": [
+    "click",
+    "checked"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 20,
+   "role": "TextView",
+   "text": "All",
+   "bounds": [
+    134,
+    103,
+    159,
+    135
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 21,
+   "role": "RecyclerView",
+   "bounds": [
+    0,
+    161,
+    720,
+    1600
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 22,
+   "role": "View",
+   "bounds": [
+    0,
+    286,
+    720,
+    622
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 23,
+   "role": "TextView",
+   "text": "Popular radio",
+   "bounds": [
+    28,
+    678,
+    234,
+    720
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 24,
+   "role": "RecyclerView",
+   "bounds": [
+    0,
+    734,
+    720,
+    1107
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 25,
+   "role": "Button",
+   "desc": "Drake Radio. Drake, Kendrick Lamar, Chris Brown, Summer Walker, DJ Khaled",
+   "bounds": [
+    28,
+    734,
+    316,
+    1107
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 26,
+   "role": "TextView",
+   "text": "Drake, Kendrick Lamar, Chris Brown, Summer Walker, DJ Khaled",
+   "bounds": [
+    28,
+    1043,
+    316,
+    1107
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 27,
+   "role": "Button",
+   "desc": "SZA Radio. Rihanna, Travis Scott, Kendrick Lamar, SZA, Frank Ocean",
+   "bounds": [
+    344,
+    734,
+    632,
+    1107
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 28,
+   "role": "TextView",
+   "text": "Rihanna, Travis Scott, Kendrick Lamar, SZA, Frank Ocean",
+   "bounds": [
+    344,
+    1043,
+    632,
+    1107
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 29,
+   "role": "Button",
+   "desc": "Fleetwood Mac Radio. Fleetwood Mac, Elton John, The Rolling Stones, Billy Joel, Eagles",
+   "bounds": [
+    660,
+    734,
+    720,
+    1107
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 30,
+   "role": "TextView",
+   "text": "Fleetwood Mac, Elton John, The Rolling Stones, Billy Joel, Eagles",
+   "bounds": [
+    660,
+    1043,
+    720,
+    1107
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 31,
+   "role": "TextView",
+   "text": "Popular artists",
+   "bounds": [
+    28,
+    1163,
+    253,
+    1205
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 32,
+   "role": "RecyclerView",
+   "bounds": [
+    0,
+    1219,
+    720,
+    1592
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 33,
+   "role": "Button",
+   "bounds": [
+    28,
+    1219,
+    316,
+    1592
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 34,
+   "role": "TextView",
+   "text": "The Weeknd",
+   "bounds": [
+    28,
+    1528,
+    316,
+    1560
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 35,
+   "role": "Button",
+   "bounds": [
+    344,
+    1219,
+    632,
+    1592
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "risk": "T3",
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 36,
+   "role": "TextView",
+   "text": "Post Malone",
+   "bounds": [
+    344,
+    1528,
+    632,
+    1560
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 37,
+   "role": "Button",
+   "bounds": [
+    660,
+    1219,
+    720,
+    1592
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 38,
+   "role": "TextView",
+   "text": "Drake",
+   "bounds": [
+    660,
+    1528,
+    720,
+    1560
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 39,
+   "role": "View",
+   "bounds": [
+    0,
+    1432,
+    144,
+    1516
+   ],
+   "actions": [
+    "click",
+    "checked"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 40,
+   "role": "View",
+   "desc": "Home, Tab 1 of 5",
+   "bounds": [
+    0,
+    1432,
+    144,
+    1516
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 41,
+   "role": "View",
+   "bounds": [
+    144,
+    1432,
+    288,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 42,
+   "role": "View",
+   "desc": "Search, Tab 2 of 5",
+   "bounds": [
+    144,
+    1432,
+    288,
+    1516
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 43,
+   "role": "View",
+   "bounds": [
+    288,
+    1432,
+    432,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 44,
+   "role": "View",
+   "desc": "Your Library, Tab 3 of 5",
+   "bounds": [
+    288,
+    1432,
+    432,
+    1516
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 45,
+   "role": "View",
+   "bounds": [
+    432,
+    1432,
+    576,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 46,
+   "role": "View",
+   "desc": "Premium, Tab 4 of 5",
+   "bounds": [
+    432,
+    1432,
+    576,
+    1516
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  },
+  {
+   "id": 47,
+   "role": "View",
+   "bounds": [
+    576,
+    1432,
+    720,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.spotify.music"
+  },
+  {
+   "id": 48,
+   "role": "View",
+   "desc": "Create, Tab 5 of 5",
+   "bounds": [
+    576,
+    1432,
+    720,
+    1516
+   ],
+   "actions": [],
+   "src": "APP:com.spotify.music",
+   "guard": 0.001
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.spotify.music",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.031,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.001,
+  "scored_nodes": 14,
+  "ms": 5960
+ },
+ "ok": true
+}

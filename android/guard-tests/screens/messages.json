@@ -1,0 +1,244 @@
+{
+ "pkg": "com.google.android.apps.messaging",
+ "activity": "com.google.android.apps.messaging.ui.ConversationListActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "11:50",
+   "desc": "11:50 AM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "View",
+   "bounds": [
+    0,
+    77,
+    720,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.apps.messaging"
+  },
+  {
+   "id": 12,
+   "role": "TextView",
+   "text": "Message on your other devices",
+   "bounds": [
+    135,
+    1163,
+    583,
+    1210
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.apps.messaging",
+   "guard": 0.006
+  },
+  {
+   "id": 13,
+   "role": "TextView",
+   "text": "Continue your conversations when you sign in to your Google Account from your other devices. Manage \"Device pairing\" settings anytime.",
+   "bounds": [
+    42,
+    1238,
+    677,
+    1348
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.apps.messaging",
+   "guard": 0.002
+  },
+  {
+   "id": 14,
+   "role": "Button",
+   "text": "No thanks",
+   "bounds": [
+    326,
+    1390,
+    487,
+    1474
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.apps.messaging"
+  },
+  {
+   "id": 15,
+   "role": "Button",
+   "text": "Get started",
+   "bounds": [
+    501,
+    1390,
+    677,
+    1474
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.apps.messaging"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.google.android.apps.messaging",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.006,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.007,
+  "scored_nodes": 2,
+  "ms": 191
+ },
+ "ok": true
+}

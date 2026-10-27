@@ -1,0 +1,675 @@
+{
+ "pkg": "com.google.android.deskclock",
+ "activity": "com.android.deskclock.DeskClock",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "11:50",
+   "desc": "11:50 AM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "TextView",
+   "text": "Alarms",
+   "bounds": [
+    42,
+    104,
+    163,
+    161
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 12,
+   "role": "ImageView",
+   "desc": "More options",
+   "bounds": [
+    636,
+    91,
+    720,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 13,
+   "role": "GridView",
+   "bounds": [
+    0,
+    189,
+    720,
+    1391
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 14,
+   "role": "TextView",
+   "text": "Alarm volume is low",
+   "bounds": [
+    63,
+    217,
+    559,
+    274
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.952
+  },
+  {
+   "id": 15,
+   "role": "Button",
+   "desc": "Dismiss",
+   "bounds": [
+    573,
+    204,
+    657,
+    288
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 16,
+   "role": "TextView",
+   "text": "Alarm volume is low and you might not hear it",
+   "bounds": [
+    63,
+    302,
+    657,
+    339
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.931
+  },
+  {
+   "id": 17,
+   "role": "Button",
+   "text": "Don't show again",
+   "bounds": [
+    154,
+    367,
+    402,
+    454
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.427
+  },
+  {
+   "id": 18,
+   "role": "Button",
+   "text": "Increase volume",
+   "bounds": [
+    416,
+    367,
+    657,
+    454
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 19,
+   "role": "CardView",
+   "desc": "Alarm Monday to Friday 8:30 AM Alarm is currently disabled.",
+   "bounds": [
+    28,
+    563,
+    692,
+    835
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.001
+  },
+  {
+   "id": 20,
+   "role": "TextView",
+   "text": "Mon-Fri",
+   "desc": "Monday to Friday",
+   "bounds": [
+    63,
+    619,
+    177,
+    660
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.001
+  },
+  {
+   "id": 21,
+   "role": "TextView",
+   "text": "8:30 AM",
+   "bounds": [
+    63,
+    696,
+    262,
+    800
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.003
+  },
+  {
+   "id": 22,
+   "role": "Switch",
+   "desc": "8:30 AM alarm",
+   "bounds": [
+    566,
+    706,
+    657,
+    790
+   ],
+   "actions": [
+    "click",
+    "unchecked"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 23,
+   "role": "CardView",
+   "desc": "Alarm Sunday, Saturday 9:00 AM Alarm is currently disabled.",
+   "bounds": [
+    28,
+    839,
+    692,
+    1111
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.001
+  },
+  {
+   "id": 24,
+   "role": "TextView",
+   "text": "Sun Sat",
+   "desc": "Sunday, Saturday",
+   "bounds": [
+    63,
+    895,
+    173,
+    936
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.001
+  },
+  {
+   "id": 25,
+   "role": "TextView",
+   "text": "9:00 AM",
+   "bounds": [
+    63,
+    972,
+    272,
+    1076
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.003
+  },
+  {
+   "id": 26,
+   "role": "Switch",
+   "desc": "9:00 AM alarm",
+   "bounds": [
+    566,
+    982,
+    657,
+    1066
+   ],
+   "actions": [
+    "click",
+    "unchecked"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 27,
+   "role": "CardView",
+   "desc": "Alarm Salt Lake City sunset. Today 6:29 PM Alarm is currently enabled.",
+   "bounds": [
+    28,
+    1115,
+    692,
+    1387
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.001
+  },
+  {
+   "id": 28,
+   "role": "TextView",
+   "text": "Today",
+   "bounds": [
+    63,
+    1171,
+    153,
+    1212
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 29,
+   "role": "TextView",
+   "text": "Salt Lake City sunset",
+   "desc": "Label Salt Lake City sunset",
+   "bounds": [
+    167,
+    1171,
+    429,
+    1212
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.001
+  },
+  {
+   "id": 30,
+   "role": "TextView",
+   "text": "6:29 PM",
+   "bounds": [
+    63,
+    1248,
+    257,
+    1352
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.003
+  },
+  {
+   "id": 31,
+   "role": "Switch",
+   "desc": "6:29 PM alarm",
+   "bounds": [
+    566,
+    1258,
+    657,
+    1342
+   ],
+   "actions": [
+    "click",
+    "checked"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 32,
+   "role": "Button",
+   "desc": "Add alarm",
+   "bounds": [
+    552,
+    1223,
+    692,
+    1363
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 33,
+   "role": "FrameLayout",
+   "desc": "Alarms",
+   "bounds": [
+    0,
+    1391,
+    144,
+    1516
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 34,
+   "role": "TextView",
+   "text": "Alarms",
+   "bounds": [
+    18,
+    1465,
+    126,
+    1505
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 35,
+   "role": "FrameLayout",
+   "desc": "World Clock",
+   "bounds": [
+    144,
+    1391,
+    288,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 36,
+   "role": "TextView",
+   "text": "World Clock",
+   "bounds": [
+    144,
+    1465,
+    288,
+    1505
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 37,
+   "role": "FrameLayout",
+   "desc": "Timers",
+   "bounds": [
+    288,
+    1391,
+    432,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 38,
+   "role": "TextView",
+   "text": "Timers",
+   "bounds": [
+    308,
+    1465,
+    412,
+    1505
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 39,
+   "role": "FrameLayout",
+   "desc": "Stopwatch",
+   "bounds": [
+    432,
+    1391,
+    576,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 40,
+   "role": "TextView",
+   "text": "Stopwatch",
+   "bounds": [
+    432,
+    1465,
+    576,
+    1505
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 41,
+   "role": "FrameLayout",
+   "desc": "Bedtime",
+   "bounds": [
+    576,
+    1391,
+    720,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 42,
+   "role": "TextView",
+   "text": "Bedtime",
+   "bounds": [
+    584,
+    1465,
+    712,
+    1505
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 43,
+   "role": "TextView",
+   "text": "Alarm deleted",
+   "bounds": [
+    42,
+    1108,
+    561,
+    1195
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 44,
+   "role": "Button",
+   "text": "Undo",
+   "bounds": [
+    575,
+    1108,
+    692,
+    1195
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.google.android.deskclock",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.952,
+  "label": "MALICIOUS",
+  "flagged_node_ids": [
+   14,
+   16
+  ],
+  "screen_score": 0.005,
+  "scored_nodes": 12,
+  "ms": 761
+ },
+ "ok": true
+}

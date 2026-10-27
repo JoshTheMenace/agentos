@@ -1,0 +1,552 @@
+{
+ "pkg": "com.google.android.deskclock",
+ "activity": "com.android.deskclock.DeskClock",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    0,
+    92,
+    84,
+    226
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    0,
+    494,
+    84,
+    628
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    0,
+    290,
+    84,
+    430
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:03",
+   "desc": "12:03 PM",
+   "bounds": [
+    112,
+    0,
+    181,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    181,
+    0,
+    220,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    220,
+    0,
+    259,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    259,
+    0,
+    298,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    298,
+    0,
+    337,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    1397,
+    1,
+    1435,
+    40
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    1435,
+    1,
+    1473,
+    40
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    1481,
+    0,
+    1495,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "TextView",
+   "text": "Timers",
+   "bounds": [
+    126,
+    55,
+    243,
+    112
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 12,
+   "role": "ImageView",
+   "desc": "More options",
+   "bounds": [
+    1439,
+    42,
+    1523,
+    126
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 13,
+   "role": "TextView",
+   "text": "00h 00m 00s",
+   "desc": "0 hours, 0 minutes, 0 seconds",
+   "bounds": [
+    113,
+    126,
+    804,
+    608
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock",
+   "guard": 0.001
+  },
+  {
+   "id": 14,
+   "role": "Button",
+   "text": "1",
+   "bounds": [
+    843,
+    131,
+    955,
+    243
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 15,
+   "role": "Button",
+   "text": "2",
+   "bounds": [
+    963,
+    130,
+    1076,
+    243
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 16,
+   "role": "Button",
+   "text": "3",
+   "bounds": [
+    1084,
+    131,
+    1196,
+    243
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 17,
+   "role": "Button",
+   "text": "4",
+   "bounds": [
+    843,
+    251,
+    955,
+    363
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 18,
+   "role": "Button",
+   "text": "5",
+   "bounds": [
+    964,
+    251,
+    1076,
+    363
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 19,
+   "role": "Button",
+   "text": "6",
+   "bounds": [
+    1084,
+    251,
+    1196,
+    363
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 20,
+   "role": "Button",
+   "text": "7",
+   "bounds": [
+    843,
+    372,
+    955,
+    484
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 21,
+   "role": "Button",
+   "text": "8",
+   "bounds": [
+    963,
+    371,
+    1076,
+    484
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 22,
+   "role": "Button",
+   "text": "9",
+   "bounds": [
+    1084,
+    372,
+    1196,
+    484
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 23,
+   "role": "Button",
+   "text": "00",
+   "bounds": [
+    843,
+    492,
+    955,
+    604
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 24,
+   "role": "Button",
+   "text": "0",
+   "bounds": [
+    964,
+    492,
+    1076,
+    604
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 25,
+   "role": "Button",
+   "desc": "Backspace",
+   "bounds": [
+    1084,
+    492,
+    1196,
+    604
+   ],
+   "actions": [
+    "click",
+    "long_click",
+    "disabled"
+   ],
+   "risk": "T3",
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 26,
+   "role": "Button",
+   "desc": "Start",
+   "bounds": [
+    1302,
+    304,
+    1428,
+    430
+   ],
+   "actions": [
+    "disabled"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 27,
+   "role": "FrameLayout",
+   "desc": "Alarms",
+   "bounds": [
+    226,
+    608,
+    456,
+    720
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 28,
+   "role": "TextView",
+   "text": "Alarms",
+   "bounds": [
+    332,
+    650,
+    398,
+    678
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 29,
+   "role": "FrameLayout",
+   "desc": "World Clock",
+   "bounds": [
+    456,
+    608,
+    690,
+    720
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 30,
+   "role": "TextView",
+   "text": "World Clock",
+   "bounds": [
+    540,
+    650,
+    655,
+    678
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 31,
+   "role": "FrameLayout",
+   "desc": "Timers",
+   "bounds": [
+    690,
+    608,
+    920,
+    720
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 32,
+   "role": "TextView",
+   "text": "Timers",
+   "bounds": [
+    796,
+    650,
+    862,
+    678
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 33,
+   "role": "FrameLayout",
+   "desc": "Stopwatch",
+   "bounds": [
+    920,
+    608,
+    1150,
+    720
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 34,
+   "role": "TextView",
+   "text": "Stopwatch",
+   "bounds": [
+    1007,
+    650,
+    1112,
+    678
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 35,
+   "role": "FrameLayout",
+   "desc": "Bedtime",
+   "bounds": [
+    1150,
+    608,
+    1380,
+    720
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.deskclock"
+  },
+  {
+   "id": 36,
+   "role": "TextView",
+   "text": "Bedtime",
+   "bounds": [
+    1247,
+    650,
+    1331,
+    678
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.deskclock"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.google.android.deskclock",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.001,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.001,
+  "scored_nodes": 1,
+  "ms": 205
+ },
+ "ok": true
+}

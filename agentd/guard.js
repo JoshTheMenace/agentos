@@ -10,7 +10,7 @@ const PATTERNS = [
   [0.3, /\b(new|updated|real|actual)\s+(instructions?|task|orders?)\s*[:\-]/i],
   [0.3, /\b(system prompt|developer message|you are now|jailbreak|developer mode)\b/i],
   [0.3, /\b(ai|assistant|agent|model|chatgpt|claude|codex)\b.{0,15}\b(must|should|needs? to|is required to)\b/i],
-  [0.3, /\b(send|forward|transfer|wire|pay|share|upload)\b.{0,40}\b(password|passcode|otp|2fa|code|token|api key|credentials?|contacts?|money|messages?|texts?|chats?|photos?|files?|location|\$\d)/i],
+  [0.3, /\b(send|forward|text|email|transfer|wire|pay|share|upload)\b.{0,40}\b(password|passcode|otp|2fa|code|token|api key|credentials?|contacts?|money|messages?|texts?|chats?|photos?|files?|location|\$\d)/i],
 ];
 
 export const THRESHOLD = 0.5;

@@ -1,0 +1,710 @@
+{
+ "pkg": "com.android.settings",
+ "activity": "com.android.settings.Settings$WifiSettingsActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:56",
+   "desc": "12:56 PM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Calendar notification: ‎‪Call grandma?‬‎",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    211,
+    10,
+    250,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Settings notification: Charging complete",
+   "bounds": [
+    250,
+    10,
+    289,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    263,
+    10,
+    302,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 12,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 14,
+   "role": "ScrollView",
+   "bounds": [
+    0,
+    0,
+    720,
+    1516
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 15,
+   "role": "FrameLayout",
+   "desc": "Internet",
+   "bounds": [
+    0,
+    0,
+    720,
+    390
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 16,
+   "role": "ImageButton",
+   "desc": "Navigate up",
+   "bounds": [
+    0,
+    77,
+    98,
+    175
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 17,
+   "role": "TextView",
+   "desc": "Fix connectivity",
+   "bounds": [
+    468,
+    84,
+    552,
+    168
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 18,
+   "role": "TextView",
+   "desc": "Search settings",
+   "bounds": [
+    552,
+    84,
+    636,
+    168
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 19,
+   "role": "TextView",
+   "desc": "Help & feedback",
+   "bounds": [
+    636,
+    84,
+    720,
+    168
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 20,
+   "role": "RecyclerView",
+   "bounds": [
+    0,
+    395,
+    720,
+    1516
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 21,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    395,
+    720,
+    498
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 22,
+   "role": "TextView",
+   "text": "Wi-Fi",
+   "bounds": [
+    42,
+    423,
+    127,
+    470
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.003
+  },
+  {
+   "id": 23,
+   "role": "Switch",
+   "bounds": [
+    594,
+    404,
+    692,
+    488
+   ],
+   "actions": [
+    "checked"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 24,
+   "role": "LinearLayout",
+   "desc": "JOSH PHONE,● Security : strong · Connected,Wifi signal full.,Secure network",
+   "bounds": [
+    0,
+    498,
+    720,
+    635
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 25,
+   "role": "TextView",
+   "text": "JOSH PHONE",
+   "bounds": [
+    126,
+    526,
+    341,
+    573
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.002
+  },
+  {
+   "id": 26,
+   "role": "TextView",
+   "text": "● Security : strong · Connected",
+   "bounds": [
+    126,
+    573,
+    481,
+    607
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.003
+  },
+  {
+   "id": 27,
+   "role": "ImageView",
+   "desc": "Settings",
+   "bounds": [
+    566,
+    498,
+    692,
+    635
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 28,
+   "role": "LinearLayout",
+   "desc": "Nacho Wi-Fi,● Security : strong · Saved / No internet access,Wifi one bar.,Secure network",
+   "bounds": [
+    0,
+    635,
+    720,
+    802
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.settings",
+   "guard": 0.002
+  },
+  {
+   "id": 29,
+   "role": "TextView",
+   "text": "Nacho Wi-Fi",
+   "bounds": [
+    126,
+    663,
+    321,
+    710
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 30,
+   "role": "TextView",
+   "text": "● Security : strong · Saved / No internet access",
+   "bounds": [
+    126,
+    710,
+    536,
+    774
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.019
+  },
+  {
+   "id": 31,
+   "role": "LinearLayout",
+   "desc": "TellMyWiFiLoveHer,● Security : strong,Wifi signal full.,Secure network",
+   "bounds": [
+    0,
+    802,
+    720,
+    939
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 32,
+   "role": "TextView",
+   "text": "TellMyWiFiLoveHer",
+   "bounds": [
+    126,
+    830,
+    431,
+    877
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 33,
+   "role": "TextView",
+   "text": "● Security : strong",
+   "bounds": [
+    126,
+    877,
+    333,
+    911
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.005
+  },
+  {
+   "id": 34,
+   "role": "LinearLayout",
+   "desc": "TellMyWifiLoverHer-5,● Security : strong,Wifi signal full.,Secure network",
+   "bounds": [
+    0,
+    939,
+    720,
+    1076
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 35,
+   "role": "TextView",
+   "text": "TellMyWifiLoverHer-5",
+   "bounds": [
+    126,
+    967,
+    468,
+    1014
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 36,
+   "role": "TextView",
+   "text": "● Security : strong",
+   "bounds": [
+    126,
+    1014,
+    333,
+    1048
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.005
+  },
+  {
+   "id": 37,
+   "role": "LinearLayout",
+   "desc": "lgahfamily,● Security : strong,Wifi two bars.,Secure network",
+   "bounds": [
+    0,
+    1076,
+    720,
+    1213
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 38,
+   "role": "TextView",
+   "text": "lgahfamily",
+   "bounds": [
+    126,
+    1104,
+    290,
+    1151
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 39,
+   "role": "TextView",
+   "text": "● Security : strong",
+   "bounds": [
+    126,
+    1151,
+    333,
+    1185
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.005
+  },
+  {
+   "id": 40,
+   "role": "LinearLayout",
+   "desc": "maui,● Security : strong,Wifi disconnected.,Secure network",
+   "bounds": [
+    0,
+    1213,
+    720,
+    1350
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.settings",
+   "guard": 0.001
+  },
+  {
+   "id": 41,
+   "role": "TextView",
+   "text": "maui",
+   "bounds": [
+    126,
+    1241,
+    205,
+    1288
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 42,
+   "role": "TextView",
+   "text": "● Security : strong",
+   "bounds": [
+    126,
+    1288,
+    333,
+    1322
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.005
+  },
+  {
+   "id": 43,
+   "role": "LinearLayout",
+   "desc": "xfinitywifi,● Security : weak,Wifi disconnected.,Open network",
+   "bounds": [
+    0,
+    1350,
+    720,
+    1487
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.settings",
+   "guard": 0.002
+  },
+  {
+   "id": 44,
+   "role": "TextView",
+   "text": "xfinitywifi",
+   "bounds": [
+    126,
+    1378,
+    283,
+    1425
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.002
+  },
+  {
+   "id": 45,
+   "role": "TextView",
+   "text": "● Security : weak",
+   "bounds": [
+    126,
+    1425,
+    318,
+    1459
+   ],
+   "actions": [],
+   "src": "APP:com.android.settings",
+   "guard": 0.002
+  },
+  {
+   "id": 46,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    1487,
+    720,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  },
+  {
+   "id": 47,
+   "role": "ImageButton",
+   "desc": "Scan QR code",
+   "bounds": [
+    566,
+    1501,
+    692,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.settings"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.android.settings",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.019,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.002,
+  "scored_nodes": 21,
+  "ms": 5949
+ },
+ "ok": true
+}

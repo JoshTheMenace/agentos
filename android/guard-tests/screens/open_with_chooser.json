@@ -1,0 +1,342 @@
+{
+ "pkg": "android",
+ "activity": "com.android.internal.app.ResolverActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:56",
+   "desc": "12:56 PM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Calendar notification: ‎‪Call grandma?‬‎",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    211,
+    10,
+    250,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Settings notification: Charging complete",
+   "bounds": [
+    250,
+    10,
+    289,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    263,
+    10,
+    302,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 12,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 14,
+   "role": "ScrollView",
+   "bounds": [
+    0,
+    0,
+    720,
+    1600
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:android"
+  },
+  {
+   "id": 15,
+   "role": "TextView",
+   "text": "Open with",
+   "bounds": [
+    42,
+    1113,
+    678,
+    1151
+   ],
+   "actions": [],
+   "src": "APP:android"
+  },
+  {
+   "id": 16,
+   "role": "ListView",
+   "bounds": [
+    0,
+    1195,
+    720,
+    1391
+   ],
+   "actions": [
+    "long_click"
+   ],
+   "src": "APP:android"
+  },
+  {
+   "id": 17,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    1195,
+    720,
+    1293
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:android"
+  },
+  {
+   "id": 18,
+   "role": "TextView",
+   "text": "Google Play Store",
+   "bounds": [
+    84,
+    1225,
+    308,
+    1263
+   ],
+   "actions": [],
+   "src": "APP:android",
+   "guard": 0.007
+  },
+  {
+   "id": 19,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    1293,
+    720,
+    1391
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:android"
+  },
+  {
+   "id": 20,
+   "role": "TextView",
+   "text": "F-Droid",
+   "bounds": [
+    84,
+    1323,
+    178,
+    1361
+   ],
+   "actions": [],
+   "src": "APP:android",
+   "guard": 0.002
+  },
+  {
+   "id": 21,
+   "role": "Button",
+   "text": "Just once",
+   "bounds": [
+    411,
+    1407,
+    564,
+    1502
+   ],
+   "actions": [
+    "click",
+    "disabled"
+   ],
+   "src": "APP:android"
+  },
+  {
+   "id": 22,
+   "role": "Button",
+   "text": "Always",
+   "bounds": [
+    564,
+    1407,
+    688,
+    1502
+   ],
+   "actions": [
+    "click",
+    "disabled"
+   ],
+   "src": "APP:android"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "android",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.007,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.001,
+  "scored_nodes": 2,
+  "ms": 235
+ },
+ "ok": true
+}

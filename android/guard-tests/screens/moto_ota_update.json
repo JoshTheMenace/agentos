@@ -1,0 +1,457 @@
+{
+ "pkg": "com.motorola.ccc.ota",
+ "activity": "com.motorola.ccc.ota.ui.BaseActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "11:51",
+   "desc": "11:51 AM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "TextView",
+   "text": "System update",
+   "bounds": [
+    28,
+    102,
+    277,
+    149
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota"
+  },
+  {
+   "id": 12,
+   "role": "ImageView",
+   "bounds": [
+    629,
+    79,
+    720,
+    172
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.motorola.ccc.ota"
+  },
+  {
+   "id": 13,
+   "role": "TextView",
+   "text": "See what's new",
+   "bounds": [
+    28,
+    571,
+    692,
+    618
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.001
+  },
+  {
+   "id": 14,
+   "role": "ScrollView",
+   "bounds": [
+    0,
+    646,
+    720,
+    1398
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.motorola.ccc.ota"
+  },
+  {
+   "id": 15,
+   "role": "TextView",
+   "text": "New version: U1TPN34.26-78",
+   "bounds": [
+    28,
+    646,
+    692,
+    680
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.001
+  },
+  {
+   "id": 16,
+   "role": "TextView",
+   "text": "Size: 2.13 GB",
+   "bounds": [
+    28,
+    680,
+    692,
+    714
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.001
+  },
+  {
+   "id": 17,
+   "role": "TextView",
+   "text": "This update includes:",
+   "bounds": [
+    28,
+    742,
+    692,
+    776
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.001
+  },
+  {
+   "id": 18,
+   "role": "LinearLayout",
+   "bounds": [
+    28,
+    794,
+    692,
+    876
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.motorola.ccc.ota"
+  },
+  {
+   "id": 19,
+   "role": "TextView",
+   "text": "Android™ 14 lets you celebrate your individuality",
+   "bounds": [
+    28,
+    794,
+    692,
+    876
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.001
+  },
+  {
+   "id": 20,
+   "role": "LinearLayout",
+   "bounds": [
+    28,
+    875,
+    692,
+    1047
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.motorola.ccc.ota"
+  },
+  {
+   "id": 21,
+   "role": "TextView",
+   "text": "Review how apps use and share your data before you give app permissions  Make it more accessible with Android 14’s new hearing and vision features",
+   "bounds": [
+    28,
+    875,
+    692,
+    1047
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.116
+  },
+  {
+   "id": 22,
+   "role": "LinearLayout",
+   "bounds": [
+    28,
+    1046,
+    692,
+    1098
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.motorola.ccc.ota"
+  },
+  {
+   "id": 23,
+   "role": "TextView",
+   "text": "Android security:",
+   "bounds": [
+    28,
+    1046,
+    692,
+    1098
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.001
+  },
+  {
+   "id": 24,
+   "role": "TextView",
+   "text": "Check out all the new features in Android 14",
+   "bounds": [
+    28,
+    1128,
+    692,
+    1162
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.001
+  },
+  {
+   "id": 25,
+   "role": "TextView",
+   "text": "What to know before you download",
+   "bounds": [
+    28,
+    1190,
+    692,
+    1224
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.001
+  },
+  {
+   "id": 26,
+   "role": "TextView",
+   "text": "This process is secure",
+   "bounds": [
+    28,
+    1244,
+    373,
+    1286
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.004
+  },
+  {
+   "id": 27,
+   "role": "TextView",
+   "text": "You won't lose any personal information",
+   "bounds": [
+    28,
+    1306,
+    595,
+    1348
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.27
+  },
+  {
+   "id": 28,
+   "role": "TextView",
+   "text": "You can continue using your device while the update installs",
+   "bounds": [
+    28,
+    1368,
+    692,
+    1398
+   ],
+   "actions": [],
+   "src": "APP:com.motorola.ccc.ota",
+   "guard": 0.002
+  },
+  {
+   "id": 29,
+   "role": "Button",
+   "text": "Update later",
+   "bounds": [
+    212,
+    1415,
+    452,
+    1499
+   ],
+   "actions": [
+    "click"
+   ],
+   "risk": "T3",
+   "src": "APP:com.motorola.ccc.ota"
+  },
+  {
+   "id": 30,
+   "role": "Button",
+   "text": "Update now",
+   "bounds": [
+    452,
+    1412,
+    692,
+    1502
+   ],
+   "actions": [
+    "click"
+   ],
+   "risk": "T3",
+   "src": "APP:com.motorola.ccc.ota"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.motorola.ccc.ota",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.27,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.008,
+  "scored_nodes": 12,
+  "ms": 3573
+ },
+ "ok": true
+}

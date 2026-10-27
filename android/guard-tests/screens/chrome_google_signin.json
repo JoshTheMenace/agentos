@@ -1,0 +1,544 @@
+{
+ "pkg": "com.android.chrome",
+ "activity": "org.chromium.chrome.browser.ChromeTabbedActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:57",
+   "desc": "12:57 PM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Calendar notification: ‎‪Call grandma?‬‎",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    211,
+    10,
+    250,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Settings notification: Charging complete",
+   "bounds": [
+    250,
+    10,
+    289,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    263,
+    10,
+    302,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 12,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 14,
+   "role": "WebView",
+   "bounds": [
+    0,
+    175,
+    720,
+    1517
+   ],
+   "actions": [
+    "scroll",
+    "focused"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 15,
+   "role": "View",
+   "bounds": [
+    0,
+    175,
+    720,
+    1517
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 16,
+   "role": "TextView",
+   "text": "Choose an account",
+   "bounds": [
+    42,
+    343,
+    679,
+    413
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.021
+  },
+  {
+   "id": 17,
+   "role": "View",
+   "desc": "Josh Gimenes josh.gimenes1@gmail.com Signed out",
+   "bounds": [
+    14,
+    469,
+    707,
+    589
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 18,
+   "role": "TextView",
+   "text": "Josh Gimenes",
+   "bounds": [
+    112,
+    490,
+    574,
+    533
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 19,
+   "role": "TextView",
+   "text": "josh.gimenes1@gmail.com",
+   "bounds": [
+    112,
+    532,
+    574,
+    568
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 20,
+   "role": "TextView",
+   "text": "Signed out",
+   "bounds": [
+    572,
+    490,
+    679,
+    519
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 21,
+   "role": "View",
+   "desc": "Use another account",
+   "bounds": [
+    14,
+    588,
+    707,
+    682
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 22,
+   "role": "TextView",
+   "text": "Use another account",
+   "bounds": [
+    112,
+    612,
+    386,
+    658
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.013
+  },
+  {
+   "id": 23,
+   "role": "View",
+   "desc": "Remove an account",
+   "bounds": [
+    14,
+    680,
+    707,
+    775
+   ],
+   "actions": [
+    "click"
+   ],
+   "risk": "T3",
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 24,
+   "role": "TextView",
+   "text": "Remove an account",
+   "bounds": [
+    112,
+    707,
+    372,
+    749
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.993
+  },
+  {
+   "id": 25,
+   "role": "View",
+   "desc": "Open Google Account Help Center (external, opens in a new window)",
+   "bounds": [
+    371,
+    1515,
+    460,
+    1517
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.002
+  },
+  {
+   "id": 26,
+   "role": "View",
+   "desc": "Privacy Policy (external, opens in a new window)",
+   "bounds": [
+    470,
+    1515,
+    586,
+    1517
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.008
+  },
+  {
+   "id": 27,
+   "role": "View",
+   "desc": "Google Terms of Service (external, opens in a new window)",
+   "bounds": [
+    596,
+    1515,
+    700,
+    1517
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.002
+  },
+  {
+   "id": 28,
+   "role": "FrameLayout",
+   "bounds": [
+    0,
+    77,
+    720,
+    175
+   ],
+   "actions": [
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 29,
+   "role": "ImageButton",
+   "desc": "Open the home page",
+   "bounds": [
+    0,
+    77,
+    84,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 30,
+   "role": "LinearLayout",
+   "bounds": [
+    84,
+    77,
+    140,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 31,
+   "role": "ImageView",
+   "desc": "Connection is secure",
+   "bounds": [
+    91,
+    105,
+    133,
+    147
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.005
+  },
+  {
+   "id": 32,
+   "role": "EditText",
+   "text": "accounts.google.com/v3/signin/accountchooser?flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S2101032577:1793127417653321",
+   "bounds": [
+    140,
+    77,
+    461,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click",
+    "edit"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 33,
+   "role": "ImageButton",
+   "desc": "New tab",
+   "bounds": [
+    461,
+    77,
+    552,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 34,
+   "role": "ImageButton",
+   "desc": "See 13 tabs",
+   "bounds": [
+    552,
+    77,
+    636,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 35,
+   "role": "ImageButton",
+   "desc": "Customize and control Google Chrome",
+   "bounds": [
+    636,
+    77,
+    720,
+    175
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.android.chrome",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.993,
+  "label": "MALICIOUS",
+  "flagged_node_ids": [
+   24
+  ],
+  "screen_score": 0.001,
+  "scored_nodes": 11,
+  "ms": 2982
+ },
+ "ok": true
+}

@@ -1,0 +1,622 @@
+{
+ "pkg": "com.google.android.calculator",
+ "activity": "com.android.calculator2.Calculator",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "11:50",
+   "desc": "11:50 AM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ViewGroup",
+   "bounds": [
+    517,
+    175,
+    699,
+    263
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 12,
+   "role": "TextView",
+   "text": "Choose theme",
+   "bounds": [
+    538,
+    210,
+    678,
+    242
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "bounds": [
+    0,
+    0,
+    720,
+    196
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 14,
+   "role": "RecyclerView",
+   "bounds": [
+    0,
+    0,
+    720,
+    196
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 15,
+   "role": "TextView",
+   "text": "150",
+   "bounds": [
+    0,
+    61,
+    720,
+    140
+   ],
+   "actions": [
+    "click",
+    "long_click",
+    "edit"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 16,
+   "role": "Button",
+   "desc": "History mode off",
+   "bounds": [
+    21,
+    94,
+    105,
+    178
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 17,
+   "role": "Button",
+   "desc": "More options",
+   "bounds": [
+    636,
+    91,
+    720,
+    175
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 18,
+   "role": "EditText",
+   "focused": true,
+   "bounds": [
+    0,
+    196,
+    720,
+    401
+   ],
+   "actions": [
+    "long_click",
+    "edit",
+    "focused"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 19,
+   "role": "TextView",
+   "desc": "No result",
+   "bounds": [
+    0,
+    401,
+    720,
+    537
+   ],
+   "actions": [
+    "edit"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 20,
+   "role": "ImageButton",
+   "desc": "Show scientific buttons",
+   "bounds": [
+    23,
+    560,
+    107,
+    644
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 21,
+   "role": "ImageButton",
+   "desc": "all clear",
+   "bounds": [
+    7,
+    674,
+    178,
+    835
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 22,
+   "role": "ImageButton",
+   "desc": "left or right parenthesis",
+   "bounds": [
+    186,
+    674,
+    356,
+    835
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 23,
+   "role": "ImageButton",
+   "desc": "percent",
+   "bounds": [
+    364,
+    674,
+    535,
+    835
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 24,
+   "role": "ImageButton",
+   "desc": "divide",
+   "bounds": [
+    543,
+    674,
+    713,
+    835
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 25,
+   "role": "ImageButton",
+   "desc": "7",
+   "bounds": [
+    7,
+    843,
+    178,
+    1004
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 26,
+   "role": "ImageButton",
+   "desc": "8",
+   "bounds": [
+    186,
+    843,
+    356,
+    1004
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 27,
+   "role": "ImageButton",
+   "desc": "9",
+   "bounds": [
+    364,
+    843,
+    535,
+    1004
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 28,
+   "role": "ImageButton",
+   "desc": "multiply",
+   "bounds": [
+    543,
+    843,
+    713,
+    1004
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 29,
+   "role": "ImageButton",
+   "desc": "4",
+   "bounds": [
+    7,
+    1012,
+    178,
+    1174
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 30,
+   "role": "ImageButton",
+   "desc": "5",
+   "bounds": [
+    186,
+    1012,
+    356,
+    1174
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 31,
+   "role": "ImageButton",
+   "desc": "6",
+   "bounds": [
+    364,
+    1012,
+    535,
+    1174
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 32,
+   "role": "ImageButton",
+   "desc": "minus",
+   "bounds": [
+    543,
+    1012,
+    713,
+    1174
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 33,
+   "role": "ImageButton",
+   "desc": "1",
+   "bounds": [
+    7,
+    1182,
+    178,
+    1343
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 34,
+   "role": "ImageButton",
+   "desc": "2",
+   "bounds": [
+    186,
+    1182,
+    356,
+    1343
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 35,
+   "role": "ImageButton",
+   "desc": "3",
+   "bounds": [
+    364,
+    1182,
+    535,
+    1343
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 36,
+   "role": "ImageButton",
+   "desc": "plus",
+   "bounds": [
+    543,
+    1182,
+    713,
+    1343
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 37,
+   "role": "ImageButton",
+   "desc": "0",
+   "bounds": [
+    7,
+    1351,
+    178,
+    1512
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 38,
+   "role": "ImageButton",
+   "desc": "point",
+   "bounds": [
+    186,
+    1351,
+    356,
+    1512
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 39,
+   "role": "ImageButton",
+   "desc": "delete",
+   "bounds": [
+    364,
+    1351,
+    535,
+    1512
+   ],
+   "actions": [
+    "click"
+   ],
+   "risk": "T3",
+   "src": "APP:com.google.android.calculator"
+  },
+  {
+   "id": 40,
+   "role": "ImageButton",
+   "desc": "equals",
+   "bounds": [
+    543,
+    1351,
+    713,
+    1512
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.calculator"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.google.android.calculator",
+ "focused_id": 18,
+ "untrusted": true,
+ "guard": {
+  "score": 0,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.009,
+  "scored_nodes": 0,
+  "ms": 78
+ },
+ "ok": true
+}

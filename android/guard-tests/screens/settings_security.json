@@ -1,0 +1,525 @@
+{
+ "pkg": "com.google.android.permissioncontroller",
+ "activity": "com.android.permissioncontroller.safetycenter.ui.SafetyCenterActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:56",
+   "desc": "12:56 PM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Calendar notification: ‎‪Call grandma?‬‎",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    211,
+    10,
+    250,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Settings notification: Charging complete",
+   "bounds": [
+    250,
+    10,
+    289,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    263,
+    10,
+    302,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 12,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 14,
+   "role": "ScrollView",
+   "bounds": [
+    0,
+    0,
+    720,
+    1516
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 15,
+   "role": "FrameLayout",
+   "desc": "Security & privacy",
+   "bounds": [
+    0,
+    0,
+    720,
+    390
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.003
+  },
+  {
+   "id": 16,
+   "role": "ImageButton",
+   "desc": "Navigate up",
+   "bounds": [
+    0,
+    77,
+    98,
+    175
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 17,
+   "role": "ScrollView",
+   "bounds": [
+    0,
+    390,
+    720,
+    1516
+   ],
+   "actions": [
+    "scroll"
+   ],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 18,
+   "role": "LinearLayout",
+   "desc": "Security and privacy status. Device may be at risk. Checking device settings…",
+   "bounds": [
+    196,
+    439,
+    608,
+    526
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.001
+  },
+  {
+   "id": 19,
+   "role": "TextView",
+   "text": "Device may be at risk",
+   "bounds": [
+    196,
+    439,
+    578,
+    492
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.001
+  },
+  {
+   "id": 20,
+   "role": "TextView",
+   "text": "Checking device settings…",
+   "bounds": [
+    196,
+    492,
+    503,
+    526
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.001
+  },
+  {
+   "id": 21,
+   "role": "TextView",
+   "text": "Location is off",
+   "desc": "Alert. Location is off",
+   "bounds": [
+    70,
+    640,
+    566,
+    687
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.001
+  },
+  {
+   "id": 22,
+   "role": "ImageButton",
+   "desc": "Dismiss",
+   "bounds": [
+    608,
+    640,
+    650,
+    682
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 23,
+   "role": "TextView",
+   "text": "When location is off, you can’t use Find Hub to locate this device",
+   "bounds": [
+    70,
+    712,
+    650,
+    781
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.004
+  },
+  {
+   "id": 24,
+   "role": "Button",
+   "text": "Location settings",
+   "bounds": [
+    70,
+    816,
+    650,
+    914
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 25,
+   "role": "ViewGroup",
+   "bounds": [
+    28,
+    988,
+    692,
+    1087
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 26,
+   "role": "TextView",
+   "text": "More alerts",
+   "bounds": [
+    140,
+    1021,
+    541,
+    1055
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.004
+  },
+  {
+   "id": 27,
+   "role": "TextView",
+   "text": "3",
+   "bounds": [
+    576,
+    1021,
+    604,
+    1055
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 28,
+   "role": "TextView",
+   "text": "Settings",
+   "bounds": [
+    42,
+    1143,
+    692,
+    1177
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 29,
+   "role": "LinearLayout",
+   "desc": "App security. Play Protect scanned yesterday",
+   "bounds": [
+    28,
+    1212,
+    692,
+    1349
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.003
+  },
+  {
+   "id": 30,
+   "role": "TextView",
+   "text": "App security",
+   "bounds": [
+    140,
+    1240,
+    342,
+    1287
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 31,
+   "role": "TextView",
+   "text": "Play Protect scanned yesterday",
+   "bounds": [
+    140,
+    1287,
+    503,
+    1321
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.017
+  },
+  {
+   "id": 32,
+   "role": "LinearLayout",
+   "desc": "List. Device lock. Screen lock, Fingerprint, Face Unlock",
+   "bounds": [
+    28,
+    1353,
+    692,
+    1490
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.001
+  },
+  {
+   "id": 33,
+   "role": "TextView",
+   "text": "Device lock",
+   "bounds": [
+    140,
+    1381,
+    323,
+    1428
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller"
+  },
+  {
+   "id": 34,
+   "role": "TextView",
+   "text": "Screen lock, Fingerprint, Face Unlock",
+   "bounds": [
+    140,
+    1428,
+    565,
+    1462
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.001
+  },
+  {
+   "id": 35,
+   "role": "LinearLayout",
+   "desc": "Google Security Checkup. No info yet",
+   "bounds": [
+    28,
+    1494,
+    692,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.permissioncontroller",
+   "guard": 0.001
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.google.android.permissioncontroller",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.017,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.001,
+  "scored_nodes": 12,
+  "ms": 4014
+ },
+ "ok": true
+}

@@ -1,0 +1,194 @@
+{
+ "pkg": "com.google.android.youtube",
+ "activity": "com.google.android.youtube.app.honeycomb.Shell$HomeActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "Button",
+   "desc": "Close",
+   "bounds": [
+    603,
+    88,
+    673,
+    158
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.youtube"
+  },
+  {
+   "id": 1,
+   "role": "ViewGroup",
+   "text": "Try 1 month of Premium Lite for free",
+   "bounds": [
+    61,
+    283,
+    659,
+    415
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.001
+  },
+  {
+   "id": 2,
+   "role": "ViewGroup",
+   "text": "It’s YouTube, just with fewer ads",
+   "bounds": [
+    61,
+    457,
+    659,
+    492
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.001
+  },
+  {
+   "id": 3,
+   "role": "ViewGroup",
+   "text": "Most videos ad-free",
+   "bounds": [
+    142,
+    565,
+    638,
+    600
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.013
+  },
+  {
+   "id": 4,
+   "role": "ViewGroup",
+   "text": "Download most videos for offline viewing",
+   "bounds": [
+    142,
+    650,
+    638,
+    720
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.006
+  },
+  {
+   "id": 5,
+   "role": "ViewGroup",
+   "text": "Background play most videos",
+   "bounds": [
+    142,
+    769,
+    638,
+    804
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.003
+  },
+  {
+   "id": 6,
+   "role": "ViewGroup",
+   "text": "Ads may appear on music",
+   "bounds": [
+    142,
+    857,
+    638,
+    892
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.001
+  },
+  {
+   "id": 7,
+   "role": "Button",
+   "desc": "1 month free",
+   "bounds": [
+    61,
+    1316,
+    659,
+    1414
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.youtube"
+  },
+  {
+   "id": 8,
+   "role": "ViewGroup",
+   "text": "1 month free",
+   "bounds": [
+    260,
+    1345,
+    460,
+    1384
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.003
+  },
+  {
+   "id": 9,
+   "role": "Button",
+   "desc": "Terms apply. Cancel anytime.",
+   "bounds": [
+    61,
+    1485,
+    659,
+    1558
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.youtube"
+  },
+  {
+   "id": 10,
+   "role": "ViewGroup",
+   "text": "Terms apply. Cancel anytime.",
+   "bounds": [
+    191,
+    1485,
+    528,
+    1516
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.002
+  },
+  {
+   "id": 11,
+   "role": "Button",
+   "text": "Terms apply.",
+   "bounds": [
+    191,
+    1485,
+    335,
+    1516
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.youtube",
+   "guard": 0.001
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.google.android.youtube",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.013,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.002,
+  "scored_nodes": 9,
+  "ms": 837
+ },
+ "ok": true
+}

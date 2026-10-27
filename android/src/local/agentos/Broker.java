@@ -127,6 +127,7 @@ final class Broker {
         switch (m) {
             case "screen.read": return read();
             case "guard.classify": return PromptGuard.classify(p.getString("text"));
+            case "guard.screen": return PromptGuard.annotate(new JSONObject().put("nodes", p.getJSONArray("nodes"))); // test hook: android/guard-tests
             case "list_apps": return ok(true).put("apps", Actions.listApps(svc));
             case "wait":
                 Thread.sleep(Math.max(0, Math.min(5000, p.optLong("ms", 1000))));

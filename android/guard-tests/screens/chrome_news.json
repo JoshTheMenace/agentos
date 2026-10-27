@@ -1,0 +1,751 @@
+{
+ "pkg": "com.android.chrome",
+ "activity": "org.chromium.chrome.browser.ChromeTabbedActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:57",
+   "desc": "12:57 PM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Calendar notification: ‎‪Call grandma?‬‎",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    211,
+    10,
+    250,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Settings notification: Charging complete",
+   "bounds": [
+    250,
+    10,
+    289,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    263,
+    10,
+    302,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 12,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 13,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 14,
+   "role": "WebView",
+   "bounds": [
+    0,
+    175,
+    720,
+    1517
+   ],
+   "actions": [
+    "scroll",
+    "focused"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 15,
+   "role": "TextView",
+   "text": "Text-Only Version",
+   "bounds": [
+    35,
+    211,
+    259,
+    246
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.002
+  },
+  {
+   "id": 16,
+   "role": "View",
+   "desc": "Go To Full Site",
+   "bounds": [
+    283,
+    203,
+    498,
+    257
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 17,
+   "role": "TextView",
+   "text": "Go To Full Site",
+   "bounds": [
+    301,
+    211,
+    481,
+    246
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.002
+  },
+  {
+   "id": 18,
+   "role": "TextView",
+   "text": "NPR : National Public Radio",
+   "bounds": [
+    35,
+    290,
+    686,
+    348
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 19,
+   "role": "TextView",
+   "text": "Tuesday, October 27, 2026",
+   "bounds": [
+    35,
+    416,
+    686,
+    451
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 20,
+   "role": "View",
+   "desc": "Democrats still poised to make gains, but poll shows warning signs for just how many",
+   "bounds": [
+    35,
+    486,
+    600,
+    561
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 21,
+   "role": "TextView",
+   "text": "Democrats still poised to make gains, but poll shows warning signs for just how many",
+   "bounds": [
+    35,
+    486,
+    600,
+    561
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 22,
+   "role": "View",
+   "desc": "A quick guide to Israel's high-stakes election",
+   "bounds": [
+    35,
+    591,
+    584,
+    626
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 23,
+   "role": "TextView",
+   "text": "A quick guide to Israel's high-stakes election",
+   "bounds": [
+    35,
+    591,
+    584,
+    626
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 24,
+   "role": "View",
+   "desc": "Israelis have changed. Will they change their leadership?",
+   "bounds": [
+    35,
+    658,
+    584,
+    731
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 25,
+   "role": "TextView",
+   "text": "Israelis have changed. Will they change their leadership?",
+   "bounds": [
+    35,
+    658,
+    584,
+    731
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 26,
+   "role": "View",
+   "desc": "Can Black voting power and Trump fatigue break Mississippi's red wall?",
+   "bounds": [
+    35,
+    761,
+    638,
+    836
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 27,
+   "role": "TextView",
+   "text": "Can Black voting power and Trump fatigue break Mississippi's red wall?",
+   "bounds": [
+    35,
+    761,
+    638,
+    836
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 28,
+   "role": "View",
+   "desc": "Bolsonaro's party accepts Brazil election defeat, but he refuses to concede",
+   "bounds": [
+    35,
+    866,
+    675,
+    941
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 29,
+   "role": "TextView",
+   "text": "Bolsonaro's party accepts Brazil election defeat, but he refuses to concede",
+   "bounds": [
+    35,
+    866,
+    675,
+    941
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 30,
+   "role": "View",
+   "desc": "Is 2026 the fakest year in music?",
+   "bounds": [
+    35,
+    971,
+    444,
+    1006
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 31,
+   "role": "TextView",
+   "text": "Is 2026 the fakest year in music?",
+   "bounds": [
+    35,
+    971,
+    444,
+    1006
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 32,
+   "role": "View",
+   "desc": "From ghostwriters to false identities: Our favorite fake music scandals of the 21st century",
+   "bounds": [
+    35,
+    1036,
+    644,
+    1111
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.003
+  },
+  {
+   "id": 33,
+   "role": "TextView",
+   "text": "From ghostwriters to false identities: Our favorite fake music scandals of the 21st century",
+   "bounds": [
+    35,
+    1036,
+    644,
+    1111
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.003
+  },
+  {
+   "id": 34,
+   "role": "View",
+   "desc": "Very chaotic, not at all good: Why does everything in music feel fake right now?",
+   "bounds": [
+    35,
+    1141,
+    680,
+    1216
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 35,
+   "role": "TextView",
+   "text": "Very chaotic, not at all good: Why does everything in music feel fake right now?",
+   "bounds": [
+    35,
+    1141,
+    680,
+    1216
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 36,
+   "role": "View",
+   "desc": "A judge halted D.C. golf course renovations. Trump says they'll still start next month",
+   "bounds": [
+    35,
+    1246,
+    666,
+    1321
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 37,
+   "role": "TextView",
+   "text": "A judge halted D.C. golf course renovations. Trump says they'll still start next month",
+   "bounds": [
+    35,
+    1246,
+    666,
+    1321
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 38,
+   "role": "View",
+   "desc": "How Aldi is pushing down grocery prices",
+   "bounds": [
+    35,
+    1351,
+    540,
+    1386
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 39,
+   "role": "TextView",
+   "text": "How Aldi is pushing down grocery prices",
+   "bounds": [
+    35,
+    1351,
+    540,
+    1386
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 40,
+   "role": "View",
+   "desc": "Filmmaking is 'our weapon against intolerance,' say 'La Bola Negra' directors",
+   "bounds": [
+    35,
+    1415,
+    668,
+    1491
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 41,
+   "role": "TextView",
+   "text": "Filmmaking is 'our weapon against intolerance,' say 'La Bola Negra' directors",
+   "bounds": [
+    35,
+    1415,
+    668,
+    1491
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 42,
+   "role": "FrameLayout",
+   "bounds": [
+    0,
+    77,
+    720,
+    175
+   ],
+   "actions": [
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 43,
+   "role": "ImageButton",
+   "desc": "Open the home page",
+   "bounds": [
+    0,
+    77,
+    84,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 44,
+   "role": "LinearLayout",
+   "bounds": [
+    84,
+    77,
+    140,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 45,
+   "role": "ImageView",
+   "desc": "Connection is secure",
+   "bounds": [
+    91,
+    105,
+    133,
+    147
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.005
+  },
+  {
+   "id": 46,
+   "role": "EditText",
+   "text": "text.npr.org",
+   "bounds": [
+    140,
+    77,
+    461,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click",
+    "edit"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 47,
+   "role": "ImageButton",
+   "desc": "New tab",
+   "bounds": [
+    461,
+    77,
+    552,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 48,
+   "role": "ImageButton",
+   "desc": "See 14 tabs",
+   "bounds": [
+    552,
+    77,
+    636,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 49,
+   "role": "ImageButton",
+   "desc": "Customize and control Google Chrome",
+   "bounds": [
+    636,
+    77,
+    720,
+    175
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.android.chrome",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.005,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.002,
+  "scored_nodes": 28,
+  "ms": 1829
+ },
+ "ok": true
+}

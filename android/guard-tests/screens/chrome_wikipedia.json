@@ -1,0 +1,1234 @@
+{
+ "pkg": "com.android.chrome",
+ "activity": "org.chromium.chrome.browser.ChromeTabbedActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    92,
+    1516,
+    226,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    494,
+    1516,
+    628,
+    1600
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    290,
+    1516,
+    430,
+    1600
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "11:50",
+   "desc": "11:50 AM",
+   "bounds": [
+    25,
+    10,
+    94,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    94,
+    10,
+    133,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    133,
+    10,
+    172,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    172,
+    10,
+    211,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    567,
+    24,
+    605,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    605,
+    24,
+    643,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "FrameLayout",
+   "desc": "Wifi signal full.",
+   "bounds": [
+    643,
+    24,
+    673,
+    63
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    681,
+    10,
+    695,
+    77
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "WebView",
+   "bounds": [
+    0,
+    175,
+    720,
+    1517
+   ],
+   "actions": [
+    "scroll",
+    "focused"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 12,
+   "role": "View",
+   "bounds": [
+    0,
+    175,
+    720,
+    1517
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 13,
+   "role": "Button",
+   "desc": "Download the Wikipedia app",
+   "bounds": [
+    0,
+    175,
+    720,
+    635
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 14,
+   "role": "View",
+   "bounds": [
+    0,
+    631,
+    720,
+    1517
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 15,
+   "role": "Button",
+   "bounds": [
+    7,
+    640,
+    63,
+    721
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 16,
+   "role": "View",
+   "desc": "Wikipedia",
+   "bounds": [
+    91,
+    661,
+    339,
+    701
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 17,
+   "role": "Image",
+   "desc": "Wikipedia",
+   "bounds": [
+    91,
+    661,
+    339,
+    701
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 18,
+   "role": "Button",
+   "text": "Search",
+   "bounds": [
+    558,
+    640,
+    637,
+    721
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 19,
+   "role": "View",
+   "bounds": [
+    635,
+    640,
+    714,
+    721
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 20,
+   "role": "Button",
+   "bounds": [
+    635,
+    640,
+    714,
+    721
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 21,
+   "role": "TextView",
+   "text": "Salt Lake City",
+   "bounds": [
+    28,
+    763,
+    693,
+    831
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 22,
+   "role": "View",
+   "desc": "Article",
+   "bounds": [
+    28,
+    855,
+    101,
+    887
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 23,
+   "role": "TextView",
+   "text": "Article",
+   "bounds": [
+    28,
+    855,
+    101,
+    887
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 24,
+   "role": "View",
+   "desc": "Talk",
+   "bounds": [
+    124,
+    855,
+    171,
+    887
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 25,
+   "role": "TextView",
+   "text": "Talk",
+   "bounds": [
+    124,
+    855,
+    171,
+    887
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 26,
+   "role": "Button",
+   "text": "Language",
+   "bounds": [
+    7,
+    904,
+    85,
+    985
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 27,
+   "role": "View",
+   "bounds": [
+    481,
+    901,
+    560,
+    988
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 28,
+   "role": "Button",
+   "text": "Save",
+   "bounds": [
+    481,
+    904,
+    560,
+    985
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 29,
+   "role": "Button",
+   "text": "View source",
+   "bounds": [
+    558,
+    904,
+    637,
+    985
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 30,
+   "role": "View",
+   "bounds": [
+    635,
+    901,
+    714,
+    988
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 31,
+   "role": "View",
+   "desc": "Download PDF",
+   "bounds": [
+    635,
+    904,
+    714,
+    985
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 32,
+   "role": "TextView",
+   "text": "Download PDF",
+   "bounds": [
+    672,
+    946,
+    720,
+    981
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 33,
+   "role": "TextView",
+   "text": "This article is about the capital of Utah. For other uses, see",
+   "bounds": [
+    38,
+    1001,
+    628,
+    1030
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 34,
+   "role": "View",
+   "desc": "Salt Lake City (disambiguation)",
+   "bounds": [
+    38,
+    1001,
+    666,
+    1067
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 35,
+   "role": "TextView",
+   "text": "Salt Lake City (disambiguation)",
+   "bounds": [
+    38,
+    1001,
+    666,
+    1067
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 36,
+   "role": "TextView",
+   "text": ".",
+   "bounds": [
+    301,
+    1037,
+    309,
+    1067
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 37,
+   "role": "TextView",
+   "text": "Salt Lake City",
+   "bounds": [
+    28,
+    1099,
+    203,
+    1134
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 38,
+   "role": "TextView",
+   "text": ", often shortened to",
+   "bounds": [
+    199,
+    1099,
+    456,
+    1134
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 39,
+   "role": "TextView",
+   "text": "Salt Lake",
+   "bounds": [
+    455,
+    1099,
+    574,
+    1134
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 40,
+   "role": "TextView",
+   "text": "or",
+   "bounds": [
+    570,
+    1099,
+    614,
+    1134
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 41,
+   "role": "TextView",
+   "text": "SLC",
+   "bounds": [
+    610,
+    1099,
+    665,
+    1134
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 42,
+   "role": "TextView",
+   "text": ", is the",
+   "bounds": [
+    28,
+    1099,
+    670,
+    1181
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 43,
+   "role": "View",
+   "desc": "capital",
+   "bounds": [
+    101,
+    1144,
+    187,
+    1181
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 44,
+   "role": "TextView",
+   "text": "capital",
+   "bounds": [
+    101,
+    1144,
+    187,
+    1181
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 45,
+   "role": "TextView",
+   "text": "and",
+   "bounds": [
+    185,
+    1144,
+    246,
+    1181
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 46,
+   "role": "View",
+   "desc": "most populous city",
+   "bounds": [
+    245,
+    1144,
+    483,
+    1181
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 47,
+   "role": "TextView",
+   "text": "most populous city",
+   "bounds": [
+    245,
+    1144,
+    483,
+    1181
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 48,
+   "role": "TextView",
+   "text": "of the U.S. state of",
+   "bounds": [
+    28,
+    1144,
+    691,
+    1226
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 49,
+   "role": "View",
+   "desc": "Utah",
+   "bounds": [
+    61,
+    1191,
+    120,
+    1226
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 50,
+   "role": "TextView",
+   "text": "Utah",
+   "bounds": [
+    61,
+    1191,
+    120,
+    1226
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 51,
+   "role": "TextView",
+   "text": ". It is the",
+   "bounds": [
+    119,
+    1191,
+    232,
+    1226
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 52,
+   "role": "View",
+   "desc": "county seat",
+   "bounds": [
+    231,
+    1191,
+    378,
+    1226
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 53,
+   "role": "TextView",
+   "text": "county seat",
+   "bounds": [
+    231,
+    1191,
+    378,
+    1226
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 54,
+   "role": "TextView",
+   "text": "of",
+   "bounds": [
+    376,
+    1191,
+    418,
+    1226
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 55,
+   "role": "View",
+   "desc": "Salt Lake County",
+   "bounds": [
+    416,
+    1191,
+    626,
+    1226
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 56,
+   "role": "TextView",
+   "text": "Salt Lake County",
+   "bounds": [
+    416,
+    1191,
+    626,
+    1226
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 57,
+   "role": "TextView",
+   "text": ", the most populous county in the state. The population was 199,723 at the",
+   "bounds": [
+    28,
+    1191,
+    680,
+    1319
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 58,
+   "role": "View",
+   "desc": "2020 census",
+   "bounds": [
+    273,
+    1284,
+    432,
+    1319
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 59,
+   "role": "TextView",
+   "text": "2020 census",
+   "bounds": [
+    273,
+    1284,
+    432,
+    1319
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 60,
+   "role": "TextView",
+   "text": ",",
+   "bounds": [
+    430,
+    1284,
+    439,
+    1319
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 61,
+   "role": "View",
+   "desc": "[13]",
+   "bounds": [
+    437,
+    1281,
+    474,
+    1307
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 62,
+   "role": "TextView",
+   "text": "[",
+   "bounds": [
+    437,
+    1281,
+    444,
+    1307
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 63,
+   "role": "TextView",
+   "text": "13",
+   "bounds": [
+    442,
+    1281,
+    469,
+    1307
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 64,
+   "role": "TextView",
+   "text": "]",
+   "bounds": [
+    467,
+    1281,
+    474,
+    1307
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 65,
+   "role": "TextView",
+   "text": "while the",
+   "bounds": [
+    472,
+    1284,
+    600,
+    1319
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 66,
+   "role": "View",
+   "desc": "Salt Lake City metropolitan area",
+   "bounds": [
+    28,
+    1284,
+    649,
+    1365
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 67,
+   "role": "TextView",
+   "text": "Salt Lake City metropolitan area",
+   "bounds": [
+    28,
+    1284,
+    649,
+    1365
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 68,
+   "role": "TextView",
+   "text": "has an estimated 1.3 million residents and is the",
+   "bounds": [
+    28,
+    1330,
+    637,
+    1412
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 69,
+   "role": "View",
+   "desc": "46th-largest metropolitan area",
+   "bounds": [
+    28,
+    1375,
+    684,
+    1457
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 70,
+   "role": "TextView",
+   "text": "46th-largest metropolitan area",
+   "bounds": [
+    28,
+    1375,
+    684,
+    1457
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.002
+  },
+  {
+   "id": 71,
+   "role": "TextView",
+   "text": "in the United States. It is also part of the larger Salt Lake City–Ogden–Provo",
+   "bounds": [
+    28,
+    1422,
+    670,
+    1503
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 72,
+   "role": "View",
+   "desc": "combined statistical area",
+   "bounds": [
+    28,
+    1468,
+    647,
+    1517
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 73,
+   "role": "TextView",
+   "text": "combined statistical area",
+   "bounds": [
+    28,
+    1468,
+    647,
+    1517
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 74,
+   "role": "TextView",
+   "text": ", an urban corridor along a",
+   "bounds": [
+    80,
+    1515,
+    414,
+    1517
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 75,
+   "role": "TextView",
+   "text": "120-mile (190",
+   "bounds": [
+    413,
+    1515,
+    588,
+    1517
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 76,
+   "role": "TextView",
+   "text": " ",
+   "bounds": [
+    586,
+    1515,
+    595,
+    1517
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 77,
+   "role": "TextView",
+   "text": "km)",
+   "bounds": [
+    593,
+    1515,
+    644,
+    1517
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 78,
+   "role": "FrameLayout",
+   "bounds": [
+    0,
+    77,
+    720,
+    175
+   ],
+   "actions": [
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 79,
+   "role": "ImageButton",
+   "desc": "Open the home page",
+   "bounds": [
+    0,
+    77,
+    84,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 80,
+   "role": "LinearLayout",
+   "bounds": [
+    84,
+    77,
+    140,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 81,
+   "role": "ImageView",
+   "desc": "Connection is secure",
+   "bounds": [
+    91,
+    105,
+    133,
+    147
+   ],
+   "actions": [],
+   "src": "APP:com.android.chrome",
+   "guard": 0.005
+  },
+  {
+   "id": 82,
+   "role": "EditText",
+   "text": "en.wikipedia.org/wiki/Salt_Lake_City",
+   "bounds": [
+    140,
+    77,
+    461,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click",
+    "edit"
+   ],
+   "src": "APP:com.android.chrome",
+   "guard": 0.001
+  },
+  {
+   "id": 83,
+   "role": "ImageButton",
+   "desc": "New tab",
+   "bounds": [
+    461,
+    77,
+    552,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 84,
+   "role": "ImageButton",
+   "desc": "See 10 tabs",
+   "bounds": [
+    552,
+    77,
+    636,
+    175
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "APP:com.android.chrome"
+  },
+  {
+   "id": 85,
+   "role": "ImageButton",
+   "desc": "Customize and control Google Chrome",
+   "bounds": [
+    636,
+    77,
+    720,
+    175
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.android.chrome"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.android.chrome",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.005,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.001,
+  "scored_nodes": 20,
+  "ms": 7669
+ },
+ "ok": true
+}

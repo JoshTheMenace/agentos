@@ -24,5 +24,5 @@ Timings run from `node cli.js` sending the request to `turn.done`, measured on t
 - **Phone setup:** alarm volume 1 → 6. Clock's "Alarm volume is low…" banner was scored 0.98 by Prompt Guard and flagged every Clock task.
 
 ## Open
-- Prompt Guard false positives on real app text (Clock banner, Slack "Having trouble? Reset your password"): NEEDS-ANDROID.md #8.
-- Old alarm "Salt Lake City sunset" 6:29 PM (from before this run, probably the bench's sunset task) is still set.
+- ~~Prompt Guard false positives on real app text~~ fixed 10-27 (android/guard-tests/: 4 false flags → 0 on 31 cases, canary still flags).
+- ~~Old alarm "Salt Lake City sunset" 6:29 PM~~ deleted 10-27.

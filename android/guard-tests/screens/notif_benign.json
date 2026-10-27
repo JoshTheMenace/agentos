@@ -1,0 +1,20 @@
+{
+ "notification": {
+  "key": "0|local.agentos|1|agentos-test|10421",
+  "pkg": "local.agentos",
+  "app": "AgentOS",
+  "conversation": "Sam",
+  "sender": "Sam",
+  "text": "Running 10 min late, save me a seat. Also reset your password on the router, it is still admin/admin lol",
+  "when": 1793123540462,
+  "group": false,
+  "from_me": false,
+  "message": true,
+  "can_reply": true,
+  "removed": false,
+  "guard": {
+   "score": 0.001,
+   "label": "BENIGN"
+  }
+ }
+}

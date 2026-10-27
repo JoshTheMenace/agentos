@@ -1,0 +1,215 @@
+{
+ "pkg": "com.google.android.apps.maps",
+ "activity": "com.google.android.maps.MapsActivity",
+ "secure": false,
+ "secure_reason": "",
+ "nodes": [
+  {
+   "id": 0,
+   "role": "ImageView",
+   "desc": "Back",
+   "bounds": [
+    0,
+    92,
+    84,
+    226
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 1,
+   "role": "ImageView",
+   "desc": "Overview",
+   "bounds": [
+    0,
+    494,
+    84,
+    628
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 2,
+   "role": "ImageView",
+   "desc": "Home",
+   "bounds": [
+    0,
+    290,
+    84,
+    430
+   ],
+   "actions": [
+    "click",
+    "long_click"
+   ],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 3,
+   "role": "TextView",
+   "text": "12:03",
+   "desc": "12:03 PM",
+   "bounds": [
+    112,
+    0,
+    181,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 4,
+   "role": "ImageView",
+   "desc": "AgentOS notification: Sam",
+   "bounds": [
+    181,
+    0,
+    220,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 5,
+   "role": "ImageView",
+   "desc": "Android System notification:",
+   "bounds": [
+    220,
+    0,
+    259,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 6,
+   "role": "ImageView",
+   "desc": "Termux notification: 1 session, 1 task (wake lock held)",
+   "bounds": [
+    259,
+    0,
+    298,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 7,
+   "role": "ImageView",
+   "desc": "Google notification: The New Stack",
+   "bounds": [
+    298,
+    0,
+    337,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 8,
+   "role": "ImageView",
+   "desc": "Alarm set for Tue 6:29 PM.",
+   "bounds": [
+    1397,
+    1,
+    1435,
+    40
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 9,
+   "role": "ImageView",
+   "desc": "Do Not Disturb",
+   "bounds": [
+    1435,
+    1,
+    1473,
+    40
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 10,
+   "role": "LinearLayout",
+   "desc": "Battery charging, 100 percent.",
+   "bounds": [
+    1481,
+    0,
+    1495,
+    42
+   ],
+   "actions": [],
+   "src": "SYSTEM"
+  },
+  {
+   "id": 11,
+   "role": "View",
+   "bounds": [
+    317,
+    42,
+    1283,
+    720
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.apps.maps"
+  },
+  {
+   "id": 12,
+   "role": "TextView",
+   "text": "Something went wrong",
+   "bounds": [
+    662,
+    504,
+    938,
+    538
+   ],
+   "actions": [],
+   "src": "APP:com.google.android.apps.maps",
+   "guard": 0.001
+  },
+  {
+   "id": 13,
+   "role": "Button",
+   "text": "Try again",
+   "bounds": [
+    718,
+    552,
+    883,
+    636
+   ],
+   "actions": [
+    "click"
+   ],
+   "src": "APP:com.google.android.apps.maps"
+  }
+ ],
+ "truncated": false,
+ "source_pkg": "com.google.android.apps.maps",
+ "focused_id": null,
+ "untrusted": true,
+ "guard": {
+  "score": 0.001,
+  "label": "BENIGN",
+  "flagged_node_ids": [],
+  "screen_score": 0.006,
+  "scored_nodes": 1,
+  "ms": 415
+ },
+ "ok": true
+}
