@@ -29,7 +29,7 @@ async function start() {
     if (m.type === 'delegation.created') // hand it to agentd at once (agentd also hears it via app-server; it dedupes)
       ws.send(JSON.stringify({ type: 'voice.delegate', item_id: m.item.id, text: m.item.content.map((c) => c.text).join('') }));
     if (m.type === 'turn.done') out(`dc turn.done ${m.turn?.role}: ${m.turn?.transcript ?? ''}`);
-    else if (/^(session.started|delegation)/.test(m.type)) out(`dc ${m.type}`);
+    else if (/^(session.started|delegation)/.test(m.type) || (q.has('wav') && !/delta|audio|usage/.test(m.type))) out(`dc ${m.type} ${JSON.stringify(m).slice(0, 240)}`);
   };
   pc.onconnectionstatechange = () => out(`pc ${pc.connectionState} +${now() - t}ms`);
   pc.ontrack = (e) => { $('spk').srcObject = e.streams[0]; meter(mic, e.streams[0]); };

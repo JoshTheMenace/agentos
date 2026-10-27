@@ -1,0 +1,37 @@
+# Voice front desk on the PHONE (2026-10-27 16:13): headless Chrome on the Mac plays TTS audio -> adb forward -> phone test agentd :8797 (this code) -> root codex 0.163.
+# GPT Live hands off; tasks.js runs a background Codex worker in real Pigeon; lease card tapped over adb (as the operator); reviewer auto-approved Send.
+# Page clock (ms). 'mic speech end' is logged 400 ms after the last loud sample; 'REPLY AUDIO ... after mic end' is from the last loud sample.
+3165 mic speech start
+4890 dc session.started {"type":"session.started","session":{"id":"rtc_u2_EdeBop3oMlL6t1sXeuei0WIxgpj6vU6v","status":"active","expires_at":1793125189}}
+5005 mic speech end
+5105 mic speech start
+6945 mic speech end
+15745 mic speech start
+16725 mic speech end
+17256 voice.delegation {"type":"voice.delegation","item_id":"item_EdeC3Q0I60b6wliw8oD7X","text":"Reply to Sam in the Pigeon app, say I'm running 10 minutes late","tool":"start_task","arg":"Reply to Sam in the Pigeon app, say I'm running 10 minutes late"}
+17905 REPLY AUDIO start, 1600ms after mic end
+18443 dc turn.done user: Reply to Sam in the Pigeon app, say I'm running 10 minutes late How's it going
+20674 dc turn.done assistant:  On it— checking Pigeon now.
+23905 REPLY AUDIO start, 7600ms after mic end
+29874 dc turn.done assistant:  Quick tap needed—please hit Allow on your phone so I can send it.
+38786 voice.result {"type":"voice.result","task":"k1","text":"I told Sam in Pigeon that you're running 10 minutes late."}
+39845 REPLY AUDIO start, 23540ms after mic end
+43706 dc turn.done assistant:  Done—told Sam you're running 10 minutes late.
+# agentd events (watcher clock)
+17658 task created queued Queued 
+17663 task running running Starting 
+23027 task step running Asking for access 
+23240 task waiting waiting Waiting for your OK to use the app 
+23243 approval.shown lease   
+24861 task resumed running Approved, continuing 
+24866 approval.resolved lease approved  tap
+24954 task step running Opening Pigeon 
+28464 task step running Tapping a button 
+30975 task step running Typing 
+33794 task step running Tapping "Send" 
+33823 task waiting waiting Waiting for your approval to tap "Send" 
+33825 approval.shown action   
+35873 review  auto approved 
+35879 task resumed running Approved, continuing 
+35880 approval.resolved action approved  reviewer
+39174 task done done Done {"id":"k1","goal":"Reply to Sam in the Pigeon app, say I'm running 10 minutes late","state":"done","step":"Done","steps":5,"waiting":null,"result":"I told Sam in Pigeon that you're running 10 minutes late.","error":null,"lease_id":"td7201589","origin":"voice","created":1793118005726,"timing":{"heard_ms":0,"start_ms":60,"first_tool_ms":5422,"first_action_ms":7346,"usage":{"in":10579,"cached":10240,"out":18},"total_ms":21571}}

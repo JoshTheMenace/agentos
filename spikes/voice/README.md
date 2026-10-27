@@ -186,6 +186,8 @@ ChatGPT login, going through `android-connect-proxy :18080`). Media went over th
 
 ## agentd integration (proposal; I did not edit `agentd/`)
 
+> **Now built** (10-27): `agentd/voice.js` (front desk) + `agentd/tasks.js` (background Codex workers). See `agentd/README.md` → "Voice front desk".
+
 agentd already has the hooks: WebViews authenticate with the `agentos.bearer.<token>` subprotocol, and
 `voice.start`/`voice.stop` currently answer `unsupported`. Proposed messages:
 
