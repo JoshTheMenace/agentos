@@ -31,7 +31,7 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 All beats ran on the phone; shots, timings and the presenter checklist are in `pitch/rehearsal/RUN.md`, open issues in `ISSUES.md`. Pass: home, ask sheet, keyboard, Pigeon task + lease tap, auto-approve ✓, trap → alert, P3 block, fingerprint card + system prompt, firewall card + root fallback, local model in airplane mode, audit chain. Needs the presenter: speaking (voice), the finger (fingerprint, firewall). Order matters: a guard flag makes every send need a fingerprint for 10 min, so auto-approve runs before the canary is staged (`--es scenario clean`).
 
 ## Next up
-1. Fingerprint press at the phone (beats 7, 8), and the open items in pitch/rehearsal/ISSUES.md (#1 empty Send bubble is security-relevant). Update demo-script.md to the RUN.md order.
+1. Fingerprint press at the phone (beats 7, 8), and the open items in pitch/rehearsal/ISSUES.md. Update demo-script.md to the RUN.md order.
 2. Watch app / plug (optional), the deck visuals (Fable) and a 2-minute backup video.
 
 Device rule: `mkdir /tmp/agentos-device.lock` before state-changing adb, and `rmdir` only if your mkdir succeeded.
