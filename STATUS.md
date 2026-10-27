@@ -19,10 +19,9 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 - Local model: Qwen3.5-0.8B on the phone via llama-server :8081 (off by default; `agentd/deploy/local-model/llama.sh start`). Use it for the airplane-mode demo "open Pigeon and read me the last message from Mom". Fix-ups for the agentd owner: tools.js task-approval timeout is 10 s (needs ≥75 s), config.js localUrl default should be 8081.
 
 ## In progress when this was written (check each folder's README/NEEDS for state)
-- launcher DONE and set as default home (launcher/README.md). Follow-ups in launcher/NEEDS.md: add home to AGENTD_CLIENT_PKGS, rpc passthrough, use agentd-forwarded /events instead of polling, REMOVE inline typed "Yes, send it" approve buttons (approvals happen on the native card only).
-- android/ island + approval card restyle (Fable). Known bug: a card that opens within about 2 s of the last one closing is lost (android/NEEDS-UI.md).
-- Reviewer is DONE (agentd/reviewer.js, deployed). Broker still needs `approval.escalate` (agentd/NEEDS-ANDROID.md).
-- Pigeon IME send-action build isn't installed yet: `adb install -r demo-apps/pigeon/build/pigeon.apk`.
+- launcher DONE and set as default home (launcher/README.md). Follow-ups done: home is in AGENTD_CLIENT_PKGS, agentd `rpc` passthrough (no :7777 token in the launcher), live state from agentd-forwarded broker events (no polling), inline typed approve buttons removed (the native card is the only gate). Left: memory consent toggle (launcher/NEEDS.md).
+- android/ island + approval card restyle (Fable). The island now follows task state (working/step/pause/hide, auto-approved moment, guard alert), and Send cards show the drafted message. The back-to-back card bug is fixed (android/NEEDS-UI.md).
+- Reviewer is DONE (agentd/reviewer.js, deployed), including `approval.escalate` to fingerprint (tested in a real turn).
 
 ## Waiting on the user
 - Fingerprint e2e test at the phone: `python3 android/tools-client.py e2e --press-approve`.
@@ -30,7 +29,6 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 
 ## Next up
 1. Integrate everything on the phone, then run the full demo-script.md rehearsal.
-2. screen.read should skip views not visible to the user (keyboard/NEEDS.md).
-3. Watch app / plug (optional), the deck visuals (Fable) and a 2-minute backup video.
+2. Watch app / plug (optional), the deck visuals (Fable) and a 2-minute backup video.
 
 Device rule: `mkdir /tmp/agentos-device.lock` before state-changing adb, and `rmdir` only if your mkdir succeeded.

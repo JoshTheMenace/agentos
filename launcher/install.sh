@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installs build/home.apk, hands it both bearer tokens (root copy into its private dir), grants mic + calendar.
+# Installs build/home.apk, hands it the agentd token (root copy into its private dir), grants mic + calendar.
 # Usage: launcher/install.sh [--set]   --set also makes it the default home (root, no chooser)
 #        launcher/install.sh moto      restore Moto's launcher
 #        launcher/install.sh dev [url] live-reload from the Mac: adb reverse + flag file (default http://127.0.0.1:5173/index.html)
@@ -19,9 +19,9 @@ case "${1:-}" in
 esac
 adb -s "$S" install -r build/home.apk
 uid=$(adb -s "$S" shell pm list packages -U $P | grep "^package:$P " | sed "s/.*uid://" | tr -d '\r')
-# Tokens: agentd's (Termux home) and the tool server's (local.agentos private dir). Only root can read them; copy, chown, relabel.
+# agentd's token (Termux home; agentd also re-provisions it at start). Only root can read it; copy, chown, relabel. No :7777 token: tool calls go through agentd.
 D=/data/data/$P/files
-adb -s "$S" shell "su -c 'mkdir -p $D && cp /data/data/com.termux/files/home/.agentos/agentd.token $D/agentd.token && cp /data/data/local.agentos/files/token $D/phone.token && chown -R $uid:$uid $D && chmod 600 $D/*.token && restorecon -RD /data/data/$P'"
+adb -s "$S" shell "su -c 'mkdir -p $D && cp /data/data/com.termux/files/home/.agentos/agentd.token $D/agentd.token && rm -f $D/phone.token && chown -R $uid:$uid $D && chmod 600 $D/*.token && restorecon -RD /data/data/$P'"
 adb -s "$S" shell pm grant $P android.permission.RECORD_AUDIO
 adb -s "$S" shell pm grant $P android.permission.READ_CALENDAR
 [ "${1:-}" = --set ] && adb -s "$S" shell cmd package set-home-activity $P/.Home

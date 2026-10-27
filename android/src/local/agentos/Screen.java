@@ -3,7 +3,8 @@
  * app/src/main/java/app/buddy/assistant/Tools.java (readScreen/walk). Copyright the buddy-android authors.
  * Licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  * Changes by AgentOS: JSON nodes {id, role, text, desc, bounds, actions[]}, our own windows skipped, password and
- * secure-screen redaction, risk hints, provenance labels (src), and FLAG_SECURE + focused activity read via root dumpsys.
+ * secure-screen redaction, risk hints, provenance labels (src), the focused input (focused / focused_id), and FLAG_SECURE +
+ * focused activity read via root dumpsys.
  */
 package local.agentos;
 
@@ -31,6 +32,7 @@ final class Screen {
     /** From the last read: foreground app, activity, and why it counts as secure ("" = not secure). */
     String pkg = "", activity = "", secureWhy = "";
     private boolean flagSecure, password;
+    private int focusedId;
 
     /** A window changed: re-check FLAG_SECURE on the next read. */
     void markDirty() { dirty = true; }
@@ -39,6 +41,7 @@ final class Screen {
         refreshFocus();
         nodes.clear();
         password = false;
+        focusedId = -1;
         JSONArray out = new JSONArray();
         String active = null;
         for (AccessibilityWindowInfo w : svc.getWindows()) {
@@ -54,7 +57,7 @@ final class Screen {
         if (flagSecure) redact(out);
         return new JSONObject().put("pkg", pkg).put("activity", activity).put("secure", !secureWhy.isEmpty())
                 .put("secure_reason", secureWhy).put("nodes", out).put("truncated", nodes.size() >= MAX_NODES)
-                .put("source_pkg", pkg).put("untrusted", true);
+                .put("source_pkg", pkg).put("focused_id", focusedId < 0 ? JSONObject.NULL : focusedId).put("untrusted", true);
     }
 
     boolean secure() { return !secureWhy.isEmpty(); }
@@ -78,6 +81,7 @@ final class Screen {
             else if (!empty(text)) o.put("text", Guard.clip(text.toString(), 160));
             if (!empty(desc) && (empty(text) || !desc.toString().equals(String.valueOf(text)))) o.put("desc", Guard.clip(desc.toString(), 120));
             if (n.isEditable() && n.isShowingHintText()) o.put("hint", true);
+            if (n.isEditable() && n.isFocused()) { o.put("focused", true); focusedId = nodes.size(); } // the input the keyboard types into
             o.put("bounds", new JSONArray().put(r.left).put(r.top).put(r.right).put(r.bottom));
             JSONArray a = new JSONArray();
             if (n.isClickable()) a.put("click");

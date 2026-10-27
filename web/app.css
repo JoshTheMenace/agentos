@@ -141,14 +141,6 @@ body{position:fixed;inset:0}
 .step .orb{width:8px;height:8px}
 .step .tag{margin-left:auto;padding:3px 8px;font-size:10.5px}
 .step.alert{color:#FF8A82}
-.appr{align-self:stretch;padding:14px 16px;animation:rise .5s var(--soft) both;--acc:var(--blue)}
-.appr .t{font-size:17px;font-weight:600;letter-spacing:-.025em}
-.appr .q{margin-top:6px;color:var(--l2);font-size:13.5px;line-height:1.35;font-weight:500}
-.appr .r2{display:flex;gap:6px;margin-top:10px}
-.appr .acts{display:flex;align-items:center;gap:8px;margin-top:12px}
-.appr .finger{display:flex;align-items:center;gap:8px;color:var(--l2);font-size:12px;font-weight:600;margin-right:auto}
-.appr .finger svg{color:var(--acc);animation:scan 1.8s ease-in-out infinite}
-.appr.sent{opacity:.5;pointer-events:none}
 .ask{display:flex;align-items:center;gap:8px;height:46px;border-radius:999px;background:rgba(255,255,255,.1);padding:0 5px 0 16px;flex:none;margin-bottom:10px}
 .ask input{flex:1;font-size:15px;color:var(--l1);min-width:0}
 .ask input::placeholder{color:var(--l3)}

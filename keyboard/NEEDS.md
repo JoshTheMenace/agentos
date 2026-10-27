@@ -9,7 +9,7 @@ Things the keyboard (`local.agentos.keys`) wants from `agentd/`, `android/` and 
 - (Optional) The keyboard also sends `field.app` (human app label). Harmless if ignored.
 
 ## android (tool server)
-- **`screen.read` includes views that are not visible to the user.** On Pigeon's chat screen it returns the chat *and* the conversation list that sits behind it (both layers, full-screen bounds). Skipping nodes where `!isVisibleToUser()` would fix it at the source. The keyboard works around it by splitting nodes into "layers" (a jump back to the top of the screen) and keeping the layer that holds the text field.
+- **DONE (2026-10-27): `screen.read` skips views the user can't see and marks the focused input** (`focused: true` on the node, `focused_id` on the reply). Pigeon's list is now `INVISIBLE` under an open chat, so the layers trick isn't needed there. Original note: **`screen.read` includes views that are not visible to the user.** On Pigeon's chat screen it returns the chat *and* the conversation list that sits behind it (both layers, full-screen bounds). Skipping nodes where `!isVisibleToUser()` would fix it at the source. The keyboard works around it by splitting nodes into "layers" (a jump back to the top of the screen) and keeping the layer that holds the text field.
 - **A `focused` flag on nodes** (or `focused_id` on the reply) would make that choice exact instead of a heuristic.
 - **Guard counts:** the keyboard reports `flagged_node_ids` from `guard` as "N flagged" in the detail line; please keep that field.
 

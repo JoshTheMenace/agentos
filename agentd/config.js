@@ -32,7 +32,7 @@ export const cfg = {
   claudeEffort: env.CLAUDE_EFFORT || 'medium',
   localUrl: env.LOCAL_URL || 'http://127.0.0.1:8081', // llama-server (deploy/local-model)
   debug: !!env.AGENTD_DEBUG,
-  clientPkgs: (env.AGENTD_CLIENT_PKGS ?? 'local.agentos,local.agentos.keys').split(',').filter(Boolean), // apps that get the WS token
+  clientPkgs: (env.AGENTD_CLIENT_PKGS ?? 'local.agentos,local.agentos.keys,local.agentos.home').split(',').filter(Boolean), // apps that get the WS token
 
 };
 

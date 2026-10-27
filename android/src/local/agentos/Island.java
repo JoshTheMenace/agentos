@@ -63,7 +63,7 @@ final class Island extends FrameLayout {
     String state = "idle", goal = "";
     int pct = -1;
     private View face;
-    private boolean shown, open, active;
+    private boolean shown, open, active, closing; // closing: a collapse whose clean-up (drop the card, shrink the window) is still due
     private ValueAnimator anim;
     /** Set by the host: the pill was tapped (open the task sheet); the user pressed Stop. */
     Runnable onPillTap, onStop;
@@ -141,7 +141,7 @@ final class Island extends FrameLayout {
     private void fit() {
         pill.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED);
         pillW = Math.max(dp(PILL_W), pill.getMeasuredWidth());
-        if (!open) morph(pillW, dp(PILL_H), dp(PILL_H) / 2f, 0, 0, 450, SPRING, null);
+        if (!open) morph(pillW, dp(PILL_H), dp(PILL_H) / 2f, 0, 0, 450, SPRING, this::closed); // takes over a running collapse's clean-up
     }
 
     // ------------------------------------------------------------------ cards
@@ -150,6 +150,7 @@ final class Island extends FrameLayout {
     void expand(View f, int acc) {
         if (!shown) show();
         removeCallbacks(autoHide);
+        closing = false;
         if (face != null) removeView(face);
         face = f;
         f.setAlpha(0);
@@ -165,13 +166,19 @@ final class Island extends FrameLayout {
     void collapse() {
         if (!open) return;
         open = false;
+        closing = true;
         tint(color(state));
-        morph(pillW, dp(PILL_H), dp(PILL_H) / 2f, 1, 0, 380, EASE, () -> {
-            if (face != null) removeView(face);
-            face = null;
-            window(dp(WIN_PILL_W), dp(PILL_H + 4));
-            if (!active) postDelayed(autoHide, 1500);
-        });
+        morph(pillW, dp(PILL_H), dp(PILL_H) / 2f, 1, 0, 380, EASE, this::closed);
+    }
+
+    /** End of a collapse (or of a pill re-fit that cancelled it): drop the card, shrink the window to the pill. */
+    private void closed() {
+        if (open || !closing) return;
+        closing = false;
+        if (face != null) removeView(face);
+        face = null;
+        window(dp(WIN_PILL_W), dp(PILL_H + 4));
+        if (!active) postDelayed(autoHide, "done".equals(state) ? 3000 : 1500);
     }
 
     /** The open card changed its content height (details toggled). */
@@ -235,7 +242,7 @@ final class Island extends FrameLayout {
     /** Fade out and remove the window. State resets now; only the removal waits for the fade, and show() can cancel it. */
     void hide() {
         if (!shown) return;
-        shown = false; open = false; active = false; state = "idle"; pct = -1;
+        shown = false; open = false; active = false; closing = false; state = "idle"; pct = -1;
         removeCallbacks(autoHide);
         if (anim != null) anim.cancel();
         if (face != null) removeView(face);

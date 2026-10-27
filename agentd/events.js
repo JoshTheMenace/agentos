@@ -5,7 +5,7 @@
 import { cfg, log } from './config.js';
 import { phoneAuth, rpc } from './tools.js';
 
-export const FORWARD = new Set(['approval.shown', 'approval.resolved', 'guard.flag', 'task.state', 'review']);
+export const FORWARD = new Set(['approval.shown', 'approval.resolved', 'guard.flag', 'task.state', 'audit.append', 'review']);
 export const pending = new Map(); // approval_id -> approval.shown payload
 export const flagged = new Set(); // task_ids the broker raised guard.flag for
 export const state = { connected: false, answeredAt: 0 };

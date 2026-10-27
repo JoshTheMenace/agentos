@@ -6,7 +6,7 @@ const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls)
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const N = window.Native || { // browser shims
   info: () => JSON.stringify({ pkg: 'browser', dev: true, top: 28, bottom: 0, ime: 0 }), token: () => null, launch: () => false, haptic: () => {},
-  settings: () => {}, shade: () => {}, calendarNext: () => null, rpc: (id) => setTimeout(() => app.rpcDone(id, { ok: false, error: 'browser' })),
+  settings: () => {}, shade: () => {}, calendarNext: () => null, get: (id) => setTimeout(() => app.rpcDone(id, { ok: false, error: 'browser' })),
   apps: () => JSON.stringify([['local.agentos.pigeon', 'Pigeon'], ['local.agentos.beacon', 'Beacon'], ['com.android.chrome', 'Chrome'], ['com.android.camera2', 'Camera'], ['com.google.android.calendar', 'Calendar']].map(([pkg, label]) => ({ pkg, label }))),
 };
 const app = window.app = {};
@@ -14,17 +14,11 @@ const info = JSON.parse(N.info());
 const hap = (k) => N.haptic(k || 'click');
 const ICON = (pkg) => `https://agentos.home/icon/${pkg}`;
 const AGENTD = 'ws://127.0.0.1:8787/', GRAPH = 'http://127.0.0.1:8787/memory/graph.json';
-const LEASE_S = 600; // task.start default ttl on the phone
 const FORBIDDEN = ['Settings', 'System UI', 'Magisk', 'Installer', 'AgentOS'];
 
 // ---------- insets (edge to edge; the shell reports status/nav/IME heights in CSS px) ----------
 app.insets = (t, b, i) => { const r = document.documentElement.style; r.setProperty('--top', t + 'px'); r.setProperty('--bottom', b + 'px'); r.setProperty('--ime', i + 'px'); };
 app.insets(info.top, info.bottom, info.ime);
-
-// ---------- tool server RPC (async through the shell; approvals block up to 60 s natively) ----------
-let rid = 0; const pend = {};
-const rpc = (method, params = {}) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; N.rpc(id, method, JSON.stringify(params)); });
-app.rpcDone = (id, r) => { pend[id]?.(r); delete pend[id]; };
 
 // ---------- agentd WebSocket ----------
 const bus = {}; const on = (t, f) => (bus[t] ??= []).push(f); const emit = (m) => (bus[m.type] || []).forEach((f) => f(m));
@@ -40,8 +34,15 @@ function connect() {
 const send = (m) => wsOk ? (ws.send(JSON.stringify(m)), true) : false;
 connect();
 
+// ---------- tool server RPC through agentd's allow-listed passthrough (firewall.set blocks natively for the fingerprint) ----------
+let rid = 0; const pend = {};
+const rpc = (method, params = {}) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; if (!send({ type: 'rpc', id, method, params })) app.rpcDone(id, { ok: false, error: 'offline' }); });
+const nget = (path) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; N.get(id, path); }); // agentd GET via the shell (cross-origin)
+app.rpcDone = (id, r) => { pend[id]?.(r); delete pend[id]; };
+on('rpc.result', (m) => app.rpcDone(m.id, m.result));
+
 // ---------- state ----------
-const S = { tasks: [], active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [] };
+const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [] }; // active = latest task.state
 const appName = (pkg) => S.names[pkg] || (pkg || '').split('.').pop().replace(/^\w/, (c) => c.toUpperCase());
 const fmtT = (ts, sec) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}) }).replace(/\s?[AP]M/i, '');
 const short = (s, n = 48) => (s = String(s || '')).length > n ? s.slice(0, n - 1) + '…' : s;
@@ -54,19 +55,7 @@ function clock() {
 }
 clock(); setInterval(clock, 1000);
 
-// ---------- audit -> tasks / recent ----------
-function parseAudit(entries) {
-  const m = new Map();
-  for (const e of entries) {
-    if (e.tool === 'task.start') m.set(e.task, { id: e.task, goal: e.goal || '', apps: e.apps || [], start: e.ts, done: false, steps: 0, last: null, paused: false, denied: 0, approved: 0 });
-    const t = m.get(e.task); if (!t) continue;
-    if (e.tool === 'task.stop') { t.done = true; t.end = e.ts; t.steps = e.steps ?? t.steps; }
-    else if (e.tool === 'task.pause') t.paused = true;
-    else if (e.tool === 'task.resume') t.paused = false;
-    else if (e.tool !== 'task.start') { t.last = e; t.steps++; if (e.decision === 'approved') t.approved++; if (e.decision === 'denied') t.denied++; }
-  }
-  return [...m.values()];
-}
+// ---------- audit lines -> text ----------
 const auditLine = (e) => {
   const app_ = appName(e.pkg), tgt = e.target ? `"${short(e.target, 24)}"` : '';
   switch (e.tool) {
@@ -83,17 +72,18 @@ const auditLine = (e) => {
   }
 };
 
+// One snapshot on connect/resume; after that the broker's events (via agentd) keep it live: no polling.
+const live = () => { renderStatus(); renderCenter(); if ($('#perms').classList.contains('on')) renderGrants(); };
+const alive = (t) => t && t.expires > Date.now() ? t : null;
 async function refresh() {
-  const r = await rpc('audit.tail', { n: 80 });
-  if (r?.entries) {
-    S.audit = r.entries;
-    S.tasks = parseAudit(r.entries);
-    S.active = S.tasks.filter((t) => !t.done && Date.now() - t.start < LEASE_S * 1000).pop() || null;
-  }
-  renderStatus(); renderCenter(); if ($('#perms').classList.contains('on')) renderGrants();
-  renderCalendar();
+  const [a, l] = await Promise.all([rpc('audit.tail', { n: 80 }), rpc('approval.list')]);
+  if (a?.entries) S.audit = a.entries;
+  if (l?.approvals) { S.active = alive(l.task); S.pending = l.approvals[0] || null; }
+  live(); renderCalendar();
 }
-setInterval(() => document.visibilityState === 'visible' && refresh(), 20000);
+on('task.state', (m) => { if (m.state === 'stopped') { if (S.active?.task_id === m.task_id) S.active = null; } else S.active = alive(m); live(); });
+on('audit.append', (m) => { S.audit = [...S.audit.slice(-119), m]; renderCenter(); });
+setInterval(() => S.active && live(), 30000); // the minutes-left countdown
 
 // ---------- home ----------
 function renderStatus() {
@@ -101,7 +91,7 @@ function renderStatus() {
   const cls = S.pending ? 'approval' : S.turn || S.active ? 'working' : '';
   orb.className = corb.className = 'orb ' + cls;
   $('#status').textContent = S.pending ? 'Waiting for you' : S.turn || S.active ? '1 task running' : wsOk ? 'Ready' : 'Agent offline';
-  const t = S.active, left = t ? Math.max(0, Math.round((t.start + LEASE_S * 1000 - Date.now()) / 60000)) : 0;
+  const t = S.active, left = t ? Math.max(0, Math.round((t.expires - Date.now()) / 60000)) : 0;
   $('#trustTxt').innerHTML = t ? `Agent can tap in ${esc(t.apps.map(appName).join(', ') || 'an app')} <b>· ${left} min</b>` : 'No active grants';
 }
 function renderCalendar() {
@@ -163,7 +153,7 @@ function open(id) { const o = $('#' + id); if (o.classList.contains('on')) retur
 function close(id) { const o = $('#' + id); o.classList.remove('on'); const i = stack.indexOf(id); if (i >= 0) stack.splice(i, 1); if (id === 'sheet') { $('#scrim').classList.remove('on'); $('#askIn').blur(); } if (id === 'voice') voiceStop(); }
 app.back = () => { if (stack.length) close(stack[stack.length - 1]); else if (page) go(0); };
 app.home = () => { [...stack].forEach(close); go(0); };
-app.resume = () => { W = innerWidth; refresh(); if (page === 2) loadMemory(); };
+app.resume = () => { W = innerWidth; wsOk && refresh(); if (page === 2) loadMemory(); };
 $('#scrim').onclick = () => close('sheet');
 $('#permsBack').onclick = () => close('perms');
 $('#drawer .grab').onclick = () => close('drawer');
@@ -190,10 +180,10 @@ function renderCenter() {
 }
 function taskRow(t) {
   const r = el('div', 'rowi ' + (S.pending ? 'approval' : 'working'));
-  const pct = Math.min(100, Math.round(100 * t.steps / 40));
-  r.innerHTML = `<span class="orb ${S.pending ? 'approval' : 'working'}"></span><div>${esc(short(t.goal, 34) || 'Task')}<span class="s">${esc(S.pending ? 'Waiting for you' : t.paused ? 'Paused' : t.last ? auditLine(t.last)[0] : 'Starting')} · ${esc(t.apps.map(appName).join(', '))}</span></div>
+  const pct = Math.min(100, Math.round(100 * (t.steps || 0) / (t.max_steps || 40))), last = S.audit.filter((e) => e.task === t.task_id && !/^task\./.test(e.tool)).pop();
+  r.innerHTML = `<span class="orb ${S.pending ? 'approval' : 'working'}"></span><div>${esc(short(t.goal, 34) || 'Task')}<span class="s">${esc(S.pending ? 'Waiting for you' : t.paused ? 'Paused' : last ? auditLine(last)[0] : 'Starting')} · ${esc((t.apps || []).map(appName).join(', '))}</span></div>
     <div class="r"><div class="mini"><i style="transform:scaleX(${pct / 100})"></i></div><button class="ib" data-a="${t.paused ? 'resume' : 'pause'}"><svg width="14" height="14"><use href="#i-${t.paused ? 'play' : 'pause'}"/></svg></button><button class="ib red" data-a="stop"><svg width="14" height="14"><use href="#i-stop"/></svg></button></div>`;
-  r.onclick = async (e) => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; hap(); if (a === 'stop') send({ type: 'stop' }); await rpc('task.' + a, { task_id: t.id }); refresh(); };
+  r.onclick = async (e) => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; hap(); if (a === 'stop') send({ type: 'stop' }); await rpc('task.' + a, { task_id: t.task_id }); refresh(); };
   return r;
 }
 $('#prov').onclick = (e) => { const p = e.target.dataset.p; if (!p) return; hap('tick'); S.provider = localStorage.provider = p; renderCenter(); };
@@ -205,9 +195,9 @@ function renderGrants() {
   const t = S.active, box = $('#grants');
   $('#grantNote').textContent = t ? 'expires' : '';
   if (!t) return box.replaceChildren(el('div', 'empty', 'None'));
-  const left = Math.max(0, Math.round((t.start + LEASE_S * 1000 - Date.now()) / 60000));
+  const left = Math.max(0, Math.round((t.expires - Date.now()) / 60000));
   box.replaceChildren(...t.apps.map((pkg) => { const r = el('div', 'rowi', `<span class="appic"><img src="${ICON(pkg)}" alt=""></span><div>${esc(appName(pkg))}<span class="s">Tap · type</span></div><div class="r"><span class="tag a">${left} min</span><button class="tag">Revoke</button></div>`);
-    $('button', r).onclick = async () => { hap(); send({ type: 'stop' }); await rpc('task.stop', { task_id: t.id }); refresh(); }; return r; }));
+    $('button', r).onclick = async () => { hap(); send({ type: 'stop' }); await rpc('task.stop', { task_id: t.task_id }); refresh(); }; return r; }));
 }
 async function renderFirewall() {
   const r = await rpc('firewall.list', {}); const rules = r?.rules || [];
@@ -222,7 +212,7 @@ async function renderFirewall() {
 }
 
 // ---------- ask sheet ----------
-const body = $('#shbody'); let aiMsg = null, steps = {}, apprCard = null;
+const body = $('#shbody'); let aiMsg = null, steps = {};
 const scrollDown = () => (body.scrollTop = body.scrollHeight);
 function setSheet(state, cls) { $('#shstate').textContent = state; $('#shorb').className = 'orb ' + (cls || ''); $('#shstop').hidden = !S.turn; }
 function sendUser(text) {
@@ -245,25 +235,19 @@ on('tool.result', (m) => {
   const d = m.decision || (m.ok ? 'auto' : 'failed'), bad = /denied|blocked|failed/.test(d);
   $('.orb', s).className = 'orb ' + (bad ? 'alert' : 'done');
   if (d !== 'auto') s.append(el('span', 'tag ' + (bad ? 'c' : 'g'), d === 'approved' ? 'Approved' : d));
-  if (S.pending && apprCard) { apprCard.remove(); apprCard = null; }
-  S.pending = null; setSheet('Working', 'working'); renderStatus();
+  S.pending = null; renderStatus();
 });
-on('approval.needed', (m) => {
-  S.pending = m; renderStatus();
-  const r2 = m.rule_of_two || {}, chips = [['untrusted', 'Untrusted input'], ['private', 'Private data'], ['outward', 'Outward action']].map(([k, l]) => `<span class="chip ${r2[k] ? 'lit' : ''}"><i></i>${l}</span>`).join('');
-  const title = /send|submit|post/i.test(m.summary || '') ? 'Send it?' : 'Allow?';
-  apprCard?.remove();
-  apprCard = el('div', 'glass appr', `<div class="t">${title}</div><div class="q">${esc(short(m.summary, 140))}</div><div class="r2">${chips}</div>
-    <div class="acts"><span class="finger"><svg width="22" height="22"><use href="#i-finger"/></svg>Fingerprint · or say yes</span><button class="btn deny">Deny</button><button class="btn ok">Approve</button></div>`);
-  $('.ok', apprCard).onclick = () => { hap('heavy'); apprCard.classList.add('sent'); sendUser('Yes, send it.'); };
-  $('.deny', apprCard).onclick = () => { hap(); apprCard.classList.add('sent'); sendUser('No, don’t.'); };
-  body.append(apprCard); setSheet('Waiting for you', 'approval'); scrollDown();
-  if (!$('#sheet').classList.contains('on') && !$('#voice').classList.contains('on')) open('sheet');
+// Approvals happen on the phone's native card only. The sheet shows one quiet line, from the broker's events.
+const waiting = (m) => { S.pending = m; setSheet('Waiting for your approval', 'approval'); live(); };
+on('approval.shown', waiting); on('approval.needed', waiting); // approval.needed = agentd's guess when the broker stream is down
+on('approval.resolved', (m) => {
+  S.pending = null; const ok = m.decision === 'approved';
+  setSheet(ok ? (m.approver === 'reviewer' ? 'Auto-approved ✓' : 'Approved') : m.decision === 'timeout' ? 'Timed out' : 'Denied', ok ? 'done' : 'alert'); live();
 });
 on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" height="14"><use href="#i-shield"/></svg><span>Ignored instructions in ${esc(appName(m.source_pkg))}</span>`)); scrollDown(); });
-on('error', (m) => { if (m.code !== 'busy') body.append(el('div', 'msg err', esc(m.message))); scrollDown(); });
-on('turn.done', (m) => { S.turn = false; S.pending = null; apprCard?.remove(); apprCard = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); renderStatus(); refresh(); });
-on('ws.open', renderStatus); on('ws.close', () => { S.turn = false; renderStatus(); });
+on('error', (m) => { body.append(el('div', 'msg err', esc(m.message))); scrollDown(); });
+on('turn.done', (m) => { S.turn = false; S.pending = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); live(); });
+on('ws.open', refresh); on('ws.close', () => { S.turn = false; S.active = null; for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- voice (WebRTC per agentd/voice.html; hold the orb to talk) ----------
 let pc, mic, micTrack;
@@ -304,7 +288,7 @@ let graphAt = 0;
 async function loadMemory() {
   if (Date.now() - graphAt < 15000) return;
   try {
-    const g = window.Native ? await rpc('agentd:/memory/graph.json') : await (await fetch(GRAPH, { headers: { Authorization: 'Bearer ' + N.token('agentd') } })).json();
+    const g = window.Native ? await nget('/memory/graph.json') : await (await fetch(GRAPH, { headers: { Authorization: 'Bearer ' + N.token('agentd') } })).json();
     if (!g.nodes) throw new Error(g.error || 'no graph');
     graphAt = Date.now(); $('#memNote').textContent = `${g.nodes.length - 1} people`;
     drawGraph(g); renderSources($('#sources'), g.consents); S.consents = g.consents;
@@ -336,4 +320,4 @@ function renderSources(box, consents = S.consents) {
 }
 
 // ---------- boot ----------
-loadApps(); refresh(); go(0);
+loadApps(); live(); renderCalendar(); go(0);

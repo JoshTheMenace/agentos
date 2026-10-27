@@ -32,7 +32,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -49,8 +48,8 @@ import org.json.JSONObject;
 /**
  * AgentOS home: a native HOME activity whose whole surface is one WebView showing web/ (bundled as assets).
  * Think of it as a picture frame: the frame (this class) talks to Android, the picture (web/) is HTML.
- * The JS bridge is narrow and request-only: list/launch apps, haptics, settings, calendar, the two bearer tokens,
- * and an async JSON-RPC relay to the AgentOS tool server (:7777). Approvals still happen natively (fingerprint card).
+ * The JS bridge is narrow and request-only: list/launch apps, haptics, settings, calendar, the agentd token, and an async GET
+ * on agentd. Tool-server calls go through agentd's WebSocket. Approvals still happen natively (fingerprint card).
  * Dev: write a URL into /data/local/tmp/agentos-home.dev (e.g. http://127.0.0.1:5173/index.html over adb reverse)
  * and the page loads live from the Mac instead of the bundle.
  */
@@ -151,7 +150,7 @@ public class Home extends Activity {
       return new JSONObject().put("pkg", getPackageName()).put("dev", devOrigin != null).put("density", density)
           .put("top", px(insTop)).put("bottom", px(insBottom)).put("ime", px(insIme)).toString();
     }
-    @JavascriptInterface public String token(String which) { return file("phone".equals(which) ? "phone.token" : "agentd.token"); }
+    @JavascriptInterface public String token(String which) { return file("agentd.token"); } // the only token this app holds
     @JavascriptInterface public String apps() throws Exception {
       Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
       PackageManager pm = getPackageManager();
@@ -196,30 +195,24 @@ public class Home extends Activity {
         return null;
       } catch (Exception e) { Log.w(TAG, "calendar: " + e); return null; }
     }
-    /** Async JSON-RPC to the AgentOS tool server (or, for "agentd:<path>", a GET on agentd: the page's https origin can't
-     *  fetch http://127.0.0.1 cross-origin). Reply comes back as app.rpcDone(id, json). Approvals block up to 60 s there. */
-    @JavascriptInterface public void rpc(String id, String method, String params) {
+    /** Async GET on agentd (the page's https origin can't fetch http://127.0.0.1 cross-origin). Reply: app.rpcDone(id, json).
+     *  Tool-server calls go over agentd's WebSocket passthrough instead; this app holds no :7777 token. */
+    @JavascriptInterface public void get(String id, String path) {
       new Thread(() -> {
         String out;
         try {
-          boolean agentd = method.startsWith("agentd:");
-          String tok = file(agentd ? "agentd.token" : "phone.token");
+          String tok = file("agentd.token");
           if (tok == null) throw new Exception("no token (run launcher/install.sh)");
-          HttpURLConnection h = (HttpURLConnection) new URL(agentd ? "http://127.0.0.1:8787" + method.substring(7) : "http://127.0.0.1:7777/rpc").openConnection();
-          h.setConnectTimeout(3000); h.setReadTimeout(90_000);
-          h.setRequestProperty("Authorization", "Bearer " + tok); h.setRequestProperty("Content-Type", "application/json");
-          if (!agentd) {
-            h.setDoOutput(true);
-            byte[] body = new JSONObject().put("method", method).put("params", new JSONObject(params == null || params.isEmpty() ? "{}" : params)).toString().getBytes(StandardCharsets.UTF_8);
-            try (OutputStream o = h.getOutputStream()) { o.write(body); }
-          }
+          HttpURLConnection h = (HttpURLConnection) new URL("http://127.0.0.1:8787" + path).openConnection();
+          h.setConnectTimeout(3000); h.setReadTimeout(20_000);
+          h.setRequestProperty("Authorization", "Bearer " + tok);
           InputStream in = h.getResponseCode() < 400 ? h.getInputStream() : h.getErrorStream();
           ByteArrayOutputStream bo = new ByteArrayOutputStream(); byte[] buf = new byte[8192]; int n;
           while (in != null && (n = in.read(buf)) > 0) bo.write(buf, 0, n);
           out = bo.size() > 0 ? bo.toString("UTF-8") : new JSONObject().put("ok", false).put("error", "HTTP " + h.getResponseCode()).toString();
         } catch (Exception e) { out = "{\"ok\":false,\"error\":" + JSONObject.quote(String.valueOf(e.getMessage())) + "}"; }
         js("window.app&&app.rpcDone(" + JSONObject.quote(id) + "," + out + ")");
-      }, "rpc-" + method).start();
+      }, "get-" + path).start();
     }
   }
 }

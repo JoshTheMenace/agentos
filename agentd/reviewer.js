@@ -59,10 +59,11 @@ export async function grade(codex, req, ms = cfg.reviewMs) {
 // One approval.shown from the broker -> grade -> act, then emit {type:"review", ...} for the UI.
 // - auto: approval.confirm {channel:"reviewer"}, only if the broker offers "reviewer" (an ordinary, tap-tier approval),
 //   the task has no guard flag, the broker gave no fingerprint reason, and the reviewer saw no taint.
-// - block: approval.deny. fingerprint: the broker has no escalate method yet, so this is advice shown to the user.
+// - block: approval.deny. fingerprint: approval.escalate, which turns an ordinary card fingerprint-only (stricter only).
 // - tap / human: the person decides on the card.
 export async function onApproval(codex, a, { turn, flagged }, emit) {
   if (a.kind && a.kind !== 'action') return; // lease cards are the user's own tap; nothing to grade
+  if (a.escalated) return; // our own escalation, re-announced by the broker: already graded
   const ordinary = !!a.allowed_channels?.includes('reviewer');
   const v = await grade(codex, { user: turn ? [turn.goal] : [], transcript: turn?.log || [],
     action: { tool: a.tool, app: a.pkg, args: { target: a.target, text: a.text || undefined } }, floor: ordinary ? 'auto' : 'fingerprint' });
@@ -73,7 +74,7 @@ export async function onApproval(codex, a, { turn, flagged }, emit) {
   if (v.decision === 'auto' && !held)
     action = await call('approval.confirm', { rationale: v.rationale }, 'approved');
   else if (v.decision === 'block') action = await call('approval.deny', { utterance: v.rationale }, 'denied');
-  else if (v.decision === 'fingerprint' && ordinary) action = 'recommends fingerprint (no broker escalate yet)';
+  else if (v.decision === 'fingerprint' && ordinary) action = await call('approval.escalate', { to: 'fingerprint', rationale: v.rationale }, 'escalated to fingerprint');
   emit({ type: 'review', approval_id: a.approval_id, task_id: a.task_id, tool: a.tool, target: a.target, decision: v.decision, action,
     rationale: v.rationale, risk_level: v.risk_level, user_authorization: v.user_authorization, tainted: v.tainted, ms: v.ms });
 }

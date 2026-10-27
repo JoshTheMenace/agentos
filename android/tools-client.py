@@ -29,8 +29,8 @@ ADB = ["adb", "-s", "ZY22J3TK8S"]
 PORT = os.environ.get("AGENTOS_PORT", "17777")  # Mac-side port, forwarded to the phone's 7777
 PRESS = "--press-approve" in sys.argv  # operator taps the card's Approve via adb (720x1600 Moto layout)
 PIGEON, BEACON = "local.agentos.pigeon", "local.agentos.beacon"
-# Island card buttons on the 720x1600 Moto: lease "Allow", and "Approve" on a tap card with the "Untrusted content" chip.
-LEASE_ALLOW, CARD_APPROVE = os.environ.get("AGENTOS_ALLOW_XY", "580 190"), os.environ.get("AGENTOS_APPROVE_XY", "575 248")
+# Island card buttons on the 720x1600 Moto: lease "Allow", and "Approve" on a "Send" card (message bubble + "Untrusted content" chip).
+LEASE_ALLOW, CARD_APPROVE = os.environ.get("AGENTOS_ALLOW_XY", "580 190"), os.environ.get("AGENTOS_APPROVE_XY", "575 325")
 
 
 def adb(*args):
@@ -164,7 +164,6 @@ def approvals():
         sys.exit(f"no {kind} event in {secs}s")
 
     def bg(method, params, timeout=90):  # a blocking call (it waits for a card) on another thread
-        time.sleep(2.5)  # the island's close animation must finish first, or it swallows the next card (see NEEDS-UI.md)
         box = {}
         th = threading.Thread(target=lambda: box.update(r=call(tok, method, params, timeout)))
         th.start()

@@ -54,6 +54,8 @@ final class Broker {
         final int maxSteps;
         final History h;
         volatile boolean paused, granted; // granted: a human allowed it on the lease card (cleared by stop)
+        /** The field this task last typed into: its live text is the message a later "Send" tap sends. */
+        volatile AccessibilityNodeInfo field;
 
         Lease(String goal, Set<String> apps, long expires, int maxSteps, String caller, History h) {
             this.goal = goal; this.apps = apps; this.expires = expires; this.maxSteps = maxSteps; this.caller = caller; this.h = h;
@@ -94,6 +96,9 @@ final class Broker {
     private volatile Lease lease, last; // last: the most recent lease, even after stop (for carry-over)
     private volatile Approvals.Pending current;
     private volatile CompletableFuture<Boolean> leaseAsk;
+    /** The island pill's step label; guard alerts already shown ("task|sender"), so rereads don't nag. */
+    private volatile String step = "Starting";
+    private final Set<String> alerted = ConcurrentHashMap.newKeySet();
 
     Broker(AgentA11y svc) {
         this.svc = svc;
@@ -120,6 +125,7 @@ final class Broker {
             case "approval.list": return approvals();
             case "approval.confirm": return confirm(p, uid);
             case "approval.deny": return deny(p);
+            case "approval.escalate": return escalate(p, uid);
             case "tap": case "type": case "scroll": case "press": case "open_app": case "firewall.set": case "firewall.clear":
                 synchronized (actLock) { return act(m, p); } // one action at a time; nothing else acts while a card is up
             default: throw new IllegalArgumentException("unknown method " + m);
@@ -167,6 +173,7 @@ final class Broker {
             audit.log(entry("task.start", l).put("goal", l.goal).put("apps", new JSONArray(apps)).put("refused_apps", refused)
                     .put("caller", caller).put("user_granted", granted).put("carried_over", same));
             Events.emit("task.state", task(l).put("state", "started"));
+            island(l, "Starting");
             return ok(true).put("task_id", l.id).put("apps", new JSONArray(apps)).put("expires", l.expires).put("max_steps", l.maxSteps)
                     .put("refused_apps", refused).put("steps", l.h.steps).put("untrusted", l.h.untrusted).put("carried_over", same)
                     .put("user_granted", granted);
@@ -210,6 +217,7 @@ final class Broker {
         svc.main.post(svc.autoPause::stop);
         audit.log(entry("task.stop", l).put("reason", why).put("steps", l.h.steps));
         Events.emit("task.state", task(l).put("state", "stopped").put("reason", why));
+        svc.main.post(svc.island::hide);
         return ok(true).put("task_id", l.id).put("reason", why);
     }
 
@@ -220,6 +228,7 @@ final class Broker {
         svc.main.post(on ? svc.autoPause::stop : svc.autoPause::start);
         audit.log(entry(on ? "task.pause" : "task.resume", l).put("reason", why));
         Events.emit("task.state", task(l).put("state", on ? "paused" : "running").put("reason", why));
+        if (on) svc.main.post(() -> svc.island.set("idle", "Paused", -1)); else island(l, null);
         return ok(true).put("task_id", l.id).put("paused", on);
     }
 
@@ -246,6 +255,7 @@ final class Broker {
                 pkg = pkg(node); target = Guard.label(node);
                 tier = risky != null || secure ? 3 : 1;
                 why = risky != null ? "outward button \"" + risky + "\"" : secure ? "tap on a secure screen (" + svc.screen.secureWhy + ")" : "navigation tap";
+                if (risky != null) text = draft(l, pkg); // "Send": the card shows (and the fingerprint signs) the exact message
                 break;
             }
             case "type":
@@ -293,26 +303,28 @@ final class Broker {
         if (block != null) return finish(log, ok(false), "blocked", block, null);
 
         if (tool.equals("type") && copied(l.h, text)) l.h.copied = true; // sticky: later sends need a fingerprint
+        if (!fw) island(l, stepLabel(tool, pkg, target));
         String decision = "auto";
         if (tier == 3 || (tier == 2 && untrusted && priv)) {
             if (tier == 2) why += " after reading untrusted content in a private app (Rule of Two)";
             String fp = fingerprintRequired(l == null ? null : l.h, tool, target, untrusted, priv, outward);
             List<String> channels = fp == null ? ORDINARY : FINGERPRINT_ONLY;
-            log.put("allowed_channels", new JSONArray(channels)).put("fingerprint_because", fp == null ? JSONObject.NULL : fp);
             Approvals.Pending a = approve(tool, pkg, target, text, l, TIER[tier], why, r2, channels, fp,
                     Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
+            log.put("allowed_channels", new JSONArray(a.channels)).put("fingerprint_because", a.because == null ? JSONObject.NULL : a.because);
             if (a.channel.isEmpty()) return finish(log, ok(false), "denied", a.reason, null);
             log.put("approver", a.channel).put("canonical", new String(a.canonical, StandardCharsets.UTF_8));
             if (a.channel.equals("fingerprint"))
                 log.put("pubkey_sha256", Audit.hex(Audit.sha256(Base64.decode(Approvals.publicKeyB64(svc), Base64.NO_WRAP))))
                    .put("sig", Base64.encodeToString(a.sig, Base64.NO_WRAP));
             else if (!a.note.isEmpty()) log.put(a.channel.equals("reviewer") ? "rationale" : "utterance", a.note);
-            if (node != null && (!node.refresh() || !Guard.label(node).equals(target) || !pkg(node).equals(pkg)))
+            if (node != null && (!node.refresh() || !Guard.label(node).equals(target) || !pkg(node).equals(pkg)
+                    || tool.equals("tap") && !draft(l, pkg).equals(text)))
                 return finish(log, ok(false), "blocked", "screen changed after approval; nothing done", null);
             decision = "approved";
         }
 
-        if (tool.equals("type")) l.h.typed.add(norm(text));
+        if (tool.equals("type")) { l.h.typed.add(norm(text)); l.field = node; }
         boolean done = execute(tool, p, node);
         if (!fw && l != null) l.h.steps++;
         JSONObject res = ok(done).put("tier", TIER[tier]).put("rule_of_two", r2);
@@ -352,25 +364,25 @@ final class Broker {
         m.untrusted = r2.getBoolean("untrusted"); m.priv = r2.getBoolean("private"); m.outward = r2.getBoolean("outward");
         Approvals.Pending a = new Approvals.Pending(
                 Approvals.canonical(tool, pkg, target, text, l == null ? "" : l.id, Approvals.hex(16)), m, channels);
+        long[] shownAt = {0};
+        ApprovalCard.Listener ui = new ApprovalCard.Listener() {
+            @Override public void approve() {
+                if (!HumanTouch.settled(shownAt[0])) return; // a tap already in flight when the card appeared isn't a decision
+                if (a.confirm("tap", "")) return;             // ordinary action: the real tap is the approval
+                svc.card.hide(); // the fingerprint prompt must not be covered by our overlay
+                svc.startActivity(new Intent(svc, ApproveActivity.class).putExtra("id", a.id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            }
+            @Override public void deny() { a.finish(null, "denied by user"); }
+        };
+        a.card = () -> { if (a.done.getCount() > 0) { shownAt[0] = SystemClock.uptimeMillis(); svc.card.show(m, ui); } }; // channelsFor(m) picks up an escalation
+        a.because = fp;
         Approvals.pending.put(a.id, a);
         current = a;
         show(a.id, new JSONObject().put("kind", "action").put("task_id", l == null ? "" : l.id).put("tool", tool).put("pkg", pkg)
                 .put("target", target).put("text", text).put("tier", tier).put("reason", why).put("rule_of_two", r2)
                 .put("summary", m.title + " in " + pkg).put("allowed_channels", new JSONArray(channels))
                 .put("fingerprint_because", fp == null ? JSONObject.NULL : fp).put("expires", System.currentTimeMillis() + timeoutMs));
-        svc.main.post(() -> {
-            svc.autoPause.stop();
-            long shownAt = SystemClock.uptimeMillis();
-            svc.card.show(m, new ApprovalCard.Listener() {
-                @Override public void approve() {
-                    if (!HumanTouch.settled(shownAt)) return; // a tap already in flight when the card appeared isn't a decision
-                    if (a.confirm("tap", "")) return;          // ordinary action: the real tap is the approval
-                    svc.card.hide(); // the fingerprint prompt must not be covered by our overlay
-                    svc.startActivity(new Intent(svc, ApproveActivity.class).putExtra("id", a.id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                }
-                @Override public void deny() { a.finish(null, "denied by user"); }
-            });
-        });
+        svc.main.post(() -> { svc.autoPause.stop(); a.card.run(); });
         try { if (!a.done.await(timeoutMs, TimeUnit.MILLISECONDS)) a.finish(null, null); }
         finally {
             current = null;
@@ -385,6 +397,7 @@ final class Broker {
         boolean yes = !a.channel.isEmpty();
         resolved(a.id, yes ? "approved" : a.reason.equals("timed out") ? "timeout" : "denied",
                 yes ? a.channel : a.reason.startsWith("denied") ? "user" : null, a.reason);
+        if (a.channel.equals("reviewer")) svc.main.post(() -> svc.card.autoApproved(m.title, a.note));
         return a;
     }
 
@@ -410,6 +423,29 @@ final class Broker {
         if (a == null) return ok(false).put("reason", "no such pending approval");
         a.finish(null, "denied by " + p.optString("channel", "caller"));
         return ok(true).put("approval_id", a.id);
+    }
+
+    /**
+     * approval.escalate {approval_id, to: "fingerprint", rationale}: agentd's reviewer asks for a fingerprint on an ordinary
+     * approval. It can only make the card stricter, so any reviewer caller may ask. The card is redrawn and approval.shown
+     * re-sent (with escalated:true) so every mirror shows "Fingerprint required".
+     */
+    private JSONObject escalate(JSONObject p, int uid) throws JSONException {
+        Approvals.Pending a = Approvals.pending.get(p.optString("approval_id"));
+        String why = "reviewer: " + Guard.clip(p.optString("rationale", "asked for a fingerprint"), 300);
+        String no = a == null ? "no such pending approval"
+                : !"fingerprint".equals(p.optString("to", "fingerprint")) ? "to must be fingerprint"
+                : !callerIn(uid, "reviewer_callers") ? "caller " + who(uid) + " may not escalate"
+                : !a.escalate(why) ? "already decided" : null;
+        if (no != null) return ok(false).put("reason", no);
+        JSONObject info = shown.get(a.id);
+        if (info != null && why.equals(a.because)) { // re-announce only when this call changed it
+            info.put("allowed_channels", new JSONArray(a.channels)).put("fingerprint_because", why).put("escalated", true);
+            Events.emit("approval.shown", info);
+            Runnable card = a.card;
+            if (card != null) svc.main.post(card);
+        }
+        return ok(true).put("approval_id", a.id).put("allowed_channels", new JSONArray(a.channels)).put("fingerprint_because", a.because);
     }
 
     /** approval.list, and the hello event on /events: open approvals and the current task. */
@@ -454,8 +490,66 @@ final class Broker {
             if (l != null) l.h.flagged = true;
             Events.emit("guard.flag", new JSONObject().put("task_id", l == null ? "" : l.id).put("pkg", s.optString("pkg"))
                     .put("score", g.opt("score")).put("node_ids", g.optJSONArray("flagged_node_ids")));
+            if (l != null) alert(l, s, g);
         }
         return s.put("ok", true);
+    }
+
+    /** guard.flag on the island: one alert card per task and sender (or flagged text). Never over an open approval card. */
+    private void alert(Lease l, JSONObject s, JSONObject g) {
+        JSONArray ids = g.optJSONArray("flagged_node_ids");
+        int id = ids == null || ids.length() == 0 ? -1 : ids.optInt(0);
+        JSONObject n = id < 0 ? new JSONObject() : s.optJSONArray("nodes").optJSONObject(id);
+        String snippet = n.optString("text", n.optString("desc", "text on this screen")), sender = id < 0 ? "" : sender(id);
+        if (current != null || !alerted.add(l.id + "|" + (sender.isEmpty() ? snippet : sender))) return;
+        float score = (float) g.optDouble("score", 0);
+        svc.main.post(() -> svc.card.alert(s.optString("pkg"), sender, snippet, score, new ApprovalCard.AlertListener() {
+            @Override public void block() { // Block = stop this task; taint already forces a fingerprint for any send
+                svc.card.hide();
+                new Thread(() -> { try { stop(l.id, "user pressed Block on a Prompt Guard alert"); } catch (Exception ignored) {} }).start();
+            }
+            @Override public void ok() { svc.card.hide(); if (lease == l) island(l, null); }
+        }));
+    }
+
+    /** Who wrote node id: a short label before it in the same group (a chat row's name), else "". */
+    private String sender(int id) {
+        try {
+            AccessibilityNodeInfo n = svc.screen.node(id), p = n.getParent();
+            for (int i = 0; p != null && i < p.getChildCount(); i++) {
+                AccessibilityNodeInfo c = p.getChild(i);
+                if (c == null || c.equals(n)) break;
+                CharSequence t = c.getText();
+                if (t != null && t.length() > 0 && t.length() <= 40) return t.toString();
+            }
+        } catch (Exception ignored) {}
+        return "";
+    }
+
+    /** The island follows the task: "working", the current step, and the share of max_steps used. */
+    private void island(Lease l, String label) {
+        if (label != null) step = label;
+        String st = step;
+        int pct = Math.min(100, l.h.steps * 100 / Math.max(1, l.maxSteps));
+        svc.main.post(() -> { svc.island.goal = l.goal; svc.island.set("working", st, pct); });
+    }
+
+    private String stepLabel(String tool, String pkg, String target) {
+        switch (tool) {
+            case "tap": return "Tapping “" + Guard.clip(target, 24) + "”";
+            case "type": return "Typing in " + labels(Collections.singleton(pkg));
+            case "open_app": return "Opening " + labels(Collections.singleton(pkg));
+            case "press": return "Pressing " + target;
+            default: return "Scrolling";
+        }
+    }
+
+    /** The live text of the field this task last typed into (same app), for a "Send" card's bubble; "" if none. */
+    private static String draft(Lease l, String pkg) {
+        AccessibilityNodeInfo f = l == null ? null : l.field;
+        if (f == null || !f.refresh() || f.isShowingHintText() || !pkg(f).equals(pkg)) return "";
+        CharSequence t = f.getText();
+        return t == null ? "" : t.toString();
     }
 
     private static boolean leaksSecret(History h, String text) {

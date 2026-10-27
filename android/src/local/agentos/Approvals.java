@@ -38,7 +38,11 @@ final class Approvals {
         final byte[] canonical;
         final ApprovalCard.Model model;
         /** Who may approve this one (Broker.channels): "fingerprint" always; "tap", "voice", "reviewer" for ordinary actions. */
-        final java.util.List<String> channels;
+        volatile java.util.List<String> channels;
+        /** Why only a fingerprint will do (null for an ordinary action). */
+        volatile String because;
+        /** Main thread: (re)draws this request's card, e.g. after an escalation. */
+        volatile Runnable card;
         final CountDownLatch done = new CountDownLatch(1);
         volatile byte[] sig;
         /** How it was approved ("fingerprint", "tap", "voice", "reviewer"), and the user's words or reviewer's rationale. */
@@ -57,7 +61,14 @@ final class Approvals {
         void finish(byte[] signature, String why) { end(signature, signature != null ? "fingerprint" : "", "", why); }
 
         /** A non-fingerprint approval; false if this channel isn't allowed for this action or it's already decided. */
-        boolean confirm(String ch, String words) { return channels.contains(ch) && end(null, ch, words, "approved by " + ch); }
+        synchronized boolean confirm(String ch, String words) { return channels.contains(ch) && end(null, ch, words, "approved by " + ch); }
+
+        /** approval.escalate: make an undecided request fingerprint-only. Only ever stricter; false if already decided. */
+        synchronized boolean escalate(String why) {
+            if (done.getCount() == 0) return false;
+            if (!channels.equals(Broker.FINGERPRINT_ONLY)) { channels = Broker.FINGERPRINT_ONLY; because = why; }
+            return true;
+        }
 
         private synchronized boolean end(byte[] signature, String ch, String words, String why) {
             if (done.getCount() == 0) return false;

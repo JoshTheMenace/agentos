@@ -6,11 +6,10 @@ import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { agentdToken, cfg, log, provisionClients } from './config.js';
 import { classify } from './guard.js';
-import { endTurn } from './tools.js';
+import { endTurn, rpc, tasks } from './tools.js';
 import * as memory from './memory/index.js';
 import * as events from './events.js';
 import * as reviewer from './reviewer.js';
-import { tasks } from './tools.js';
 import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
 import { ClaudeCli, handleMcp } from './providers/claude-cli.js';
@@ -26,6 +25,9 @@ if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approv
   const turn = tasks.get(a.task_id);
   reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size }, events.publish);
 });
+// UI passthrough to the tool server, so the launcher needs no :7777 token. Read/UI methods only; approvals are never here
+// (firewall.set is allowed because the broker still puts up its fingerprint card for it).
+const UI_RPC = { 'audit.tail': 10_000, 'approval.list': 10_000, 'firewall.list': 10_000, 'firewall.set': 90_000, 'task.pause': 10_000, 'task.resume': 10_000, 'task.stop': 10_000 };
 const VOICE_PAGE = new URL('./voice.html', import.meta.url);
 const TOKEN = Buffer.from(agentdToken());
 const PROTO = 'agentos.bearer.'; // browsers/WebViews can't set headers on a WebSocket, so they may send the token as a subprotocol
@@ -143,6 +145,12 @@ wss.on('connection', (ws) => {
         active.abort.abort();
         return active.p.stop?.(session);
       case 'suggest': return suggest(msg);
+      case 'rpc': { // {id, method, params} -> {type:"rpc.result", id, method, result}
+        const ms = UI_RPC[msg.method];
+        if (!ms) return send({ type: 'rpc.result', id: msg.id, method: msg.method, result: { ok: false, error: 'method not allowed' } });
+        const result = await rpc(msg.method, msg.params && typeof msg.params === 'object' ? msg.params : {}, ms).catch((e) => ({ ok: false, error: e.message }));
+        return send({ type: 'rpc.result', id: msg.id, method: msg.method, result });
+      }
       case 'voice.start': { // {sdp}: WebRTC offer from the page -> answer; audio then flows page <-> OpenAI directly
         if (session.voice) await codex.voiceStop(session.voice).catch(() => {});
         const t0 = Date.now();
