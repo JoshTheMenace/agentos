@@ -7,7 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { cfg, log } from '../config.js';
+import { cfg, fileToken, log } from '../config.js';
 import { SYSTEM_PROMPT } from '../prompt.js';
 import { TOOLS, runTool } from '../tools.js';
 
@@ -28,7 +28,13 @@ export class ClaudeCli {
       '--tools', '', '--strict-mcp-config', '--mcp-config', mcpFile, '--allowedTools', 'mcp__agentos__*',
       '--permission-mode', 'dontAsk', '--setting-sources', '', '--disable-slash-commands', '--no-session-persistence',
       '--system-prompt', SYSTEM_PROMPT, ...(cfg.claudeCliModel ? ['--model', cfg.claudeCliModel] : [])];
-    const p = spawn(cfg.claudeBin, args, { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'] });
+    // Headless login (phone): `claude setup-token` output in ~/.agentos/claude.token. With it, use a clean config dir
+    // so stale logins in ~/.claude can't win. Without it, the CLI uses its own saved login (the Mac).
+    // No auto-update: on the phone we pin 2.1.112, the last plain-JS release (newer ones are native and can't run on Android).
+    const token = fileToken(join(cfg.codexCwd, '..', 'claude.token'));
+    const env = { ...process.env, DISABLE_AUTOUPDATER: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+      ...(token && { CLAUDE_CODE_OAUTH_TOKEN: token, CLAUDE_CONFIG_DIR: join(dir, 'config') }) };
+    const p = spawn(cfg.claudeBin, args, { cwd: dir, env, stdio: ['pipe', 'pipe', 'pipe'] });
     const s = { p, secret, turn: null, stderr: [] };
     live.set(secret, s);
     createInterface({ input: p.stdout }).on('line', (l) => this.#onLine(s, l));
