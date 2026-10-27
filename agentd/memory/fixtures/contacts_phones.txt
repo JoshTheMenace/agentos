@@ -1,0 +1,4 @@
+Row: 0 contact_id=1, display_name=Alex Rivera, data1=(801) 555-0101, data4=+18015550101
+Row: 1 contact_id=2, display_name=Mom, data1=801-555-0102, data4=+18015550102
+Row: 2 contact_id=3, display_name=Sam Lee, data1=+1 385 555 0103, data4=NULL
+Row: 3 contact_id=4, display_name=Priya Shah, data1=(801) 555-0104, data4=+18015550104

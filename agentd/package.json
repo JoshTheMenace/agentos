@@ -1,0 +1,16 @@
+{
+  "name": "agentd",
+  "version": "0.1.0",
+  "description": "AgentOS bridge: UIs <-> model providers <-> Android tool server",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "bin": { "agentd": "server.js", "agentctl": "cli.js" },
+  "scripts": {
+    "start": "node server.js",
+    "mock": "node mock-phone.js",
+    "ask": "node cli.js"
+  },
+  "dependencies": { "ws": "^8.18.0" },
+  "optionalDependencies": { "@anthropic-ai/sdk": "*" }
+}

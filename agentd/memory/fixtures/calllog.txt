@@ -1,0 +1,3 @@
+Row: 0 _id=1, number=8015550101, name=Alex Rivera, type=2, date=1792100000000, duration=420
+Row: 1 _id=2, number=8015550102, name=Mom, type=1, date=1792200000000, duration=900
+Row: 2 _id=3, number=4355550177, name=NULL, type=3, date=1792300000000, duration=0

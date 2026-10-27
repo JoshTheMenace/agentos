@@ -1,0 +1,69 @@
+<!doctype html><meta charset="utf-8"><title>AgentOS voice</title>
+<button id="go">Start voice</button> <button id="end">Stop</button>
+<audio id="spk" autoplay></audio><pre id="out"></pre>
+<script>
+// Bare voice client for agentd (browser or the island WebView; restyle freely, keep the WebRTC part).
+// Open http://127.0.0.1:8787/voice#token=<agentd token>. ?auto starts at once; ?wav=<url> plays a speech file instead of the mic.
+// Flow: mic + "oai-events" data channel -> offer -> agentd voice.start -> voice.answer. Audio goes straight to OpenAI.
+const T0 = performance.now(), now = () => Math.round(performance.now() - T0), $ = (id) => document.getElementById(id);
+const out = (s) => { console.log(`${now()} ${s}`); $('out').textContent += `${now()} ${s}\n`; };
+const q = new URLSearchParams(location.search), token = new URLSearchParams(location.hash.slice(1)).get('token');
+const ws = new WebSocket(`ws://${location.host}/`, 'agentos.bearer.' + token);
+let pc, t;
+
+ws.onmessage = async (e) => {
+  const m = JSON.parse(e.data);
+  if (m.type === 'voice.answer') { await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); out(`answer applied +${now() - t}ms (agentd ${m.ms}ms)`); }
+  else if (m.type !== 'text.delta') out(`${m.type} ${JSON.stringify(m).slice(0, 300)}`);
+};
+
+async function start() {
+  t = now();
+  const mic = q.get('wav') ? await fileStream(q.get('wav')) : await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  pc = new RTCPeerConnection();
+  pc.addTrack(mic.getAudioTracks()[0], mic);
+  const dc = pc.createDataChannel('oai-events'); // must exist before createOffer
+  dc.onopen = () => { out(`datachannel open +${now() - t}ms`); mic.play?.(); };
+  dc.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'delegation.created') // hand it to agentd at once (agentd also hears it via app-server; it dedupes)
+      ws.send(JSON.stringify({ type: 'voice.delegate', item_id: m.item.id, text: m.item.content.map((c) => c.text).join('') }));
+    if (m.type === 'turn.done') out(`dc turn.done ${m.turn?.role}: ${m.turn?.transcript ?? ''}`);
+    else if (/^(session.started|delegation)/.test(m.type)) out(`dc ${m.type}`);
+  };
+  pc.onconnectionstatechange = () => out(`pc ${pc.connectionState} +${now() - t}ms`);
+  pc.ontrack = (e) => { $('spk').srcObject = e.streams[0]; meter(mic, e.streams[0]); };
+  await pc.setLocalDescription(await pc.createOffer());
+  await new Promise((ok) => { setTimeout(ok, 500); // host candidates are enough (the answer is ice-lite); don't wait for slow interfaces
+    pc.onicegatheringstatechange = () => pc.iceGatheringState === 'complete' && ok(); });
+  out(`offer ready +${now() - t}ms`);
+  ws.send(JSON.stringify({ type: 'voice.start', sdp: pc.localDescription.sdp }));
+}
+
+// Latency: end of mic speech -> first loud sample of the reply.
+function meter(micStream, remote) {
+  const ac = new AudioContext(), buf = new Float32Array(1024);
+  const an = (s) => { const a = ac.createAnalyser(); ac.createMediaStreamSource(s).connect(a); return a; };
+  const lvl = (a) => { a.getFloatTimeDomainData(buf); return Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length); };
+  const micA = an(micStream), spkA = an(remote);
+  let lastMic = 0, lastSpk = 0, micOn = false, spkOn = false;
+  setInterval(() => {
+    const tt = now();
+    if (lvl(micA) > 0.02) { lastMic = tt; if (!micOn) { micOn = true; out('mic speech start'); } }
+    if (micOn && tt - lastMic > 400) { micOn = false; out('mic speech end'); }
+    if (lvl(spkA) > 0.01) { if (!spkOn) { spkOn = true; out(`REPLY AUDIO start, ${micOn ? 'while user talking' : tt - lastMic + 'ms after mic end'}`); } lastSpk = tt; }
+    if (spkOn && tt - lastSpk > 600) { spkOn = false; out('reply audio end'); }
+  }, 20);
+}
+
+async function fileStream(url) { // test mode: a speech file as the "mic"
+  const ac = new AudioContext(), dest = ac.createMediaStreamDestination();
+  const buf = await ac.decodeAudioData(await (await fetch(url)).arrayBuffer());
+  dest.stream.play = () => { const s = ac.createBufferSource(); s.buffer = buf; s.connect(dest); s.start(); out('playing ' + url); };
+  return dest.stream;
+}
+
+$('go').onclick = () => start().catch((e) => out('ERR ' + e));
+$('end').onclick = () => { ws.send(JSON.stringify({ type: 'voice.stop' })); pc?.close(); out('stopped'); };
+if (q.has('auto')) ws.onopen = $('go').onclick;
+</script>

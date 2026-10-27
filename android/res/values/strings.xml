@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="a11y_description">AgentOS lets your AI agent read the screen and act, inside a task lease you can stop at any time. Outward actions need your fingerprint. Hold volume-down for 1 second to stop the agent.</string>
+</resources>

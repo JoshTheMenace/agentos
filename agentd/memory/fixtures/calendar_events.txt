@@ -1,0 +1,4 @@
+Row: 0 _id=10, title=Moab trip planning, dtstart=1792000000000, dtend=1792003600000, eventLocation=Campus Cafe, deleted=0
+Row: 1 _id=11, title=Hackathon judging, dtstart=1792800000000, dtend=1792810000000, eventLocation=Huntsman Hall, deleted=0
+Row: 2 _id=12, title=Standup (dial-in 801-555-0199, pin 4432), dtstart=1791900000000, dtend=1791901800000, eventLocation=, deleted=0
+Row: 3 _id=13, title=Old deleted thing, dtstart=1791000000000, dtend=1791001800000, eventLocation=NULL, deleted=1

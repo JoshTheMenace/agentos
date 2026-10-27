@@ -1,0 +1,28 @@
+
+   605ms [error] {"message":"Reconnecting... 2/5","retryable":true}
+
+  1058ms [error] {"message":"Reconnecting... 3/5","retryable":true}
+
+  1944ms [error] {"message":"Reconnecting... 4/5","retryable":true}
+
+  3700ms [error] {"message":"Reconnecting... 5/5","retryable":true}
+
+ 10270ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+ 18389ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+ 31574ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+ 54706ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+ 97878ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+161082ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+224231ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+287380ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+350574ms [error] {"message":"Reconnecting... waiting for network","retryable":true}
+
+413768ms [error] {"message":"Reconnecting... waiting for network","retryable":true}

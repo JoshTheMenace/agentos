@@ -1,0 +1,96 @@
+package local.agentos;
+
+import android.content.Context;
+import android.util.Log;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.json.JSONObject;
+
+/**
+ * Tool server: POST /rpc {method, params} on 127.0.0.1:7777 with "Authorization: Bearer <files/token>".
+ * Replies with the method's result object (always has "ok"). Loopback only; 64 KB body cap.
+ */
+final class Server {
+    static final int PORT = 7777;
+    private final Broker broker;
+    private final byte[] expected;
+    private final ExecutorService pool = Executors.newFixedThreadPool(4);
+    private volatile ServerSocket ss;
+
+    Server(Context c, Broker broker) throws IOException {
+        this.broker = broker;
+        File f = new File(c.getFilesDir(), "token");
+        if (!f.exists()) Files.write(f.toPath(), Approvals.hex(32).getBytes(StandardCharsets.UTF_8));
+        expected = ("Bearer " + new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8).trim()).getBytes(StandardCharsets.UTF_8);
+    }
+
+    void start() {
+        new Thread(() -> {
+            try {
+                ss = new ServerSocket(PORT, 8, InetAddress.getByName("127.0.0.1")); // not getLoopbackAddress(): that is ::1 on Android
+                while (!ss.isClosed()) {
+                    Socket s = ss.accept();
+                    pool.execute(() -> handle(s));
+                }
+            } catch (IOException e) { Log.w("AgentOS", "server stopped: " + e); }
+        }, "agentos-rpc").start();
+    }
+
+    void stop() {
+        try { if (ss != null) ss.close(); } catch (IOException ignored) {}
+        pool.shutdownNow();
+    }
+
+    private void handle(Socket c) {
+        try (Socket s = c) {
+            s.setSoTimeout(10_000);
+            DataInputStream in = new DataInputStream(s.getInputStream());
+            String first = in.readLine(), auth = "";
+            int len = 0, headerBytes = 0;
+            for (String l; (l = in.readLine()) != null && !l.isEmpty(); ) {
+                if ((headerBytes += l.length()) > 8192) return;
+                String low = l.toLowerCase();
+                if (low.startsWith("content-length:")) len = Integer.parseInt(l.substring(15).trim());
+                if (low.startsWith("authorization:")) auth = l.substring(14).trim();
+            }
+            if (first == null || !first.startsWith("POST /rpc ")) { reply(s, "404 Not Found", err("POST /rpc only")); return; }
+            if (!MessageDigest.isEqual(expected, auth.getBytes(StandardCharsets.UTF_8))) { reply(s, "401 Unauthorized", err("bearer token required")); return; }
+            if (len <= 0 || len > 65536) { reply(s, "400 Bad Request", err("body must be 1..65536 bytes")); return; }
+            byte[] body = new byte[len];
+            in.readFully(body);
+            JSONObject res;
+            try {
+                JSONObject req = new JSONObject(new String(body, StandardCharsets.UTF_8));
+                JSONObject params = req.optJSONObject("params");
+                res = broker.call(req.getString("method"), params == null ? new JSONObject() : params);
+            } catch (Exception e) {
+                Log.w("AgentOS", "rpc error", e);
+                res = err(e.getMessage() == null ? e.toString() : e.getMessage());
+            }
+            reply(s, "200 OK", res);
+        } catch (Exception e) { Log.w("AgentOS", "request failed: " + e); }
+    }
+
+    private static JSONObject err(String msg) {
+        try { return new JSONObject().put("ok", false).put("error", msg); } catch (Exception e) { throw new IllegalStateException(e); }
+    }
+
+    private static void reply(Socket s, String status, JSONObject res) throws IOException {
+        byte[] b = res.toString().getBytes(StandardCharsets.UTF_8);
+        OutputStream o = s.getOutputStream();
+        o.write(("HTTP/1.1 " + status + "\r\nContent-Type: application/json\r\nContent-Length: " + b.length
+                + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+        o.write(b);
+        o.flush();
+    }
+}

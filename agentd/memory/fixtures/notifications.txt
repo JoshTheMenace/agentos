@@ -1,0 +1,18 @@
+  NotificationRecord(0x0a9c7f5c: pkg=android user=UserHandle{0} id=1 tag=null importance=2 key=0|android|1|null|1000
+        when=1792195000000
+        extras={
+            android.title=String (USB debugging connected)
+            android.text=String (Tap to turn off)
+        }
+  NotificationRecord(0x0312b3c7: pkg=com.google.android.calendar user=UserHandle{0} id=7 importance=4 key=0|cal|7
+        when=1792196000000
+        extras={
+            android.title=String (Moab trip planning)
+            android.text=String (Today at 3 PM at Campus Cafe)
+        }
+  NotificationRecord(0x0312b3c8: pkg=com.example.bank user=UserHandle{0} id=8 importance=4 key=0|bank|8
+        when=1792197000000
+        extras={
+            android.title=String (Balance)
+            android.text=String ($12.00)
+        }

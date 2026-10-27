@@ -1,0 +1,7 @@
+<resources>
+  <bool name="light">false</bool>
+  <color name="bg">#FF0F0F13</color><color name="surface">#FF1B1B22</color><color name="surface2">#FF26262F</color>
+  <color name="text">#FFF2F2F5</color><color name="text2">#FF9A9AA8</color><color name="divider">#FF2C2C36</color>
+  <color name="accent">#FF6D93FF</color><color name="onAccent">#FFFFFFFF</color>
+  <color name="ok">#FF4CCB85</color><color name="bad">#FFFF6B6B</color>
+</resources>

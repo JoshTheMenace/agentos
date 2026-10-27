@@ -1,0 +1,8 @@
+node_modules/
+build/
+out/
+*.apk
+*.aar
+*.onnx
+models/
+.DS_Store

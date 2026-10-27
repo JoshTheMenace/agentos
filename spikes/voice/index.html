@@ -1,0 +1,82 @@
+<!doctype html><meta charset="utf-8"><title>AgentOS voice spike</title>
+<button id="go">Start voice</button> <button id="stop">Stop</button>
+<input id="txt" placeholder="type to the voice session"> <button id="send">Send text</button>
+<audio id="spk" autoplay></audio><pre id="out"></pre>
+<script>
+// Bare WebRTC client. Same flow will run in the Android WebView: mic track + "oai-events"
+// data channel -> non-trickle offer -> relay -> app-server -> answer. Audio goes straight to OpenAI.
+const T0 = performance.now(), now = () => Math.round(performance.now() - T0);
+const out = (s) => { document.getElementById('out').textContent += `${now()} ${s}\n`; fetch('/log', { method: 'POST', body: s }); };
+const level = (an, buf) => { an.getFloatTimeDomainData(buf); return Math.sqrt(buf.reduce((a, v) => a + v * v, 0) / buf.length); };
+let pc;
+
+async function start() {
+  const t = now();
+  const wav = new URLSearchParams(location.search).get('wav');  // test mode: send a speech file instead of the mic
+  const mic = wav ? await fileStream(wav) : await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  pc = new RTCPeerConnection();
+  pc.addTrack(mic.getAudioTracks()[0], mic);
+  const dc = pc.createDataChannel('oai-events');          // must exist before createOffer
+  dc.onopen = () => { out(`datachannel open +${now() - t}ms`); mic.play?.(); };
+  dc.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === 'delegation.created') delegate(dc, m.item);
+    if (!/delta|transcript.added|usage/.test(m.type)) out(`dc ${m.type} ${JSON.stringify(m).slice(0, 400)}`); };
+  pc.onconnectionstatechange = () => out(`pc ${pc.connectionState} +${now() - t}ms`);
+  pc.ontrack = (e) => { document.getElementById('spk').srcObject = e.streams[0]; meter(mic, e.streams[0]); record(e.streams[0]); };
+  await pc.setLocalDescription(await pc.createOffer());
+  await new Promise((ok) => { setTimeout(ok, 500);          // host candidates are enough; don't wait for slow interfaces
+    pc.addEventListener('icegatheringstatechange', () => pc.iceGatheringState === 'complete' && ok()); });
+  out(`offer ready +${now() - t}ms`);
+  const r = await fetch('/start', { method: 'POST', body: pc.localDescription.sdp });
+  if (!r.ok) return out('start failed: ' + await r.text());
+  await pc.setRemoteDescription({ type: 'answer', sdp: await r.text() });
+  out(`answer applied +${now() - t}ms`);
+}
+
+// Latency: time from the end of mic speech to the first loud sample of the reply.
+function meter(micStream, remote) {
+  const ac = new AudioContext(), buf = new Float32Array(1024);
+  const an = (s) => { const a = ac.createAnalyser(); ac.createMediaStreamSource(s).connect(a); return a; };
+  const micA = an(micStream), spkA = an(remote);
+  let lastMic = 0, lastSpk = 0, micOn = false, spkOn = false;
+  setInterval(() => {
+    const m = level(micA, buf), r = level(spkA, buf), t = now();
+    if (m > 0.02) { lastMic = t; if (!micOn) { micOn = true; out('mic speech start'); } }
+    if (micOn && t - lastMic > 400) { micOn = false; out('mic speech end'); }
+    if (r > 0.01) { if (!spkOn) { spkOn = true; out(`REPLY AUDIO start, ${micOn ? 'while user still talking' : t - lastMic + 'ms after mic end'}`); } lastSpk = t; }
+    if (spkOn && t - lastSpk > 600) { spkOn = false; out('reply audio end'); }
+  }, 20);
+}
+// Client-handled delegation: run the work through the relay (agentd on the phone), then hand the
+// answer back to the voice model on the same data channel. "speakable" = say it; "commentary" = quiet context.
+async function delegate(dc, item) {
+  const t = now(), text = item.content.map((c) => c.text).join('');
+  const r = await fetch('/delegate', { method: 'POST', body: text }); if (!r.ok) return; // server mode: app-server answers
+  const reply = await r.text();
+  dc.send(JSON.stringify({ type: 'delegation.context.append', delegation_item_id: item.id, channel: 'speakable',
+    content: [{ type: 'input_text', text: reply }] }));
+  out(`delegation answered in ${now() - t}ms: ${reply}`);
+}
+async function fileStream(url) {
+  const ac = new AudioContext(), dest = ac.createMediaStreamDestination();
+  const buf = await ac.decodeAudioData(await (await fetch(url)).arrayBuffer());
+  dest.stream.play = () => { const src = ac.createBufferSource(); src.buffer = buf; src.connect(dest); src.start(); out('playing ' + url); };
+  return dest.stream;
+}
+function record(s) {  // keep a copy of what came back so it can be checked offline
+  const rec = new MediaRecorder(s); const parts = [];
+  rec.ondataavailable = (e) => parts.push(e.data);
+  rec.onstop = () => fetch('/upload', { method: 'POST', body: new Blob(parts) });
+  rec.start(); window.stopRec = () => rec.state === 'recording' && rec.stop();
+}
+
+new EventSource('/events').onmessage = (e) => {
+  const { method, params } = JSON.parse(e.data);
+  if (method.endsWith('transcript/done')) out(`${params.role}: ${params.text}`);
+  else if (!/delta/.test(method)) out(`<- ${method}`);
+};
+const $ = (id) => document.getElementById(id);
+$('go').onclick = start;
+$('stop').onclick = async () => { window.stopRec?.(); await fetch('/stop', { method: 'POST' }); pc?.close(); out('stopped'); };
+$('send').onclick = () => fetch('/say', { method: 'POST', body: $('txt').value });
+if (location.search.includes('auto')) start().catch((e) => out('ERR ' + e));
+</script>

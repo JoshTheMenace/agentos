@@ -1,0 +1,4 @@
+Row: 0 event_id=10, attendeeName=Alex Rivera, attendeeEmail=alex@example.com
+Row: 1 event_id=10, attendeeName=, attendeeEmail=me@example.com
+Row: 2 event_id=11, attendeeName=Priya Shah, attendeeEmail=priya.shah@example.com
+Row: 3 event_id=12, attendeeName=Jordan, attendeeEmail=jordan@example.com
