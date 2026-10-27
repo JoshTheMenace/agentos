@@ -21,7 +21,7 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 ## In progress when this was written (check each folder's README/NEEDS for state)
 - launcher/ `local.agentos.home` (Fable): home, command center, permissions, voice, memory graph.
 - android/ island + approval card restyle (Fable). Known bug: a card that opens within about 2 s of the last one closing is lost (android/NEEDS-UI.md).
-- agentd reviewer wiring (agentd/reviewer.js).
+- Reviewer is DONE (agentd/reviewer.js, deployed). Broker still needs `approval.escalate` (agentd/NEEDS-ANDROID.md).
 - Pigeon IME send-action build isn't installed yet: `adb install -r demo-apps/pigeon/build/pigeon.apk`.
 
 ## Waiting on the user

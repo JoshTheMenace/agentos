@@ -92,7 +92,7 @@ public class Home extends Activity {
     web.setOnApplyWindowInsetsListener((v, ins) -> {
       insTop = ins.getInsets(WindowInsets.Type.statusBars()).top; insBottom = ins.getInsets(WindowInsets.Type.navigationBars()).bottom;
       insIme = ins.getInsets(WindowInsets.Type.ime()).bottom;
-      js("app.insets&&app.insets(" + px(insTop) + "," + px(insBottom) + "," + px(insIme) + ")");
+      js("window.app&&app.insets&&app.insets(" + px(insTop) + "," + px(insBottom) + "," + px(insIme) + ")");
       return ins;
     });
     setContentView(web);
@@ -108,9 +108,9 @@ public class Home extends Activity {
   boolean allowed(Uri u) { String o = u.getScheme() + "://" + u.getHost() + (u.getPort() > 0 ? ":" + u.getPort() : ""); return ORIGIN.equals(o) || o.equals(devOrigin); }
   void js(String code) { runOnUiThread(() -> web.evaluateJavascript(code, null)); }
 
-  @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); js("app.home&&app.home()"); } // HOME key while on home: reset
-  @Override protected void onResume() { super.onResume(); js("app.resume&&app.resume()"); }
-  @Override public void onBackPressed() { js("app.back&&app.back()"); } // never leave home
+  @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); js("window.app&&app.home&&app.home()"); } // HOME key while on home: reset
+  @Override protected void onResume() { super.onResume(); js("window.app&&app.resume&&app.resume()"); }
+  @Override public void onBackPressed() { js("window.app&&app.back&&app.back()"); } // never leave home
   @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
     if (pendingMic == null) return;
     if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pendingMic.grant(pendingMic.getResources()); else pendingMic.deny();
@@ -218,7 +218,7 @@ public class Home extends Activity {
           while (in != null && (n = in.read(buf)) > 0) bo.write(buf, 0, n);
           out = bo.size() > 0 ? bo.toString("UTF-8") : new JSONObject().put("ok", false).put("error", "HTTP " + h.getResponseCode()).toString();
         } catch (Exception e) { out = "{\"ok\":false,\"error\":" + JSONObject.quote(String.valueOf(e.getMessage())) + "}"; }
-        js("app.rpcDone(" + JSONObject.quote(id) + "," + out + ")");
+        js("window.app&&app.rpcDone(" + JSONObject.quote(id) + "," + out + ")");
       }, "rpc-" + method).start();
     }
   }

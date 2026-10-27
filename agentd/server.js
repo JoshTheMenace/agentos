@@ -14,7 +14,7 @@ import { tasks } from './tools.js';
 import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
 import { ClaudeCli, handleMcp } from './providers/claude-cli.js';
-import { Local } from './providers/local.js';
+import { Local, suggest as localSuggest } from './providers/local.js';
 
 // claude: the Claude Code CLI if installed (subscription), else the Messages API with ANTHROPIC_API_KEY.
 const cli = new ClaudeCli();
@@ -129,7 +129,8 @@ wss.on('connection', (ws) => {
     }
     const input = JSON.stringify({ mode: m.mode || 'reply', before: String(m.before || '').slice(-2000), after: String(m.after || '').slice(0, 500),
       field: { pkg: m.field?.pkg, hint: m.field?.hint }, untrusted_screen_data: { source_pkg: m.field?.pkg, trusted: false, lines } });
-    try { reply({ items: (await codex.suggest(input, abort.signal)).slice(0, 3).map(String) }); }
+    const local = cfg.suggestProvider === 'local' && (m.mode || 'reply') === 'reply'; // the local prompt only writes replies
+    try { reply({ items: (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal))).slice(0, 3).map(String) }); }
     catch (e) { reply({ items: [], error: e.message }); }
   }
 

@@ -22,6 +22,7 @@ export const cfg = {
   codexEffort: env.CODEX_EFFORT || 'low', // phone control wants fast steps; raise for hard tasks
   suggestModel: env.SUGGEST_MODEL || 'gpt-6-luna', // keyboard suggestions: small and fast, no tools
   suggestEffort: env.SUGGEST_EFFORT || 'low',
+  suggestProvider: env.SUGGEST_PROVIDER || 'codex', // 'local' = llama-server for mode "reply" (fix/rewrite stay on Codex)
   reviewModel: env.REVIEW_MODEL || 'codex-auto-review', // approval reviewer (what Codex's own Auto-review uses)
   reviewMs: Number(env.REVIEW_MS || 4000),             // slower than this -> the human decides
   codexCwd: env.CODEX_CWD || join(STATE, 'codex-cwd'),
@@ -29,7 +30,7 @@ export const cfg = {
   claudeCliModel: env.CLAUDE_CLI_MODEL || null,
   claudeModel: env.CLAUDE_MODEL || 'claude-opus-5-5', // API-key fallback (ANTHROPIC_API_KEY)
   claudeEffort: env.CLAUDE_EFFORT || 'medium',
-  localUrl: env.LOCAL_URL || 'http://127.0.0.1:8080/v1/chat/completions',
+  localUrl: env.LOCAL_URL || 'http://127.0.0.1:8081', // llama-server (deploy/local-model)
   debug: !!env.AGENTD_DEBUG,
   clientPkgs: (env.AGENTD_CLIENT_PKGS ?? 'local.agentos,local.agentos.keys').split(',').filter(Boolean), // apps that get the WS token
 
