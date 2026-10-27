@@ -1,0 +1,14 @@
+{
+  "id": "pomodoro",
+  "package": "com.google.android.deskclock",
+  "label": "Focus 25m",
+  "when": [["timer_start_button", "add_timer_button"]],
+  "anchor": {"id": "overflow_action_button"}, "place": "left", "gap": 8, "w": 136, "h": 44,
+  "style": {"sample": ["timer_preset_4", "timer_setup_digit_2"]},
+  "action": {
+    "type": "press",
+    "press": ["timer_setup_delete", "timer_setup_delete", "timer_setup_delete", "timer_setup_delete", "timer_setup_delete",
+              "timer_setup_delete", "timer_setup_digit_2", "timer_setup_digit_5", "timer_setup_digit_0", "timer_setup_digit_0",
+              ["timer_start_button", "add_timer_button"]]
+  }
+}

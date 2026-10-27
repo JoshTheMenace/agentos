@@ -1,0 +1,17 @@
+{
+  "id": "tip",
+  "package": "com.google.android.calculator",
+  "label": "Tip",
+  "anchor": {"id": "op_div"}, "place": "above", "gap": 8, "w": "anchor", "h": 44,
+  "alt": [{"anchor": {"id": "collapse_expand"}, "place": "right", "gap": 16, "w": 96, "h": 44}],
+  "style": {"sample": "op_div"},
+  "action": {
+    "type": "compute",
+    "read": ["result_preview", "formula"],
+    "chips": [{"label": "18%", "factor": 0.18}, {"label": "20%", "factor": 0.20}],
+    "chipStyle": {"sample": "eq"},
+    "onChip": ["op_add", "$value", "eq"],
+    "keys": {"0": "digit_0", "1": "digit_1", "2": "digit_2", "3": "digit_3", "4": "digit_4",
+             "5": "digit_5", "6": "digit_6", "7": "digit_7", "8": "digit_8", "9": "digit_9", ".": "dec_point"}
+  }
+}
