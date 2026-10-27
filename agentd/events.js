@@ -5,7 +5,9 @@
 import { cfg, log } from './config.js';
 import { phoneAuth, rpc } from './tools.js';
 
-export const FORWARD = new Set(['approval.shown', 'approval.resolved', 'guard.flag', 'task.state', 'audit.append', 'review']);
+export const FORWARD = new Set(['approval.shown', 'approval.resolved', 'guard.flag', 'task.state', 'audit.append', 'review',
+  'task.update', 'tool.request', 'tool.result', 'guard.alert', 'task.started', 'approval.needed',
+  'notification.posted', 'rule']); // 3rd line: the notification feed and reply rules (context.js) // 2nd line: background tasks (tasks.js)
 export const pending = new Map(); // approval_id -> approval.shown payload
 export const flagged = new Set(); // task_ids the broker raised guard.flag for
 export const state = { connected: false, answeredAt: 0 };
@@ -73,5 +75,5 @@ export async function answer(utterance, channel) {
 
 // What to say when the card goes up during a voice session.
 export const prompt = (a) => (a.allowed_channels?.includes('voice')
-  ? `Should I ${a.tool === 'tap' ? `tap ${a.target}` : a.tool}${a.text ? `: "${String(a.text).slice(0, 80)}"` : ''}? Say yes or no.`
+  ? `Should I ${a.tool === 'tap' ? `tap ${a.target}` : a.tool === 'notifications.reply' ? String(a.target).toLowerCase() : a.tool}${a.text ? `: "${String(a.text).slice(0, 80)}"` : ''}? Say yes or no.`
   : 'Please approve that on your phone with your fingerprint.');

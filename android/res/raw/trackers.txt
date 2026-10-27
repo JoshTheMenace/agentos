@@ -1,0 +1,477 @@
+# domain company — tracker domains (Exodus Privacy network signatures, CC BY-SA, plus hand-added SDK hosts). A host matches if it is the domain or ends in .domain
+247realmedia.com AppNexus
+2mdn.net Google Ads
+3lift.com TripleLift
+4seeresults.com Foresee
+a.fiksu.com Fiksu
+a.tiles.mapbox.com Mapbox
+a4.tl Ad4Screen
+aatkit.com Add Apt Tr
+abtasty.com ABTasty
+accengage.com Ad4Screen
+account.talkingdata.com TalkingData
+acrcloud.com ACRCloud
+actv8technologies.com Actv8me
+ad-brix.com Adbrix
+ad.cauly.co.kr Cauly
+ad.crwdcntrl.net Lotame
+ad4push.com Ad4Screen
+ad4screen.com Ad4Screen
+adcolony.com AdColony
+adform.com Adform
+adformdsp.net Adform
+adfurikun.jp Adfurikun
+adj.st Adjust
+adjust.com Adjust
+adjust.io Adjust
+adjust.net.in Adjust
+adjust.world Adjust
+adlibr.com ADLIB
+adm.dynamicyield.com Dynamic Yield
+admixer.co.kr Admixer
+admixer.net Admixer
+adnxs.com Xandr
+adproxy.fyber.com Fyber
+ads-api.twitter.com Twitter
+ads.adadapted.com AdAdapted
+ads.aerserv.com AerServ
+ads.glispa.com Glispa Connect
+ads.google.com Google Ads
+ads.heyzap.com Fyber
+ads.mdotm.com MDOTM
+ads.rubiconproject.com Rubicon Project
+ads.tapdaq.com Tapdaq
+adsafeprotected.com Integral Ad Science
+adservice.g.cn Google Ads
+adsrvr.org Smart AdServer
+adswizz.com AdsWizz
+adtech.de Millennial Media
+adx.adform.net Adform
+amazon-adsystem.com Amazon Ads
+amobee.com Amobee
+amplitude.com Amplitude
+analytics-server.gimbal.com Gimbal
+analytics.ad.daum.net AdFit
+analytics.localytics.com Localytics
+analytics.mobile.yandex.net Yandex
+analytics.social.unity.com Unity Ads
+analytics.tiktok.com TikTok
+analytics.twitter.com Twitter
+analytics.yinzcam.com Yinzcam Sobek
+android-quinoa-config-prod.sense360eng.com Sense360
+api-device.mocaplatform.com MOCA
+api.airpush.com Airpush
+api.alphonso.tv Alphonso
+api.altamob.com Altamob
+api.appsee.com AppSee
+api.apptentive.com Apptentive
+api.beaconinside.com Square Metrics
+api.crittercism.com Apteligent by VMWare
+api.crowdtangle.com CrowdTangle
+api.dynamicyield.com Dynamic Yield
+api.factual.com Factual
+api.gimbal.com Gimbal
+api.giphy.com GIPHY Analytics
+api.hypertrack.com HyperTrack
+api.infinario.com Exponea
+api.keen.io Keen
+api.myendpoint.io X-Mode
+api.otherlevels.com OtherLevels
+api.pingstart.com PingStart
+api.proximi.fi Proximi.io
+api.pushspring.com PushSpring
+api.safegraph.com OpenLocate
+api.sentiance.com Sentiance
+api.smartechmetrics.com X-Mode
+api.swrve.com Swrve
+api.taplytics.com Taplytics
+api.tiles.mapbox.com Mapbox
+api.uca.cloud.unity3d.com Unity Ads
+api.vungle.akadns.net Vungle
+apidm.airpush.com Airpush
+apiinit.amap.com AutoNavi / Amap
+apilocate.amap.com AutoNavi / Amap
+apistaging.airpush.com Airpush
+app-config.enhance.co Enhance
+app-measurement.com Google Analytics
+app.link Branch
+app.roximity.com Roximity
+appboy.com Braze
+appcelerator.com Appcelerator Analytics
+appcelerator.net Appcelerator Analytics
+appdynamics.com Appdynamics
+appengage-video.fyber.com Fyber
+appengage-video.sponsorpay.com Fyber
+appload.ingest.crittercism.com Apteligent by VMWare
+applovin.com AppLovin
+applvn.com AppLovin
+appmetrica.yandex.com Yandex
+appnext.com Appnext
+appnexus.com AppNexus
+appnexus.net AppNexus
+appodeal.com Appodeal
+appodealx.com Appodeal
+apportal.airpush.com Airpush
+appsflyer.com AppsFlyer
+appsflyersdk.com AppsFlyer
+areametrics.com Areametrics
+ati-host.net ATInternet
+auditude.com Auditude
+av1.xdrig.com TalkingData
+avocarrot.com Glispa Connect
+axonix.com Axonix
+backelite.com Backelite
+backtrace.io Backtrace
+banner.fyber.com Fyber
+banners-slb.mobile.yandex.net Yandex
+banners.mobile.yandex.net Yandex
+bat.bing.com Microsoft Ads
+batch.com Batch
+beta.airpush.com Airpush
+bidmachine.io BidMachine
+bin5y4muil.execute-api.us-east-1.amazonaws.com X-Mode
+brahe.apptimize.com Apptimize
+branch.io Branch
+braze.com Braze
+braze.eu Braze
+bugly.qq.com Bugly
+business-api.tiktok.com TikTok
+c2i.startappnetwork.com Startapp
+c2s.startappnetwork.com Startapp
+casalemedia.com Index Exchange
+cdn-api.swirl.com Swirl
+cdn.adswizz.com.edgesuite.net AdsWizz
+cdn.dynamicyield.com Dynamic Yield
+cdn.gigya.com SAP CDC
+cdn1.gigya.com SAP CDC
+cdn1.sponsorpay.com Fyber
+cdn2.gigya.com SAP CDC
+cdn2.sponsorpay.com Fyber
+cdn3.gigya.com SAP CDC
+cdn3.sponsorpay.com Fyber
+cdn4.sponsorpay.com Fyber
+cdnap.airpush.com Airpush
+cdns.us1.gigya.com SAP CDC
+cedexis.com Cedexis Radar
+cgicol.amap.com AutoNavi / Amap
+chartbeat.com Chartbeat
+chartbeat.net Chartbeat
+chartboost.com Chartboost
+clarity.ms Microsoft Clarity
+clevertap-prod.com CleverTap
+click-haproxy.supersonicads.com ironSource
+cloud.xdrig.com TalkingData
+cloudmobi.net Cloudmobi
+cmcm.com Cheetah Ads
+colocator.net Colocator
+commander1.com TagCommander
+comscore.com ComScore
+config.uca.cloud.unity3d.com Unity Ads
+content.swrve.com Swrve
+conversantmedia.com Conversant
+crashlytics.com Google Crashlytics
+criteo.com Criteo
+criteo.net Criteo
+ct.pinterest.com Pinterest
+cuebiq.com Cuebiq
+cws.conviva.com Conviva
+cx.ssacdn.com ironSource
+data-location.enhance.co Enhance
+data.de.coremetrics.com IBM Digital Analytics
+databerries.com Teemo
+david.gigya-cs.com SAP CDC
+dbankcloud.cn Huawei Mobile Services Core
+dbankcloud.com Huawei Mobile Services Core
+dbankcloud.ru Huawei Mobile Services Core
+de.ioam.de INFOnline
+debug.aerserv.com AerServ
+deliver.oztam.com.au OzTAM
+deltadna.net deltaDNA
+demdex.net Demdex
+device-api.asnapieu.com Urbanairship
+devices.carnivalmobile.com Carnival
+display.io Display
+dmtry.com Google Ads
+doubleclick.com Google Ads
+doubleclick.net Google Ads
+dov-e.com DOV-E
+duapps.com Duapps
+dynatrace.com Dynatrace
+e-ssl.apsalar.com Apsalar
+e.apsalar.com Apsalar
+engine.fyber.com Fyber
+engine.sponsorpay.com Fyber
+etl.tindersparks.com Tinder Analytics
+eulerian.com Eulerian
+eum-appdynamics.com Appdynamics
+event.split.io Split
+events.mapbox.com Mapbox
+events.uber.com Uber Analytics
+evt.tamoco.com Tamoco
+exp.glispa.com Glispa Connect
+facebook.com Facebook
+facebook.net Facebook
+fastlane.rubiconproject.com Rubicon Project
+files.adform.net Adform
+firebase.com Google Firebase
+firebaselogging-pa.googleapis.com Google Firebase
+flurry.com Yahoo Flurry
+foresee.com Foresee
+foreseeresults.com Foresee
+frm.acuant.net Acuant
+fwmrm.net FreeWheel
+fyc.heyzap.com Fyber
+g.jwpsrv.com JW Player
+gemius.pl Gemius HeatMap
+geodata.otherlevels.com OtherLevels
+glympse.com Glympse
+go.admost.com Admost
+google-analytics.com Google Analytics
+googleadservices.com Google Ads
+googlesyndication.com Google Ads
+graph.accountkit.com AccountKit
+grid.amap.com AutoNavi / Amap
+hb-minify-juc1ugur1qwqqqo4.stackpathdns.com ACRCloud
+heapanalytics.com Heap
+helpshift.com HelpShift
+hicloud.com Huawei Mobile Services Core
+hockeyapp.net HockeyApp
+hotjar.com Hotjar
+houndify.com Houndify
+hypertrack.amazonaws.com HyperTrack
+hyprmx.com HyprMX
+i.4see.mobi Foresee
+iasds01.com Integral Ad Science
+img-cloudflare-2.haizap.com Fyber
+img-cloudflare.haizap.com Fyber
+incoming-data-sense360.s3.amazonaws.com Sense360
+init.supersonicads.com ironSource
+inlocomedia.com In Loco
+inmobi.cn InMobi
+inmobi.com InMobi
+inmobi.info InMobi
+inmobi.net InMobi
+inmobi.us InMobi
+inmobicdn.com InMobi
+inmobicdn.net InMobi
+inputs.alooma.com Alooma
+inrix.com Inrix
+inrix.io Inrix
+instreamatic.com Instreamatic
+integralads.com Integral Ad Science
+interstitial.fyber.com Fyber
+ipqualityscore.com IPQualityScore
+ipsws.indooratlas.com IndoorAtlas
+ironsrc.com ironSource
+ironsrc.mobi ironSource
+jwpltx.com JW Player
+kiip.me Kiip
+kochava.com Kochava
+kontakt.io Kontakt
+krxd.net Audience Studio
+lbs.amap.com AutoNavi / Amap
+leanplum.com LeanPlum
+liftoff.io Liftoff
+ligatus.com Ligatus
+lisnr.com Lisnr
+locuslabs.com Locuslabs
+loggly.com Loggly
+logs.amap.com AutoNavi / Amap
+m.airpush.com Airpush
+m.talkingdata.com TalkingData
+m2m-api.inmarket.com InMarket
+m5.amap.com AutoNavi / Amap
+manifest.localytics.com Localytics
+marketo.com Marketo
+marketo.net Marketo
+mars.telequid.com TeleQuid
+mbe-cdn.fyber.com Fyber
+mc.yandex.ru Yandex
+md-a-c.apptimize.com Apptimize
+md-a-s.apptimize.com Apptimize
+mdn.otherlevels.com OtherLevels
+med.heyzap.com Fyber
+media.net Millennial Media
+medicscan.acuant.net Acuant
+metrics.brightcove.com Brightcove
+millennialmedia.com Millennial Media
+mixpanel.com Mixpanel
+mktoedge.com Marketo
+mktorest.com Marketo
+mktossl.com Marketo
+mng-ads.com Google Ads
+moat.com Moat
+moatads.com Moat
+mobclix.com Axonix
+mobile-sdk-resources.jumio.com Jumio
+mobileads.google.com Google Ads
+mobileanalytics.us-east-1.amazonaws.com Amazon Analytics
+mobileapptracking.com TUNE
+mobpowertech.com MobPower
+mobvista.com Mobvista
+moengage.com MoEngage
+moodpresence.com Moodmedia
+mopub.com MoPub
+mparticle.com mParticle
+mtgglobals.com Mintegral
+nativex.com NativeX
+newrelic.com New Relic
+nexage.com Nexage
+nexus.ensighten.com Ensighten
+nr-data.net New Relic
+nv-sdk.jumio.com Jumio
+offer.fyber.com Fyber
+omniture.com Omniture
+omtrdc.net Omniture
+onesignal.com OneSignal
+ooyala.com Ooyala
+openx.com OpenX
+openx.net OpenX
+openx.org OpenX
+optimized-by.rubiconproject.com Rubicon Project
+optimizely.com Optimizely
+optimizelyapis.com Optimizely
+outbrain.com Outbrain
+outcome.supersonicads.com ironSource
+ow-gateway.supersonicads.com ironSource
+p.jwpcdn.com JW Player
+pangle.io TikTok
+partner-service.link Lenddo
+persona.ly Persona.ly
+ping.tapylitics.com Taplytics
+pingback.giphy.com GIPHY Analytics
+pixel-tracking.sonic-us.supersonicads.com ironSource
+pixel.rubiconproject.com Rubicon Project
+presage.io Ogury Presage
+profile.localytics.com Localytics
+prov.alphonso.tv Alphonso
+proximitykit.radiusnetworks.com Radius Networks
+pubmatic.com PubMatic
+pubnative.net PubNative
+push.xdrig.com TalkingData
+pushwoosh.com Pushwoosh
+px.dynamicyield.com Dynamic Yield
+pyze.com Pyze
+qualtrics.com Qualtrics
+quantcast.com Quantcast
+quantcast.net Quantcast
+quantserve.com Quantcast
+quinoa-personal-identify-prod.sense360eng.com Sense360
+rayjump.com Mintegral
+rec.replay.answerscloud.com Foresee
+recommender.scarabresearch.com Emarsys Predict
+registration.gimbal.com Gimbal
+report.appmetrica.yandex.net Yandex
+restapi.amap.com AutoNavi / Amap
+rich.otherlevels.com OtherLevels
+rtb.platform.glispa.com Glispa Connect
+rubiconproject.com Magnite
+rv-gateway.supersonicads.com ironSource
+s4m.io S4M
+sam4m.com S4M
+saspreview.com Smart AdServer
+scandit.com Scandit
+schibsted.com Schibsted
+schibsted.io Schibsted
+scorecardresearch.com comScore
+sdk-assets.localytics.com Localytics
+sdk-info.gimbal.com Gimbal
+sdk.adbuddiz.com AdBuddiz
+sdk.adincube.com Adincube
+sdk.adotmob.com Adot
+sdk.appbrain.com AppBrain
+sdk.fiksu.com Fiksu
+sdk.follow-apps.com FollowAnalytics
+sdk.foursquare.com Pilgrim by Foursquare
+sdk.gpshopper.com GPShopper
+sdk.predic.io PredicIO
+sdk.split.io Split
+sdk6.ibm.xtify.com IBM Mobile Marketing
+segment.com Segment
+segment.io Segment
+service.fyber.com Fyber
+services.assureid.net Acuant
+serving-sys.com Sizmek
+shopkick.com Shopkick
+shopkick.de Shopkick
+signal360.com Signal360
+silverpush.co SilverPush
+silverpush.com SilverPush
+singlespot.com Singlespot
+singular.net Singular
+smaato.net Smaato
+smartadserver.com Smart AdServer
+smartadserver.ru Smart AdServer
+smartlook.com SmartLook
+sonicnotify.com Signal360
+soom.la Soomla
+st.dynamicyield.com Dynamic Yield
+stags.bluekai.com BlueKai
+startappservice.com Startapp
+startup.mobile.yandex.net Yandex
+static.ssacdn.com ironSource
+statistics.videofarm.daum.net AdFit
+stats.aws.rubiconproject.com Rubicon Project
+stats.unity3d.com Unity Ads
+supersonic.com ironSource
+supersonicads-a.akamaihd.net ironSource
+sygic-api.infinario.com Exponea
+sync.adotmob.com Adot
+sync2ad.com Sync2Ad
+synerise.com Synerise
+sypi.gpshopper.com GPShopper
+taboola.com Taboola
+tagcommander.com TagCommander
+tags.bluekai.com BlueKai
+tags.otherlevels.com OtherLevels
+tap2-cdn.rubiconproject.com Rubicon Project
+tapjoy.com Tapjoy
+tapjoyads.com Tapjoy
+target.my.com myTarget
+teads.tv Teads
+tealiumiq.com Tealium
+tele.fm Cifrasoft
+templates.glispaconnect.com Glispa Connect
+tiqcdn.com Tealium
+tm.amap.com AutoNavi / Amap
+tr.snapchat.com Snap
+track.adform.net Adform
+tracker-api.my.com myTracker
+tracker.adotmob.com Adot
+tracker.fyber.com Fyber
+trck.at HyperTrack
+trk.glispa.com Glispa Connect
+tusdk.com Tutucloud
+txn.ingest.crittercism.com Apteligent by VMWare
+ua.supersonicads.com ironSource
+umeng.com Umeng Analytics
+unityads.unity3d.com Unity Ads
+urbanairship.com Urbanairship
+usebutton.com Button
+v.ssacdn.com ironSource
+vectaury.io Vectaury
+verify.uxcam.com UXCam
+video-ads.rubiconproject.com Rubicon Project
+video-interstitial-assets-cdn.fyber.com Fyber
+video.fyber.com Fyber
+vungle.com Vungle
+wap.amap.com AutoNavi / Amap
+wb.amap.com AutoNavi / Amap
+weborama.fr Weborama
+weborama.net Weborama
+webtrends.com Webtrends
+widespace.com Widespace
+wootric.com Wootric
+wootric.com.herokudns.com Wootric
+ws.otherlevels.com OtherLevels
+www-googletagmanager.l.google.com Google Tag Manager
+www.5rocks.io Tapjoy
+www.googletagmanager.com Google Tag Manager
+www.googletagservices.com Google Tag Manager
+www.supersonicads.com ironSource
+wzrkt.com CleverTap
+x.heyzap.com Fyber
+yoc-performance.com YOC VIS.X
+yoc.com YOC VIS.X
+yuntuapi.amap.com AutoNavi / Amap
+zapr.in Zapr

@@ -10,6 +10,7 @@ to Mac port $AGENTOS_PORT, default 17777).
   tools-client.py settings ['{"require_user_lease":false}']
                                                       write (as root) or, with no JSON, delete files/settings.json
   tools-client.py approvals                            lease card, taint carry-over, approval channels + /events
+  tools-client.py notifs                               notification feed: test chat, direct reply, P3, copy check, standing auto-reply
 
 The bearer token is read with root from /data/data/local.agentos/files/token and never printed.
 """
@@ -85,14 +86,13 @@ def find(screen, pred):
 
 
 def approve(tok, method, params, press_approve=False, window=90):
-    """An outward call: the phone shows the card; a human approves with a fingerprint within `window` seconds."""
+    """An outward call: the phone shows the card; a human taps Approve (plus the fingerprint for money) within `window` seconds."""
     params = dict(params, approval_timeout_s=window)
     print(f"\n>>> {method} {json.dumps(params)}")
     if press_approve:  # the test operator presses Approve over adb (a human-side touch); the fingerprint stays human
         threading.Timer(4, lambda: adb("shell", f"input tap {CARD_APPROVE}")).start()
-        threading.Timer(4, lambda: print(f">>> TOUCH SENSOR NOW (power button) -- fingerprint prompt is up, {window} s window", flush=True)).start()
     else:
-        print(f">>> ON THE PHONE: tap 'Approve with fingerprint', then TOUCH SENSOR NOW ({window} s window)", flush=True)
+        print(f">>> ON THE PHONE: tap 'Approve' ({window} s window; the fingerprint only for payments)", flush=True)
     t0 = time.time()
     r = call(tok, method, params, timeout=window + 20)
     print(f"    -> {r['decision']}: {r.get('reason')} ({time.time() - t0:.1f}s)")
@@ -222,9 +222,9 @@ def approvals():
     send("Tap test: running 10 min late", lambda a: (time.sleep(4), subprocess.run(ADB + ["exec-out", "screencap -p"], stdout=open("/tmp/agentos-card.png", "wb")),
                                                        adb("shell", f"input tap {CARD_APPROVE}")))
     send("RPC tap test", lambda a: (confirm("tap")(a), call(tok, "approval.deny", {"approval_id": a["approval_id"], "channel": "test"})))
-    # 3. copied from the screen -> fingerprint only; the reviewer and voice are refused
-    send("the north gate at six tonight", lambda a: (confirm("reviewer", rationale="x")(a), confirm("voice", utterance="send it")(a),
-                                                       call(tok, "approval.deny", {"approval_id": a["approval_id"]})))
+    # 3. copied from the screen -> a person must approve: the reviewer is refused, a spoken "send it" works
+    send("the north gate at six tonight", lambda a: (print("  held because:", a.get("held_because")), confirm("reviewer", rationale="x")(a),
+                                                       confirm("voice", utterance="send it")(a)))
     # 4. not on the allow-list -> refused
     settings('{"require_user_lease": true}')
     r = bg("firewall.set", {"pkg": BEACON, "mode": "block", "approval_timeout_s": 15})
@@ -241,6 +241,79 @@ def approvals():
     stop.set()
     print("event types seen:", sorted(set(seen)))
     audit(tok, 30)
+
+
+def notifs():
+    """Notification feed on our own test chat (a MessagingStyle notification with a real RemoteInput Reply action)."""
+    tok, ev, stop = token(), queue.Queue(), threading.Event()
+    threading.Thread(target=events, args=(tok, ev, stop), daemon=True).start()
+    old = adb("exec-out", "su -c 'cat /data/data/local.agentos/files/settings.json 2>/dev/null; true'")
+    settings(json.dumps(dict(json.loads(old or "{}"), voice_callers=["com.android.shell"])))  # the operator says "yes" over adb
+
+    def wait_for(kind, secs=20, pred=lambda d: True):
+        end = time.time() + secs
+        while time.time() < end:
+            try:
+                t, d = ev.get(timeout=1)
+            except queue.Empty:
+                continue
+            if t == kind and pred(d):
+                return d
+        sys.exit(f"no {kind} event in {secs}s")
+
+    def post(frm, text):  # test harness (not the agent): a message arrives
+        adb("shell", f"am broadcast -a local.agentos.UI --es notify '{text}' --es from {frm}")
+        return wait_for("notification.posted", pred=lambda d: d["text"] == text)
+
+    def reply(key, text, how=None, secs=15):
+        box = {}
+        th = threading.Thread(target=lambda: box.update(r=call(tok, "notifications.reply", {"key": key, "text": text, "approval_timeout_s": secs}, secs + 20)))
+        th.start()
+        if how:
+            a = wait_for("approval.shown")
+            print(f"  card: {a['summary']!r} allowed {a['allowed_channels']} held_because {a.get('held_because')} r2 {a['rule_of_two']}")
+            how(a)
+        th.join()
+        r = box["r"]
+        print(f"  reply {text!r} -> {r['decision']}: {r['reason']}")
+        return r
+
+    def confirm(ch, **kw):
+        return lambda a: print("  confirm", ch, "->", call(tok, "approval.confirm", dict(approval_id=a["approval_id"], channel=ch, **kw))["ok"])
+
+    t0 = time.time()
+    n = post("Alice", "Hey are you still coming? We are at the table")
+    print(f"posted -> event in {time.time() - t0:.1f}s: {n['conversation']}: {n['text']!r} can_reply={n['can_reply']} guard={n['guard']}")
+    lst = call(tok, "notifications.list", {"n": 3})
+    print("list:", [(x["app"], x["conversation"], x["text"][:30]) for x in lst["notifications"]], "foreground:", lst["foreground"])
+    # 1. a reply in a messaging app (the test chat counts as one): all three Rule-of-Two lamps -> a person approves, not the reviewer
+    t0 = time.time()
+    r = reply(n["key"], "Running 10 minutes late, sorry!", lambda a: (confirm("reviewer", rationale="x")(a), confirm("voice", utterance="send it")(a)))
+    back = wait_for("notification.posted", pred=lambda d: d["key"] == n["key"] and d["from_me"])
+    print(f"  the app got it: thread now ends with ({back['sender']}) {back['text']!r} ({time.time() - t0:.1f}s round trip)")
+    # 2. P3: a code that arrived by notification can never be sent
+    c = post("Alice", "Your login code is 482913")
+    reply(c["key"], "it says 482913")
+    # 3. text copied from the message -> a person must approve (reviewer refused, voice ok)
+    reply(n["key"], "are you still coming", lambda a: (confirm("reviewer", rationale="x")(a), call(tok, "approval.deny", {"approval_id": a["approval_id"]})))
+    # 4. standing auto-reply: one human OK for the exact text, then replies with it need no card
+    box = {}
+    th = threading.Thread(target=lambda: box.update(r=call(tok, "notifications.autoreply", {"text": "Driving, I'll text you back soon", "minutes": 5, "approval_timeout_s": 15}, 40)))
+    th.start()
+    a = wait_for("approval.shown")
+    print(f"autoreply card: {a['summary']!r} allowed {a['allowed_channels']}")
+    confirm("reviewer", rationale="x")(a)
+    confirm("voice", utterance="yes")(a)
+    th.join()
+    print("  ->", box["r"]["decision"])
+    b = post("Bob", "Where are you?")
+    t0 = time.time()
+    reply(b["key"], "Driving, I'll text you back soon")
+    print(f"  (no card, {time.time() - t0:.2f}s)")
+    print("stop autoreply:", call(tok, "notifications.autoreply", {"minutes": 0})["reason"])
+    settings(old or None)  # back to what it was
+    stop.set()
+    audit(tok, 8)
 
 
 def audit(tok, n):
@@ -265,6 +338,8 @@ def main():
         e2e(firewall="--no-firewall" not in sys.argv)
     elif cmd == "approvals":
         approvals()
+    elif cmd == "notifs":
+        notifs()
     elif cmd == "events":
         q, end = queue.Queue(), time.time() + (float(sys.argv[2]) if len(sys.argv) > 2 else 1e9)
         threading.Thread(target=events, args=(token(), q), daemon=True).start()

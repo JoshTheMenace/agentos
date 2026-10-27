@@ -19,6 +19,8 @@ cur=$(adb -s "$S" shell settings get secure enabled_accessibility_services | tr 
 case ":$cur:" in *":$SVC:"*) ;; *) [ "$cur" = null ] || [ -z "$cur" ] && new=$SVC || new="$cur:$SVC"
   adb -s "$S" shell settings put secure enabled_accessibility_services "$new" ;; esac
 adb -s "$S" shell settings put secure accessibility_enabled 1
+# Notification feed (Notifs): read notifications + reply through their Reply action; post the test chat.
+adb -s "$S" shell "cmd notification allow_listener local.agentos/local.agentos.Notifs; pm grant local.agentos android.permission.POST_NOTIFICATIONS"
 adb -s "$S" shell "settings get secure enabled_accessibility_services"
 echo "installed; uid $uid"
 

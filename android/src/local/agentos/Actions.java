@@ -3,6 +3,8 @@ package local.agentos;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.content.Intent;
+import android.net.Uri;
+import android.provider.AlarmClock;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Path;
@@ -70,6 +72,37 @@ final class Actions {
         s.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         return true;
     }
+
+    /**
+     * Allow-listed direct intents: one call instead of a string of taps. Only these three; never arbitrary intents
+     * (no SMS/call/share intents, no URLs: an injected page can't make the agent open evil.com?data=...).
+     * kind alarm {hour, minute, label?} · timer {seconds, label?} · search {query} (Google in the browser).
+     */
+    static Intent intent(JSONObject p) throws JSONException {
+        String label = p.optString("label", "");
+        switch (p.getString("kind")) {
+            case "alarm": return new Intent(AlarmClock.ACTION_SET_ALARM).putExtra(AlarmClock.EXTRA_HOUR, clamp(p.getInt("hour"), 0, 23))
+                    .putExtra(AlarmClock.EXTRA_MINUTES, clamp(p.optInt("minute", 0), 0, 59)).putExtra(AlarmClock.EXTRA_MESSAGE, label);
+            case "timer": return new Intent(AlarmClock.ACTION_SET_TIMER).putExtra(AlarmClock.EXTRA_LENGTH, clamp(p.getInt("seconds"), 1, 86400))
+                    .putExtra(AlarmClock.EXTRA_MESSAGE, label).putExtra(AlarmClock.EXTRA_SKIP_UI, false);
+            case "search": return new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(p.getString("query"))));
+            default: throw new IllegalArgumentException("kind must be alarm, timer or search");
+        }
+    }
+
+    /** The app that will handle it (the lease must cover it). A browser chooser falls back to Chrome. */
+    static String intentPkg(AccessibilityService s, JSONObject p) throws JSONException {
+        ResolveInfo r = s.getPackageManager().resolveActivity(intent(p), PackageManager.MATCH_DEFAULT_ONLY);
+        String pkg = r == null ? null : r.activityInfo.packageName;
+        return pkg == null || pkg.equals("android") ? "com.android.chrome" : pkg;
+    }
+
+    static boolean startIntent(AccessibilityService s, JSONObject p) throws JSONException {
+        s.startActivity(intent(p).setPackage(intentPkg(s, p)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        return true;
+    }
+
+    private static int clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
 
     static JSONArray listApps(AccessibilityService s) throws JSONException {
         PackageManager pm = s.getPackageManager();

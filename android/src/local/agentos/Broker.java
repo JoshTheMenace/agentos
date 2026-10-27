@@ -30,8 +30,9 @@ import org.json.JSONObject;
  * T2 draft (type) · T3 outward (risky button, type+submit, any tap on a secure screen, firewall changes) ·
  * T4 forbidden (passwords, typing on secure screens, system/AgentOS surfaces, locked phone).
  * Rule of Two, per action: untrusted (this task has read screen content) · private (private app or secure screen) ·
- * outward (T3). T3 always needs approval; T2 needs it when untrusted and private are both true. How strong the
- * approval must be (a tap, or a fingerprint) is decided by fingerprintRequired(), the risk-adaptive policy.
+ * outward (T3). T3 always needs approval; T2 needs it when untrusted and private are both true. Who may approve
+ * (the reviewer, a person's tap or voice, or only a fingerprint) is decided by channels(), the risk-adaptive policy.
+ * Notification text (Notifs) is untrusted exactly like screen text; notifications.reply is a T3 outward action.
  */
 final class Broker {
     /**
@@ -65,27 +66,29 @@ final class Broker {
 
     // ------------------------------------------------- risk-adaptive approvals
 
-    private static final java.util.regex.Pattern HIGH_STAKES = java.util.regex.Pattern.compile("(?i)\\b(pay|payment|buy|purchase|order|"
-            + "checkout|check out|transfer|donate|subscribe|add to (?:cart|basket|bag)|delete|remove|erase|install|uninstall|update|reset|deactivate)\\b");
+    /** Money and the like: the only things that need a fingerprint (founder policy, 10-27). */
+    private static final java.util.regex.Pattern MONEY = java.util.regex.Pattern.compile("(?i)\\b(pay|payment|buy|purchase|place order|"
+            + "checkout|check out|transfer|donate|subscribe|add to (?:cart|basket|bag)|install|uninstall|factory reset|deactivate)\\b");
     static final List<String> FINGERPRINT_ONLY = Collections.singletonList("fingerprint"),
+            HUMAN = Collections.unmodifiableList(Arrays.asList("tap", "voice", "fingerprint")),
             ORDINARY = Collections.unmodifiableList(Arrays.asList("tap", "voice", "reviewer", "fingerprint"));
 
     /**
-     * Risk-adaptive approvals: the riskier the action, the stronger the proof. Returns null for an ordinary outward
-     * action (a real finger tap on the card, a spoken "send it", or agentd's reviewer model may approve it), else the
-     * reason only a fingerprint will do. Because the reviewer is only offered when this returns null, it can never
-     * approve anything tainted, flagged or high-stakes.
+     * Risk-adaptive approvals, three steps. A fingerprint only for money, installs and vault passwords. A person (tap
+     * or voice; the reviewer may not) when the task is tainted: Prompt Guard flagged text, text copied from untrusted
+     * content, or all three Rule-of-Two lamps lit. Everything else is ordinary: agentd's reviewer may auto-approve.
+     * Returns {channels, why}: why is null for ordinary actions.
      */
-    static String fingerprintRequired(History h, String tool, String target, boolean untrusted, boolean priv, boolean outward) {
-        if (h != null && h.flagged) return "Prompt Guard flagged text in this task";
-        if (h != null && h.copied) return "the agent typed text copied from the screen (untrusted arguments)";
-        if (tool.startsWith("firewall.")) return "network rule change";
-        if (HIGH_STAKES.matcher(target).find()) return "money, delete or install";
-        if (untrusted && priv && outward) return "all three Rule-of-Two lamps are lit";
-        return null;
+    static Object[] channels(History h, String tool, String target, boolean untrusted, boolean priv, boolean outward, boolean copied) {
+        if (tool.startsWith("vault.")) return new Object[]{FINGERPRINT_ONLY, "uses a saved password"};
+        if (MONEY.matcher(target).find()) return new Object[]{FINGERPRINT_ONLY, "money or an install"};
+        if (h != null && h.flagged) return new Object[]{HUMAN, "Prompt Guard flagged text in this task"};
+        if (copied || h != null && h.copied) return new Object[]{HUMAN, "the text was copied from untrusted content"};
+        if (untrusted && priv && outward) return new Object[]{HUMAN, "all three Rule-of-Two lamps are lit"};
+        return new Object[]{ORDINARY, null};
     }
 
-    private static final java.util.regex.Pattern SECRET = java.util.regex.Pattern.compile(
+    static final java.util.regex.Pattern SECRET = java.util.regex.Pattern.compile(
             "AGENTOS-CANARY-[A-Z0-9]+|(?<![\\d.:])\\d{6,8}(?![\\d.:])|(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)");
     private static final String[] TIER = {"T0 observe", "T1 navigate", "T2 draft", "T3 outward", "T4 forbidden"};
     private final AgentA11y svc;
@@ -97,15 +100,17 @@ final class Broker {
     private volatile Lease lease, last; // last: the most recent lease, even after stop (for carry-over)
     private volatile Approvals.Pending current;
     private volatile CompletableFuture<Boolean> leaseAsk;
-    /** The island pill's step label; guard alerts already shown ("task|sender"), so rereads don't nag. */
+    /** The island pill's step label. */
     private volatile String step = "Starting";
-    private final Set<String> alerted = ConcurrentHashMap.newKeySet();
+    private static volatile Broker self; // for Notifs.flagged
 
     Broker(AgentA11y svc) {
         this.svc = svc;
         leaseCard = new LeaseCard(svc);
         audit = new Audit(svc.getFilesDir());
         PromptGuard.init(svc);
+        Trackers.start(svc);
+        self = this;
     }
 
     /** uid: the calling app's uid for task.start and approval.confirm (-1 if unknown or not looked up). */
@@ -123,12 +128,21 @@ final class Broker {
             case "task.resume": return pause(false, "task.resume");
             case "audit.tail": return audit.tail(Math.max(1, Math.min(500, p.optInt("n", 20)))).put("pubkey", Approvals.publicKeyB64(svc));
             case "firewall.list": return Firewall.list(svc);
+            case "trackers.scan": return Trackers.scan(svc, p);
+            case "trackers.list": return Trackers.list(svc);
+            case "notifications.list": return notifications(p);
             case "approval.list": return approvals();
             case "approval.confirm": return confirm(p, uid);
             case "approval.deny": return deny(p);
             case "approval.escalate": return escalate(p, uid);
-            case "tap": case "type": case "scroll": case "press": case "open_app": case "firewall.set": case "firewall.clear":
+            case "tap": case "type": case "scroll": case "press": case "open_app": case "intent": case "firewall.set": case "firewall.clear":
+            case "trackers.block": case "trackers.unblock": case "notifications.reply":
                 synchronized (actLock) { return act(m, p); } // one action at a time; nothing else acts while a card is up
+            case "notifications.autoreply":
+                if (p.optInt("minutes", 60) > 0) synchronized (actLock) { return act(m, p); }
+                if (p.has("text")) Notifs.standing.remove(p.getString("text")); else Notifs.standing.clear(); // stopping needs no approval
+                audit.log(new JSONObject().put("task", "").put("tool", m).put("text", p.optString("text", "(all)")).put("decision", "auto").put("reason", "auto-reply stopped"));
+                return ok(true).put("decision", "auto").put("reason", "auto-reply stopped");
             default: throw new IllegalArgumentException("unknown method " + m);
         }
     }
@@ -209,12 +223,12 @@ final class Broker {
         CompletableFuture<Boolean> ask = leaseAsk;
         if (ask != null && taskId.isEmpty()) ask.complete(false); // the kill switch also answers an open lease card with no
         Lease l = lease;
+        Approvals.Pending c = current; // the kill switch (no task id) denies any open card, even a lease-free one (a reply)
+        if (c != null && (taskId.isEmpty() || l != null && taskId.equals(l.id) && c.model.task.startsWith(l.id))) c.finish(null, "task stopped");
         if (l == null) return ok(true).put("reason", "no active task");
         if (!taskId.isEmpty() && !taskId.equals(l.id)) return ok(false).put("reason", "task " + taskId + " is not the active task (" + l.id + ")");
         lease = null;
         l.granted = false; // a stopped grant can't be reused by a later task.start
-        Approvals.Pending c = current;
-        if (c != null) c.finish(null, "task stopped");
         svc.main.post(svc.autoPause::stop);
         audit.log(entry("task.stop", l).put("reason", why).put("steps", l.h.steps));
         Events.emit("task.state", task(l).put("state", "stopped").put("reason", why));
@@ -244,10 +258,13 @@ final class Broker {
 
     private JSONObject act(String tool, JSONObject p) throws Exception {
         Lease l = lease;
-        boolean fw = tool.startsWith("firewall."), scoped = !fw && !tool.equals("press");
+        boolean fw = tool.startsWith("firewall.") || tool.startsWith("trackers."), reply = tool.equals("notifications.reply"), free = fw || tool.startsWith("notifications.");
+        boolean scoped = !free && !tool.equals("press"); // free: the card itself is the gate (no lease needed)
         AccessibilityNodeInfo node = p.has("id") ? svc.screen.node(p.getInt("id")) : null;
         if (node == null && (tool.equals("tap") || tool.equals("type"))) throw new IllegalArgumentException(tool + " needs an id from screen.read");
-        boolean secure = !fw && svc.screen.secure();
+        boolean secure = !free && svc.screen.secure();
+        Notifs.Rec nr = reply ? Notifs.get(p.optString("key")) : null;
+        if (reply && nr == null) throw new IllegalArgumentException("no such notification key (call notifications.list)");
         String text = p.optString("text", ""), pkg, target, why;
         int tier;
         switch (tool) {
@@ -274,45 +291,66 @@ final class Broker {
             case "open_app":
                 pkg = p.getString("pkg"); target = "launch app"; tier = 1; why = "open app in lease";
                 break;
+            case "intent": // allow-listed: alarm, timer, web search (Actions.intent). A search is a draft: its words leave the phone
+                pkg = Actions.intentPkg(svc, p); target = p.getString("kind") + " " + (p.has("query") ? p.getString("query") : p.has("seconds") ? p.getInt("seconds") + " s"
+                        : String.format(java.util.Locale.US, "%02d:%02d", p.optInt("hour"), p.optInt("minute")));
+                text = p.optString("query", ""); tier = p.getString("kind").equals("search") ? 2 : 1; why = "direct " + p.getString("kind");
+                break;
             case "firewall.set": {
                 JSONArray d = p.optJSONArray("domains");
                 pkg = p.getString("pkg"); target = p.getString("mode") + " " + (d == null || d.length() == 0 ? "all traffic" : d.join(",").replace("\"", ""));
                 tier = 3; why = "network rule change";
                 break;
             }
+            case "trackers.block": case "trackers.unblock": // protective; only names on the bundled tracker list
+                target = Trackers.plan(svc, tool, p); pkg = p.getString("pkg"); tier = 3; why = "tracker block (network rule)";
+                break;
+            case "notifications.reply":
+                pkg = nr.pkg; target = "Reply to " + nr.convo; tier = 3; why = "reply to a message (notification)";
+                break;
+            case "notifications.autoreply":
+                pkg = "local.agentos"; target = "Auto-reply for " + Math.max(1, Math.min(240, p.optInt("minutes", 60))) + " min"; tier = 3; why = "standing auto-reply";
+                break;
             default: // firewall.clear
                 pkg = "*"; target = "remove all AgentOS firewall rules"; tier = 3; why = "network rule change";
         }
 
         String block = null;
         if (svc.getSystemService(KeyguardManager.class).isKeyguardLocked()) block = "phone is locked";
-        else if (!fw && l == null) block = "no active task: call task.start first";
-        else if (!fw && System.currentTimeMillis() > l.expires) block = "task lease expired";
-        else if (!fw && l.paused) block = "task paused (human touched the screen or task.pause): call task.resume after re-reading the screen";
-        else if (!fw && l.h.steps >= l.maxSteps) block = "task reached max_steps " + l.maxSteps;
-        else if (!fw && p.has("task_id") && !p.getString("task_id").equals(l.id)) block = "task_id does not match the active task";
+        else if (!free && l == null) block = "no active task: call task.start first";
+        else if (!free && System.currentTimeMillis() > l.expires) block = "task lease expired";
+        else if (!free && l.paused) block = "task paused (human touched the screen or task.pause): call task.resume after re-reading the screen";
+        else if (!free && l.h.steps >= l.maxSteps) block = "task reached max_steps " + l.maxSteps;
+        else if (!free && p.has("task_id") && !p.getString("task_id").equals(l.id)) block = "task_id does not match the active task";
         else if (tier == 4) block = "T4 forbidden: " + why;
-        else if (tool.equals("type") && leaksSecret(l.h, text)) block = "T4 forbidden: text contains a code/canary read from the screen (P3)";
+        else if (text.trim().isEmpty() && free && !fw) block = "text is empty";
+        else if (reply && nr.reply == null) block = "this notification has no reply action: open the app instead";
+        else if ((tool.equals("type") || tool.equals("intent") || free) && (l != null && leaksSecret(l.h, text) || Notifs.leaks(text)))
+            block = "T4 forbidden: text contains a code/canary read from the screen or a notification (P3)";
         else if (node != null && Guard.offLimits(node)) block = "T4 forbidden: AgentOS's own window";
         else if (scoped && Guard.forbidden(pkg)) block = "T4 forbidden: " + pkg + " is a protected system surface";
         else if (scoped && !l.apps.contains(pkg)) block = pkg + " is not in this task's lease " + l.apps;
 
-        boolean untrusted = l != null && l.h.untrusted, priv = Guard.privateApp(pkg) || secure, outward = tier == 3;
+        boolean untrusted = l != null && l.h.untrusted || reply, priv = Guard.privateApp(pkg) || secure || nr != null && nr.test, outward = tier == 3; // a reply answers a stranger's text
         JSONObject r2 = new JSONObject().put("untrusted", untrusted).put("private", priv).put("outward", outward);
         JSONObject log = entry(tool, l).put("pkg", pkg).put("target", target).put("text", Guard.clip(text, 200))
                 .put("tier", TIER[tier]).put("rule_of_two", r2);
         if (block != null) return finish(log, ok(false), "blocked", block, null);
 
-        if (tool.equals("type") && copied(l.h, text)) l.h.copied = true; // sticky: later sends need a fingerprint
-        if (!fw) island(l, stepLabel(tool, pkg, target));
+        if (tool.equals("type") && copied(l.h, text)) l.h.copied = true; // sticky: later sends need a person, not the reviewer
+        if (!free) island(l, stepLabel(tool, pkg, target));
         String decision = "auto";
-        if (tier == 3 || (tier == 2 && untrusted && priv)) {
+        if (reply && Notifs.standing(text)) { log.put("approver", "standing auto-reply"); decision = "approved"; } // the user approved this exact text once
+        else if (tier == 3 || (tier == 2 && untrusted && priv)) {
             if (tier == 2) why += " after reading untrusted content in a private app (Rule of Two)";
-            String fp = fingerprintRequired(l == null ? null : l.h, tool, target, untrusted, priv, outward);
-            List<String> channels = fp == null ? ORDINARY : FINGERPRINT_ONLY;
-            Approvals.Pending a = approve(tool, pkg, target, text, l, TIER[tier], why, r2, channels, fp,
+            boolean copy = free && !fw && copied(Notifs.seen, text);
+            Object[] pol = channels(l == null ? null : l.h, tool, target, untrusted, priv, outward, copy);
+            if (reply && "MALICIOUS".equals(nr.label) && pol[1] == null) pol = new Object[]{HUMAN, "Prompt Guard flagged this message"};
+            if (tool.equals("notifications.autoreply")) pol = new Object[]{HUMAN, "a standing grant needs a person"};
+            @SuppressWarnings("unchecked") List<String> channels = (List<String>) pol[0];
+            Approvals.Pending a = approve(tool, pkg, target, text, l, TIER[tier], why, r2, channels, (String) pol[1],
                     Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
-            log.put("allowed_channels", new JSONArray(a.channels)).put("fingerprint_because", a.because == null ? JSONObject.NULL : a.because);
+            log.put("allowed_channels", new JSONArray(a.channels)).put("because", a.because == null ? JSONObject.NULL : a.because);
             if (a.channel.isEmpty()) return finish(log, ok(false), "denied", a.reason, null);
             log.put("approver", a.channel).put("canonical", new String(a.canonical, StandardCharsets.UTF_8));
             if (a.channel.equals("fingerprint"))
@@ -326,13 +364,11 @@ final class Broker {
         }
 
         if (tool.equals("type")) { l.h.typed.add(norm(text)); l.field = node; }
-        boolean done = execute(tool, p, node);
-        if (!fw && l != null) l.h.steps++;
+        boolean done = reply ? Notifs.reply(svc, nr, text) : execute(tool, p, node);
+        if (!free && l != null) l.h.steps++;
         JSONObject res = ok(done).put("tier", TIER[tier]).put("rule_of_two", r2);
-        if (fw) {
-            Events.emit("firewall.changed", new JSONObject().put("tool", tool).put("pkg", pkg).put("target", target).put("ok", done));
-            return finish(log, res, decision, done ? why : "failed", null);
-        }
+        if (fw) Events.emit("firewall.changed", new JSONObject().put("tool", tool).put("pkg", pkg).put("target", target).put("ok", done));
+        if (free) return finish(log, res, decision, done ? why : "failed", null);
         settle();
         return finish(log, res, decision, done ? why : "Android refused the action", read());
     }
@@ -350,7 +386,10 @@ final class Broker {
             case "scroll": return Actions.scroll(svc, node, p.optString("dir", "down"));
             case "press": return Actions.press(svc, p.getString("key"));
             case "open_app": return Actions.openApp(svc, p.getString("pkg"));
+            case "intent": return Actions.startIntent(svc, p);
             case "firewall.set": Firewall.set(svc, p.getString("pkg"), p.getString("mode"), p.optJSONArray("domains")); return true;
+            case "trackers.block": case "trackers.unblock": Trackers.block(svc, tool, p); return true;
+            case "notifications.autoreply": Notifs.standing.put(p.getString("text"), System.currentTimeMillis() + Math.max(1, Math.min(240, p.optInt("minutes", 60))) * 60_000L); return true;
             default: Firewall.clear(); return true;
         }
     }
@@ -359,7 +398,8 @@ final class Broker {
     private Approvals.Pending approve(String tool, String pkg, String target, String text, Lease l, String tier, String why, JSONObject r2,
             List<String> channels, String fp, long timeoutMs) throws Exception {
         ApprovalCard.Model m = new ApprovalCard.Model();
-        m.title = tool.equals("type") ? "type into \"" + target + "\"" : tool.equals("tap") ? "tap \"" + target + "\"" : tool + " " + target;
+        m.title = tool.equals("type") ? "type into \"" + target + "\"" : tool.equals("tap") ? "tap \"" + target + "\""
+                : tool.startsWith("notifications.") || tool.startsWith("trackers.") ? target : tool + " " + target;
         m.app = pkg; m.target = target; m.text = text; m.tier = tier; m.reason = why;
         m.task = l == null ? "(no task)" : l.id + " · " + l.goal;
         m.untrusted = r2.getBoolean("untrusted"); m.priv = r2.getBoolean("private"); m.outward = r2.getBoolean("outward");
@@ -382,7 +422,8 @@ final class Broker {
         show(a.id, new JSONObject().put("kind", "action").put("task_id", l == null ? "" : l.id).put("tool", tool).put("pkg", pkg)
                 .put("target", target).put("text", text).put("tier", tier).put("reason", why).put("rule_of_two", r2)
                 .put("summary", m.title + " in " + pkg).put("allowed_channels", new JSONArray(channels))
-                .put("fingerprint_because", fp == null ? JSONObject.NULL : fp).put("expires", System.currentTimeMillis() + timeoutMs));
+                .put("fingerprint_because", channels.equals(FINGERPRINT_ONLY) ? fp : JSONObject.NULL)
+                .put("held_because", fp != null && !channels.equals(FINGERPRINT_ONLY) ? fp : JSONObject.NULL).put("expires", System.currentTimeMillis() + timeoutMs));
         svc.main.post(() -> { svc.autoPause.stop(); a.card.run(); });
         try { if (!a.done.await(timeoutMs, TimeUnit.MILLISECONDS)) a.finish(null, null); }
         finally {
@@ -489,28 +530,43 @@ final class Broker {
         JSONObject g = s.getJSONObject("guard");
         if ("MALICIOUS".equals(g.optString("label"))) {
             if (l != null) l.h.flagged = true;
-            Events.emit("guard.flag", new JSONObject().put("task_id", l == null ? "" : l.id).put("pkg", s.optString("pkg"))
-                    .put("score", g.opt("score")).put("node_ids", g.optJSONArray("flagged_node_ids")));
-            if (l != null) alert(l, s, g);
+            JSONArray ids = g.optJSONArray("flagged_node_ids");
+            JSONObject n = ids == null || ids.length() == 0 ? null : s.optJSONArray("nodes").optJSONObject(ids.optInt(0));
+            flag(l, s.optString("pkg"), ids == null || ids.length() == 0 ? "" : sender(ids.optInt(0)), n == null ? "" : n.optString("text", n.optString("desc")),
+                    g.opt("score"), ids);
         }
         return s.put("ok", true);
     }
 
-    /** guard.flag on the island: one alert card per task and sender (or flagged text). Never over an open approval card. */
-    private void alert(Lease l, JSONObject s, JSONObject g) {
-        JSONArray ids = g.optJSONArray("flagged_node_ids");
-        int id = ids == null || ids.length() == 0 ? -1 : ids.optInt(0);
-        JSONObject n = id < 0 ? new JSONObject() : s.optJSONArray("nodes").optJSONObject(id);
-        String snippet = n.optString("text", n.optString("desc", "text on this screen")), sender = id < 0 ? "" : sender(id);
-        if (current != null || !alerted.add(l.id + "|" + (sender.isEmpty() ? snippet : sender))) return;
-        float score = (float) g.optDouble("score", 0);
-        svc.main.post(() -> svc.card.alert(s.optString("pkg"), sender, snippet, score, new ApprovalCard.AlertListener() {
-            @Override public void block() { // Block = stop this task; taint already forces a fingerprint for any send
-                svc.card.hide();
-                new Thread(() -> { try { stop(l.id, "user pressed Block on a Prompt Guard alert"); } catch (Exception ignored) {} }).start();
-            }
-            @Override public void ok() { svc.card.hide(); if (lease == l) island(l, null); }
-        }));
+    /** A Prompt Guard hit: audited and sent as guard.flag (the launcher's log shows it). No pop-up (founder, 10-27). */
+    private void flag(Lease l, String pkg, String sender, String snippet, Object score, JSONArray ids) throws JSONException {
+        JSONObject e = new JSONObject().put("task_id", l == null ? "" : l.id).put("pkg", pkg).put("sender", sender)
+                .put("snippet", Guard.clip(snippet, 160)).put("score", score).put("node_ids", ids == null ? new JSONArray() : ids);
+        Events.emit("guard.flag", e);
+        audit.log(new JSONObject().put("task", l == null ? "" : l.id).put("tool", "guard.flag").put("pkg", pkg).put("sender", sender)
+                .put("text", Guard.clip(snippet, 160)).put("score", score).put("decision", "flagged").put("reason", "Prompt Guard: likely prompt injection"));
+    }
+
+    /** Notifs: a message that arrived flagged. */
+    static void flagged(Notifs.Rec r) throws JSONException {
+        Broker b = self;
+        if (b != null) b.flag(null, r.pkg, r.sender, r.text, r.score, null);
+    }
+
+    /** notifications.list {n}: recent notifications (untrusted) + the foreground app. Reading them taints the task like screen text. */
+    private JSONObject notifications(JSONObject p) throws Exception {
+        JSONArray a = Notifs.list(Math.max(1, Math.min(Notifs.MAX, p.optInt("n", 20))));
+        Lease l = lease;
+        for (int i = 0; l != null && i < a.length(); i++) {
+            JSONObject n = a.getJSONObject(i);
+            l.h.untrusted = true;
+            if (!n.optBoolean("from_me")) l.h.seen.add(norm(n.optString("text")));
+            if ("MALICIOUS".equals(n.getJSONObject("guard").optString("label"))) l.h.flagged = true;
+        }
+        AccessibilityNodeInfo root = svc.getRootInActiveWindow();
+        String fg = root == null ? "" : pkg(root);
+        return ok(true).put("listener", Notifs.connected).put("notifications", a)
+                .put("foreground", new JSONObject().put("pkg", fg).put("app", fg.isEmpty() ? "" : labels(Collections.singleton(fg))));
     }
 
     /** Who wrote node id: a short label before it in the same group (a chat row's name), else "". */
@@ -540,6 +596,7 @@ final class Broker {
             case "tap": return "Tapping “" + Guard.clip(target, 24) + "”";
             case "type": return "Typing in " + labels(Collections.singleton(pkg));
             case "open_app": return "Opening " + labels(Collections.singleton(pkg));
+            case "intent": return "Setting " + Guard.clip(target, 24);
             case "press": return "Pressing " + target;
             default: return "Scrolling";
         }
@@ -568,16 +625,18 @@ final class Broker {
     }
 
     /** Is this text lifted from third-party screen text: the same string, or a 12+ character piece of one (either way)? */
-    private static boolean copied(History h, String text) {
+    private static boolean copied(History h, String text) { return copied(h.seen, text); }
+
+    private static boolean copied(Set<String> seen, String text) {
         String t = norm(text);
-        synchronized (h.seen) {
-            for (String x : h.seen)
+        synchronized (seen) {
+            for (String x : seen)
                 if (t.equals(x) || x.length() >= 12 && t.contains(x) || t.length() >= 12 && x.contains(t)) return true;
         }
         return false;
     }
 
-    private static String norm(String s) { return s.toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ").trim(); }
+    static String norm(String s) { return s.toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ").trim(); }
 
     /** Root-only switches in files/settings.json (no RPC writes it). Missing or broken file = the safe defaults. */
     private JSONObject settings() {

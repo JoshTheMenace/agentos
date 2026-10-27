@@ -18,8 +18,9 @@ export const cfg = {
   phoneTokenFile: env.PHONE_TOKEN_FILE || (onPhone ? '/data/data/local.agentos/files/token' : join(STATE, 'phone.token')),
   provider: env.AGENTD_PROVIDER || 'codex',
   codexBin: env.CODEX_BIN || 'codex',
-  codexModel: env.CODEX_MODEL || null,
+  codexModel: env.CODEX_MODEL || 'gpt-6.1-terra', // fastest at phone control in bench/RESULTS.md (vs gpt-6.1-sol, gpt-6-luna)
   codexEffort: env.CODEX_EFFORT || 'low', // phone control wants fast steps; raise for hard tasks
+  screenFormat: env.AGENTD_SCREEN || 'compact', // what the model sees of a screen: 'compact' lines or the raw 'json' nodes (bench/RESULTS.md)
   suggestModel: env.SUGGEST_MODEL || 'gpt-6-luna', // keyboard suggestions: small and fast, no tools
   suggestEffort: env.SUGGEST_EFFORT || 'low',
   suggestProvider: env.SUGGEST_PROVIDER || 'codex', // 'local' = llama-server for mode "reply" (fix/rewrite stay on Codex)

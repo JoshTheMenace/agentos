@@ -10,19 +10,21 @@ It asks for your fingerprint when money moves and writes everything in a ledger.
 |---|---|
 | `AgentA11y` | AccessibilityService. Hosts everything below and starts the tool server. Holding volume-down for 1 s stops the active task. |
 | `Screen` | `screen.read`: compact node list (port of Buddy's `walk()`), `src` provenance label per node, FLAG_SECURE via root `dumpsys window`, password detection, redaction |
-| `Actions` | tap / type / scroll / press / open_app / list_apps (the "hands"; no policy) |
-| `Broker` | Leases (+ the lease card), tiers T0–T4, Rule of Two per action, risk-adaptive approvals (`fingerprintRequired`), taint carry-over, P3 secret block, pause/stop, audit |
+| `Actions` | tap / type / scroll / press / open_app / intent / list_apps (the "hands"; no policy) |
+| `Broker` | Leases (+ the lease card), tiers T0–T4, Rule of Two per action, risk-adaptive approvals (`channels`), taint carry-over, P3 secret block, pause/stop, audit |
+| `Notifs` | NotificationListenerService: the last 40 notifications (app, conversation, sender, text, time, Prompt Guard score) and each one's RemoteInput Reply action, for `notifications.list` / `notifications.reply`. Also the adb test chat (`--es notify`). |
 | `Guard` | Risky-button regex, private-app list, forbidden packages, `offLimits` (port of Buddy's `Guard`) |
 | `PromptGuard` + `Pg2Tokenizer` | On-device Llama Prompt Guard 2 (22M) through ONNX Runtime: scores untrusted screen text for prompt injection (see "Prompt Guard" below) |
 | `Approvals` + `ApproveActivity` | Keystore EC key (auth per use, BIOMETRIC_STRONG) + transparent Activity hosting `BiometricPrompt` with a CryptoObject |
 | `Island` | The native overlay window (TYPE_ACCESSIBILITY_OVERLAY): a black pill over the camera hole that breathes while the agent works (`set(state, label, pct)`) and springs open into cards (`expand`/`collapse`). A2 "Calm Glass iOS Dark" tokens live here. Tap the pill for the task sheet with Stop. The Broker drives it from task state (see "Island" below). |
-| `ApprovalCard` | The cards that open out of the Island: approval (`show`, Broker API unchanged), security alert (`alert`), task lease (`lease`), auto-approved moment (`autoApproved`). Essentials only; a tap on the card body shows details. |
+| `ApprovalCard` | The cards that open out of the Island: approval (`show`, Broker API unchanged), task lease (`lease`), auto-approved moment (`autoApproved`). (`alert` is no longer called: guard hits go to the log.) Essentials only; a tap on the card body shows details. |
 | `LeaseCard` | The one-tap "Allow agent in <apps> for N min" card; its look is `ApprovalCard.lease()` |
 | `HumanTouch` | `real(event, shownAt)`: is a touch a real finger (not accessibility-injected, not through an overlay, touchscreen, ≥ 500 ms after the card appeared)? All card buttons use it |
 | `Events` | `GET /events` server-sent-events fan-out (one queue per listener, a slow one is dropped) |
 | `AutoPause` | 1-px outside-touch watcher: a human touch pauses the task (port of Buddy's `AutoPause`) |
 | `Audit` | Hash-chained `files/audit.jsonl` |
-| `Firewall` | Root iptables/ip6tables `--uid-owner` rules in chain `AGENTOS_FW` |
+| `Firewall` | Root iptables/ip6tables `--uid-owner` rules in chain `AGENTOS_FW`; domain blocks match the name (SNI/Host), not IPs |
+| `Trackers` | Tracker radar: which tracker companies each app talks to (TLS SNI per uid), and tracker blocks. See "Tracker radar" |
 | `Server` | `POST /rpc` and `GET /events` on 127.0.0.1:7777, bearer token in `files/token`; finds the calling app's uid from `/proc/net/tcp*` (root) |
 | `Root` | `su -c` helper (Magisk) |
 
@@ -41,6 +43,8 @@ python3 android/tools-client.py e2e          # full test on our Pigeon + Beacon 
 python3 android/tools-client.py audit 20     # tail + independent chain check of the whole file on the Mac
 python3 android/tools-client.py events       # print the live /events stream
 python3 android/tools-client.py approvals    # lease card, taint carry-over, approval channels, /events (taps the cards over adb)
+python3 android/tools-client.py notifs       # notification feed: test chat, direct reply, P3, copy check, standing auto-reply
+adb shell am broadcast -a local.agentos.UI --es notify 'are you close?' --es from Sam   # a test chat message with a real Reply action
 python3 android/tools-client.py settings '{"require_user_lease":false}'   # root-only switches; no JSON = delete = defaults
 ```
 UI without the broker (adb only; the receiver requires `android.permission.DUMP`, which only the shell holds):
@@ -74,9 +78,16 @@ It always has `ok`; errors are `{ok:false, error}`.
 | `tap {id}` | | T1, or T3 if the label is risky or the screen is secure | On a risky button ("Send") the action's `text` is the live text of the field this task last typed into (same app). The card shows it as the message bubble, the fingerprint signs it, and the tap is refused if the field changed after approval. |
 | `type {id, text, submit?}` | | T2; T3 with `submit`; T4 on a password field or a secure screen | |
 | `scroll {id?, dir}` | dir = up/down/left/right | T1 | `press {key: back\|home\|recents}` T1, `open_app {pkg}` T1 |
+| `intent {kind, ...}` | `alarm {hour, minute?, label?}` · `timer {seconds, label?}` · `search {query}` | T1; search T2 | Allow-list only (Actions.intent): no URLs, SMS, call or share intents. The handler app (Clock, Chrome) must be in the lease. One call instead of a string of taps; returns the new screen like other actions. |
 | `firewall.list` | | T0 | `{rules:[{pkg, uid, family, dest, action}]}` |
-| `firewall.set {pkg, mode, domains?[]}` | | T3 | `block` alone = cut the app off; `block`+domains = block those IPs; `allow` alone = remove its rules; `allow`+domains = only those. |
+| `firewall.set {pkg, mode, domains?[]}` | | T3 | `block` alone = cut the app off; `block`+domains = block those names (SNI/Host match, holds when IPs rotate); `allow` alone = remove its rules; `allow`+domains = only those. |
 | `firewall.clear` | | T3 | Flushes `AGENTOS_FW`: undoes every rule we added |
+| `trackers.scan` | `{pkg?, seconds?=3 (max 15)}` | T0 | Waits `seconds`, then `{pkg, label, trackers:[{domain, company, blocked, hits}], summary}`. pkg defaults to the app on screen (else the app that last hit a tracker). |
+| `trackers.list` | | T0 | `{apps:[{pkg, label, trackers:[{domain, company, blocked, hits}]}]}`: the Blockers view. `hits` counts connection attempts, blocked ones too. |
+| `trackers.block` / `trackers.unblock` | `{pkg?, domains?[]}` | T3, ordinary | Default: every tracker seen for the app (unblock: every blocked one). Only domains on the bundled tracker list; anything else is `firewall.set`. Tap, voice or reviewer approval (no fingerprint), no lease needed. |
+| `notifications.list {n?=20}` | | T0 | `{listener, notifications:[{key, pkg, app, conversation, sender, text, when, group, from_me, message, can_reply, removed, guard:{score, label}}] (newest first), foreground:{pkg, app}}`. The text is untrusted: reading it marks the active task untrusted (and flagged if Prompt Guard flagged one). |
+| `notifications.reply {key, text}` | | T3 | Fills the notification's own Reply box and fires it (like the shade's inline reply): no app opening, ~0.1 s after approval. No lease needed: the card is the gate. Always *untrusted* (it answers someone else's text); *private* for messaging apps. |
+| `notifications.autoreply {text, minutes≤240}` | | T3 (a person) | A standing grant: one tap or spoken "yes" allows replies with exactly this text for N minutes; such replies then need no card (audit `approver: "standing auto-reply"`). `minutes: 0` stops it (no approval). |
 | `audit.tail {n}` | | T0 | `{entries, count, chain_ok, broken_at, head, pubkey}` |
 | `approval.list` | | – | `{approvals:[<approval.shown payload>], task: <task.state payload> \| null}` |
 | `approval.confirm` | `{approval_id, channel: "voice"\|"reviewer", utterance \| rationale}` | – | Only from agentd's app (`com.termux`) or, for voice, the launcher (`local.agentos.home`), checked by caller uid. The channel must be in the approval's `allowed_channels`. `tap` and `fingerprint` are refused here: they only count on the phone's own card. → `{ok, reason?}` |
@@ -91,11 +102,14 @@ Each event is `id:`, `event: <type>` and one `data: <json>` line; the JSON also 
 
 | Event | Data |
 |---|---|
-| `approval.shown` | `{approval_id, kind: "action"\|"lease", task_id, tool, pkg, target, text, tier, reason, rule_of_two, summary, allowed_channels[], fingerprint_because, expires, escalated?}` (a lease has `apps, goal, caller` instead of pkg/text/rule_of_two). Sent again with `escalated: true` after `approval.escalate`. |
+| `approval.shown` | `{approval_id, kind: "action"\|"lease", task_id, tool, pkg, target, text, tier, reason, rule_of_two, summary, allowed_channels[], fingerprint_because, held_because, expires, escalated?}` (a lease has `apps, goal, caller` instead of pkg/text/rule_of_two). Sent again with `escalated: true` after `approval.escalate`. |
 | `approval.resolved` | `{approval_id, kind, task_id, tool, decision: approved\|denied\|timeout, approver, channel, reason}`; `approver` = `channel` = `fingerprint`/`tap`/`voice`/`reviewer`, `user` for a denial, `null` for a timeout or stop |
-| `guard.flag` | `{task_id, pkg, score, node_ids}`: a `screen.read` that Prompt Guard labelled MALICIOUS |
+| `guard.flag` | `{task_id, pkg, sender, snippet, score, node_ids}`: a `screen.read` or an arriving notification that Prompt Guard labelled MALICIOUS. Also written to the audit log (`tool: "guard.flag"`, `decision: "flagged"`). No pop-up. |
+| `notification.posted` | a `notifications.list` item, sent when a notification arrives or its text changes |
 | `task.state` | `{state: started\|paused\|running\|stopped, task_id, goal, apps, expires, steps, max_steps, untrusted, flagged, paused, caller, reason?}` |
 | `firewall.changed` | `{tool, pkg, target, ok}` |
+| `tracker.seen` | `{uid, domain, company, host}`: an app hit a tracker for the first time |
+| `tracker.blocked` | `{pkg, label, blocked: true\|false, domains, app: <trackers.list row>}` |
 | `audit.append` | the audit line just written (with `hash`) |
 
 Differences from ARCHITECTURE.md:
@@ -104,27 +118,28 @@ Differences from ARCHITECTURE.md:
 
 ## Policy, in one screen
 
-- **Lease:** every action except `firewall.*` needs an active task. The target app must be in the lease, the lease must not have expired or reached `max_steps`, and the task must not be paused.
+- **Lease:** every action except `firewall.*` and `notifications.*` needs an active task. The target app must be in the lease, the lease must not have expired or reached `max_steps`, and the task must not be paused.
 - **T4 (always blocked):**
   - packages: Settings, SystemUI, Magisk, the permission controller, the package installer, and AgentOS itself;
   - `offLimits` nodes (our windows);
   - password fields, typing on secure screens, and a locked phone;
-  - **P3:** typing text that contains a code read from the screen in this task (a canary `AGENTOS-CANARY-*`, a 6–8 digit OTP, or a 13–19 digit card number).
+  - **P3:** typing or replying with text that contains a code read from the screen in this task, or from any notification (a canary `AGENTOS-CANARY-*`, a 6–8 digit OTP, or a 13–19 digit card number).
 - **Rule of Two (per action):**
   - *untrusted*: this task has read the screen;
   - *private*: a messaging, mail, social, finance or store app (Buddy's list), or a secure screen;
   - *outward*: T3.
-  - Every T3 action needs a fingerprint. A T2 (type) needs one when *untrusted* and *private* are both true.
+  - Every T3 action needs an approval. A T2 (type) needs one when *untrusted* and *private* are both true.
 - **Leases (one tap).** Every `task.start` comes from a program, so the phone asks first: "Allow agent in Pigeon for 10 min?" (`LeaseCard`).
   - Only a real finger counts (`HumanTouch`). No answer within `approval_timeout_s` (default 60) = no. The volume-down kill switch also answers no.
   - A replacement by the same caller (same uid), for apps the user already allowed and while that grant runs, needs no new card. It can't extend the grant. `task.stop` ends the grant.
   - Off switch for automated tests, root-only: `files/settings.json` `{"require_user_lease": false}` (`tools-client.py settings …`). No RPC writes it; a missing or broken file means "on".
 - **Taint carry-over.** The task's history (`untrusted`, Prompt Guard `flagged`, `copied`, step count, P3 secrets) lives in a `History` object, like a hand stamp at a club.
   A new `task.start` by the same caller uid within the previous lease's TTL keeps it, even after a `task.stop`, so re-leasing can't wash it off. `task.start {untrusted:true}` also works.
-- **Risk-adaptive approvals** (`Broker.fingerprintRequired`, one small function): the riskier the action, the stronger the proof.
-  - A **fingerprint** is required when Prompt Guard flagged text in this task, or the agent typed text copied from third-party screen text (the same string, or a 12+ character piece of one: tainted arguments or a tainted recipient), or the action is money/delete/install (button label) or a firewall change, or all three Rule-of-Two lamps are lit.
-  - Otherwise the action is ordinary. A **real tap** on Approve is enough, and so are **voice** (`approval.confirm`, the user's own words via agentd or the launcher) and agentd's **reviewer** model. The reviewer is only ever offered on ordinary actions, so it can't approve anything tainted, flagged or high-stakes.
-  - `allowed_channels` is in `approval.shown`. The audit line records `allowed_channels`, `fingerprint_because`, `approver` (the channel) and `utterance` or `rationale`.
+- **Risk-adaptive approvals** (`Broker.channels`, one small function, founder policy 10-27): three steps.
+  - **Fingerprint only** for money and the like: pay, buy, purchase, place order, checkout, transfer, donate, subscribe, add to cart, install/uninstall, factory reset, deactivate (button label), and `vault.*` (saved passwords). `fingerprint_because` says why.
+  - **A person** (a real tap or the user's own "yes"; the reviewer may not) when the task is tainted: Prompt Guard flagged text, the agent typed or replied with text copied from untrusted content (the same string, or a 12+ character piece of one), or all three Rule-of-Two lamps are lit (e.g. a reply in WhatsApp/Discord to a notification). `held_because` says why.
+  - Everything else is **ordinary**: a tap, voice, or agentd's **reviewer** auto-approves. Firewall changes and deletes are ordinary now (the reviewer may still ask for a tap).
+  - `allowed_channels` is in `approval.shown`. The audit line records `allowed_channels`, `because`, `approver` (the channel) and `utterance` or `rationale`.
   - Tapping an existing contact in a list doesn't taint the recipient. The user sees the card (or hears agentd's summary) before approving.
 - **Approval:** the card shows tool, app, exact target label, exact text, task, tier, reason and the three chips.
   1. **Approve** approves at once when `tap` is allowed. Otherwise it opens `ApproveActivity`. A fingerprint unlocks the Keystore key, which signs the canonical action JSON `{"tool","pkg","target","text","task_id","nonce"}` (in that order) with `SHA256withECDSA`, i.e. ECDSA over SHA-256 of those bytes.
@@ -144,13 +159,25 @@ The pill is like a taxi's roof light: it shows what the agent is doing right now
 - `task.start` → orange "working" pill, "Starting". Each action → its step ("Tapping “Send”", "Typing in Pigeon", "Opening Pigeon"). The ring is the share of `max_steps` used.
 - Pause → grey "Paused". Stop (RPC, island Stop, volume-down) → the island hides.
 - An approval opens the card; the reviewer approving it shows the green "Auto-approved ✓" moment (tap it for the rationale), then the step pill returns.
-- `guard.flag` during a task → the red alert card, once per task and sender (e.g. "Pigeon · Unknown number"), never over an open approval. OK closes it; Block stops the task.
+- `guard.flag` → no pop-up (founder, 10-27). The hit is audited and sent as an event; the launcher's log shows it, and the task now needs a person (not the reviewer) for every send.
 
 ### Firewall reversal
 All rules live in one chain, so undoing them is simple:
 - `firewall.clear` (needs a fingerprint);
 - or, as root: `iptables -w -F AGENTOS_FW; ip6tables -w -F AGENTOS_FW`;
 - to remove the chain completely: `for t in iptables ip6tables; do $t -w -D OUTPUT -j AGENTOS_FW; $t -w -F AGENTOS_FW; $t -w -X AGENTOS_FW; done`.
+- the radar's own chain (`AGENTOS_SNI`) only copies packets (NFLOG), never drops them; the same loop with `AGENTOS_SNI` removes it.
+
+### Tracker radar (`Trackers`)
+Every HTTPS connection starts with a "ClientHello" that names the server in plain text (SNI), like the address on an envelope.
+- **Seeing:** a root rule in `AGENTOS_SNI` (`--dport 443`, string `|160301|` with `--algo kmp`; `bm` silently missed these) copies just those first packets to NFLOG group 42. The kernel tags each with the sending app's uid. A root `tcpdump -i nflog:42 -w -` streams them to the app, which reads the name and looks it up in `res/raw/trackers.txt` (476 domains → company; Exodus Privacy signatures plus hand-added SDK hosts like `appsflyersdk.com`, `app-measurement.com`).
+- **Why not DNS:** Android's resolver sends every app's lookup itself, as root, so DNS can't tell which app asked (tried: every query showed uid 0).
+- It's always on (started with the broker), so it already knows what an app did since it opened. Hits are kept in `files/trackers.json`. An app's own company doesn't count (the Facebook app → facebook.com).
+- **Blocking:** `Firewall.names()` adds, per app, `-p tcp -m owner --uid-owner U -m string --string <domain> --algo kmp -j REJECT --reject-with tcp-reset`. It matches the SNI or HTTP Host whatever the IP is, so blocks hold through IP rotation and CDNs (this fixes the old httpbin miss). While an app has any name rule, its QUIC (UDP 443) is rejected too, so it falls back to TCP where names are visible. Domains are checked against `[a-z0-9-]+(\.[a-z0-9-]+)+` before they reach the shell: the root command is a fixed template.
+- **Speed (phone, 10-27):** detection is live (no polling). `trackers.list` / `trackers.scan {seconds:0}` take 10–50 ms (0.45 s for the first call after start). Block or unblock with a voice approval: about 4 s end to end, most of it the test script's adb/su.
+- **Verified on the phone (10-27):** 1Weather (`com.inmobi.weather`): AppsFlyer, MoEngage, Google Firebase. Spotify: Facebook, Branch, Google Crashlytics, Google Firebase, Google Ads, comScore. Discord: AppsFlyer. After `trackers.block` (voice approval), a relaunch got 20 tracker connections rejected (1Weather) and 10 (Spotify) over IPv4 and IPv6, and both apps still loaded normally. `trackers.unblock` removed every rule; `firewall.set block httpbin.org` now writes name rules, and `allow` removes them.
+- **Demo apps:** Spotify (best: well known, 6 companies, keeps working) and 1Weather (still on its first-run location screen; set a location once so it shows weather and ads).
+- **Limits:** rules are lost on reboot (the radar comes back, blocks don't). Encrypted ClientHello (ECH) or QUIC-only traffic would hide names; Android 13 apps don't use ECH, and QUIC is cut while blocking. A name rule also resets an app's plain-HTTP request whose body contains that domain. `pkg` defaults to the top app window; pass `pkg` if a full-screen AgentOS activity is in front.
 
 Loopback is never filtered (`-o lo -j RETURN`), so agentd can always reach :7777.
 
@@ -225,6 +252,12 @@ Detection on our Pigeon app (`am start -n local.agentos.pigeon/.Main --es scenar
 
 ## What works / known limits
 
+### Notification feed (2026-10-27, `tools-client.py notifs`, final APK)
+- Test chat message → `notification.posted` in 0.4–0.5 s, Prompt Guard scored (0.001 BENIGN). `notifications.list` returns 20+ real notifications (Calendar, Google, Spotify...) plus the foreground app.
+- Direct reply: card "Reply to Alice?" with `held_because: all three Rule-of-Two lamps are lit`; the reviewer is refused, a spoken "send it" works; the app receives the reply (its notification updates with our message) **0.8 s** after the call.
+- P3: a reply containing a code that arrived by notification → blocked. A reply copied from the message → held for a person. Standing auto-reply: one "yes", then a matching reply goes out with no card in **0.02 s**.
+- After a process restart the listener re-seeds; Prompt Guard needs ~5 s to load, so early notifications are scored in the background (never blocks `notifications.list`).
+
 ### Integration run (Moto G 5G 2023, 2026-10-27)
 - A real agentd turn (Codex, `node cli.js` in Termux): lease card tapped → `screen.read` → `type "Yes, on my way."` → `tap "Send"`. The card showed the exact message. agentd's reviewer answered `fingerprint`, called `approval.escalate`, the card redrew as "Fingerprint required", and it graded the re-sent `approval.shown` only once. The island hid when the turn stopped the task.
 - With `tools-client.py`: a second lease card right after a timeout opened and took the tap; the reviewer approval showed "Auto-approved ✓" and then the step pill again; the canary in Pigeon's list raised one alert ("Pigeon · Unknown number") over three reads; after a card closed during a pill re-fit, the window was back to pill size (420×72 px); `approvals` passed with no wait between cards.
@@ -260,7 +293,7 @@ Known limits:
 - "Copied from the screen" is a string match. A paraphrase gets past it; Prompt Guard and the lamps are the other layers.
 - The BiometricPrompt text is drawn by our app, not by secure hardware. A compromised *app process* could show one thing and sign another. Android Protected Confirmation isn't used.
 - Root (the referee) is above all of this. The signatures make tampering evident; they can't prevent it.
-- Domain firewall rules resolve to IPs once, at set time, so they miss CDNs and IP changes. The SNI string match from `research/04` 3c isn't implemented.
+- `firewall.set allow`+domains (allow only these) still resolves names to IPs once, at set time. Domain *blocks* match names (see "Tracker radar").
 - A fingerprint prompt closes when its request ends (timeout, Deny, Stop). A late signature for a finished request is ignored.
 - If root is unavailable, FLAG_SECURE can't be checked, so every screen counts as secure: typing is blocked and taps need approval.
 - Taint is coarse. Any `screen.read` during a task marks it untrusted (honest for a phone agent, which is almost always A+B+C).

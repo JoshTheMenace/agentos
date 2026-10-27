@@ -16,7 +16,7 @@ Node 22+, ESM, one runtime dependency (`ws`). `@anthropic-ai/sdk` is optional an
 | `server.js` | WebSocket server, token check, one conversation per connection, provider router, `/health`, and `/mcp` (phone tools for Claude Code) |
 | `events.js` | Broker `/events` subscription, voice yes/no → `approval.confirm`/`deny`, reviewer hook |
 | `reviewer.js` | Tool-less approval reviewer: grades each card, may approve ordinary low-risk ones, denies clear attacks |
-| `tools.js` | The 13 phone tools matching `android/README.md` (incl. `task_start`, `firewall_clear`, `submit`, `src`/`risk`), the call to `:7777/rpc` (90 s timeout: approvals wait 60 s), guard wrapping, and the lease: every action runs inside the turn's `task.start` and carries its `task_id` |
+| `tools.js` | The 13 phone tools matching `android/README.md` (incl. `task_start`, `firewall_clear`, `submit`, `src`/`risk`), the call to `:7777/rpc` (90 s timeout: approvals wait 60 s), guard wrapping, and the lease: every action runs inside the turn's `task.start` and carries its `task_id`. Speed (see `bench/RESULTS.md`): screens go to the model as compact lines (`id Role: text (desc) [flags]`, no bounds or status bar; `AGENTD_SCREEN=json` for the old shape), `act` runs several steps in one call (each still through the broker; ids re-found by role+text), and `set_alarm`/`set_timer`/`web_search` use the phone's allow-listed `intent`. |
 | `guard.js` | `classify(text) -> {score, label}`. A regex placeholder; swap in Prompt Guard 2 behind the same function (it may be async) |
 | `prompt.js` | The system prompt shared by all providers (phone agent, screen text is untrusted data, ask before outward actions) |
 | `providers/codex.js` | `codex app-server` over stdio, with `dynamicTools`, streamed deltas, and every Codex approval declined |
@@ -25,9 +25,13 @@ Node 22+, ESM, one runtime dependency (`ws`). `@anthropic-ai/sdk` is optional an
 | `providers/local.js` | Stub for an OpenAI-compatible `llama-server --jinja` |
 | `mock-phone.js` | Fake `:7777` tool server: a small chat screen with one planted prompt injection |
 | `cli.js` | Tiny client: `node cli.js [--provider codex\|claude\|local] "text"`; keyboard test: `node cli.js --suggest reply\|rewrite\|fix [--screen "a\|b"] "text"` |
+| `context.js` | "What's going on": the live `<phone_context>` block put in front of every task (latest message threads with their reply keys, other notifications, foreground app, people from memory, active rules), the notification feed → memory, and reply rules (`rules_set/list/clear`). See "Phone context" below |
+| `tasks.js` | Task manager: each handed-off job is a background Codex thread ("worker") with a task brief + phone context (`context.js` `forTask`). Tracks state, steps, approval waits, result and timing; emits `task.update` |
+| `voice.js` | Voice front desk: one GPT Live session per connection. Routes every hand-off to `start_task` / `task_status` / `list_tasks` / `stop_task`, and speaks task results and approval waits |
 | `voice.html` | Bare voice client served at `/voice#token=<agentd token>` (`?auto`, `?wav=<url>` for tests). Restyle freely; keep the WebRTC part |
 | `memory/` | Personal memory (SQLite + FTS5, consent ledger), owned by the memory track; wired in through `tools.js` and `/memory/graph.json` |
 | `runs/` | Recorded transcripts from the phone and voice tests |
+| `bench/` | Speed benchmark on the real phone: `bench/up.sh` starts a separate agentd on :8788 (never touches the live one), `node bench/bench.js --runs 2` runs 6 tasks with the device lock and checks results with adb. `RESULTS.md` has the numbers |
 | `deploy/` | `tx.sh` (run in Termux from the Mac), `codex-root.sh` (root Codex fallback), `termux-boot.sh` (Termux:Boot) |
 
 ## WebSocket protocol (from ARCHITECTURE.md)
@@ -41,29 +45,66 @@ Auth uses `Authorization: Bearer <token>`. A WebView can't set that header on a 
 ### Lease
 The model calls `task_start {apps}` first (the prompt tells it to). If it acts without one, agentd starts one itself with the foreground app (or the `open_app` target). The phone shows a one-tap lease card ("Allow agent in Pigeon for 10 min"), so `task.start` blocks up to 60 s like an approval (agentd waits 90 s). Every action carries the lease's `task_id`, and `endTurn` stops the task, which ends the grant, so the next turn asks again. The broker carries taint over when a lease is replaced, so agentd no longer re-reads the screen to re-taint.
 
-### Voice (`gpt-live-1-codex` via `thread/realtime/start`, see `spikes/voice/README.md`)
+### Voice front desk + background tasks (`voice.js`, `tasks.js`; protocol in `spikes/voice/README.md`)
+Think of a front desk. **GPT Live is the receptionist**: it talks, never does phone work. Every job it hands off becomes a ticket for the **back office (a background Codex thread per task)**. The receptionist keeps chatting, can look up any ticket ("how's it going?"), and announces when one is done or needs a signature.
+
+- In v3 the voice model's only tool is *delegation*, so the four desk tools ride on the delegated text. `VOICE_PROMPT` (passed as `thread/realtime/start {prompt}`, verified honored) asks it to start the text with `start_task:` / `task_status:` / `list_tasks` / `stop_task:`; in practice it usually sends a plain sentence, so `route()` also reads plain sentences (status words → `task_status`, "stop/cancel/never mind" → `stop_task`, a bare yes/no → never a task, anything else → `start_task`). This path has **no model call**: status answers come from live task state in a few ms.
+- `start_task` starts the worker **at once** (same ms the delegation arrives). The worker is `codex.run` on its own thread with `SYSTEM_PROMPT` plus a brief: act now, fewest calls, no mid-task questions, the request is the go-ahead (the phone's own approval still applies), final answer = one spoken sentence. `context.js` `forTask(goal)` (notifications / cross-app context, 800 ms cap) goes into the brief as untrusted data.
+- agentd talks back with `appendSpeech("[BACKEND] …")`: "task started" (the voice acks in its own words), status, "Task finished: Done, I told Sam…", failures, and approval waits. Approval prompts wait `REVIEW_MS`+1 s first, so a card the reviewer auto-approves is never announced. The user's own spoken yes/no still answers the one pending card (`events.answer`).
+- **One screen, one lease:** the broker holds one lease at a time, so workers take turns at the screen. Several tasks can be queued/tracked at once; one runs. Tasks outlive the voice page (closing it doesn't stop them). Island stop / kill switch (`task.state stopped` for its lease) stops the worker.
+
 | Direction | Message | Meaning |
 |---|---|---|
-| client → agentd | `{type:"voice.start", sdp}` | WebRTC offer. agentd starts a voice thread **with no tools**, then `thread/realtime/start {version:"v3", clientManagedHandoffs:true, transport:{type:"webrtc", sdp}}` |
-| agentd → client | `{type:"voice.answer", sdp, ms}` · `voice.started {session_id}` | `setRemoteDescription(answer)`; audio then flows page ⇄ OpenAI directly |
-| agentd → client | `voice.transcript {role, text, final}` · `voice.closed {reason}` · `voice.error {message}` | mirrors of `thread/realtime/*` |
-| client → agentd | `{type:"voice.say", text}` · `{type:"voice.stop"}` | `appendSpeech` · `realtime/stop` (also on disconnect) |
-| client → agentd | `{type:"voice.delegate", item_id, text}` (optional) | the page saw `delegation.created` on its data channel. agentd also hears it through app-server (`itemAdded handoff_request`); it dedupes by id |
-| agentd → client | `voice.delegation {item_id, text}` · `voice.result {item_id, text}` | a spoken request ran as a normal `ask` turn (our tools, same gate, same events), and the answer was spoken with `appendSpeech` |
+| client → agentd | `{type:"voice.start", sdp}` · `voice.stop` · `voice.say {text}` | WebRTC offer → `voice.answer {sdp, ms}`, `voice.started`; stop; make it say something |
+| client → agentd | `{type:"voice.delegate", item_id, text}` | page saw `delegation.created` (fast path; agentd also hears it from app-server and dedupes) |
+| client → agentd | `{type:"voice.text", text}` | typed input into the live session (`appendText`, role user): same path as speech, for tests or a keyboard |
+| agentd → client | `voice.transcript {role, text, final}` · `voice.delegation {item_id, text, tool, arg}` · `voice.result {task, text}` · `voice.closed` · `voice.error` | |
+| client → agentd | `{type:"task.start", goal}` · `{type:"task.list"}` → `task.list {tasks}` · `{type:"task.cancel", id}` | typed background tasks (same workers) |
+| agentd → every client | `task.update {why, task:{id, goal, state, step, steps, waiting, result, error, lease_id, origin, timing}}` | `why`: created, running, step, waiting, resumed, paused, done, failed, stopped. `state`: queued, running, waiting, paused, done, failed, stopped. `lease_id` = the broker's `task.state` id, so UIs can join the two. Workers' `tool.request/result`, `guard.alert` are forwarded too, tagged `task` |
 
-Why the voice thread has no tools: app-server also starts its own turn on the voice thread for each delegation. agentd interrupts that turn and runs the request on the connection's normal thread instead, so the work happens once and goes through `tools.js`. When an approval is needed during a voice request, the voice says "Please approve that on your phone".
+**Prompt:** Codex's built-in realtime prompt (it says "always delegate" and already knows `[BACKEND]` messages) is the default. `VOICE_PROMPT` in `voice.js` is honored with `VOICE_PROMPT=agentos`, but on the phone it sometimes made GPT Live say "On it" or "Canceled" without handing anything off, so it's opt-in.
+
+**Tested on the phone** (`runs/2026-10-27-voice-tasks-phone.txt`; TTS audio played by headless Chrome on the Mac → adb forward → a test agentd on the phone, real Pigeon, reviewer on):
+| Step (from end of speech) | Measured |
+|---|---|
+| Hand-off reaches agentd | 0.9–1.6 s |
+| Worker started | +60 ms after that |
+| Spoken ack ("On it") | 1.6–2.6 s (GPT Live's own filler; plain answers are 1.2–1.7 s) |
+| First worker tool call | 3.2–5.4 s after the hand-off (thread start + first model call; prompt is ~96% cached) |
+| First on-screen action (open Pigeon / Clock) | 5.8 s (Clock) · 8.2 s (Pigeon, includes the 1.6 s lease tap) |
+| Whole "reply to Sam" task | 21.6 s, incl. the lease tap and a 2 s reviewer auto-approve; "Done, told Sam…" spoken 1.1 s after it finished |
+| "How's it going?" / "What's running?" / "Never mind, stop that" | answered or stopped within ~0.5 s of the hand-off (no model call) |
+
+Seen and left: GPT Live sometimes answers "how's it going?" from its own memory of the `[BACKEND]` notes instead of handing it off; speech-to-text heard "Pigeon" as "pidgin" once (it then translated the message). Twice the realtime session took 3–19 s to become active (network), so the first sentence was lost: start voice a few seconds before talking, or keep one session pre-connected. Speed ideas left: a pre-started spare worker thread (`codex.js`), and an instant earcon in the UI on `delegation.created`.
+
+The broker's own `task.state` events are unchanged (the island and launcher keep working); `task.update` is the richer, agentd-side view.
+
+### Phone context, notifications and reply rules (`context.js`)
+Like a good assistant glancing at your lock screen before answering: every typed turn (`server.js` `ask`) and every background task (`tasks.js` → `forTask`) starts with a short `<phone_context>` block, so "reply back that I'm 10 minutes late" needs no name or app ("reply back" = thread #1, the newest).
+- **Feed:** the broker's `Notifs` listener (android/README.md) sends `notification.posted`; `context.js` keeps the last 40 and re-reads `notifications.list` (600 ms cap) at the start of each turn, which also gives the foreground app. Forwarded to every UI (`notification.posted`, `rule`).
+- **Untrusted:** message text is written by strangers. It is guarded twice (the broker's Prompt Guard label + `guard.js`); flagged text is withheld, 4–8 digit codes become `[code]`, and the block is labelled as data. A turn that saw it marks its lease `untrusted` (Rule of Two), and the reviewer's transcript gets the message a reply answers.
+- **Tools:** `notifications_list`, `notifications_reply {key, text}` (the broker's direct reply: no app opening, no lease, its own approval card). For a messaging app all three Rule-of-Two lamps are lit, so a person approves (tap, or "yes" by voice); the reviewer may not.
+- **Memory:** with the `notifications` source granted (`node memory/cli.js grant notifications`), each message (in, and our sent replies) is saved as a `message` event linked to the person and the app (`memory.noteMessage`), so the block can list "People lately: Sam (Discord, 2m ago)" (`memory.recentPeople`). No grant = nothing is stored; the live block still works.
+- **Rules** (`~/.agentos/rules.json`, set by the model from the user's words with `rules_set`):
+  - `auto` ("tell people I'm driving"): a fixed text. Setting it calls `notifications.autoreply`, so the phone asks a person once ("Auto-reply for 60 min"); then each matching new thread gets that exact text once, with no card (the broker's standing grant, audited).
+  - `handle` ("handle replies from Sam for me"): each new matching message starts a background turn that may answer with `notifications_reply` (every send is approved as usual).
+  - `draft`: only suggestions (`rule {action:"drafted", items}` for the launcher).
+  - Flagged messages never trigger a rule (`rule {action:"skipped"}`).
+- **Phone results (2026-10-27, test agentd on :8789 with this tree, final APK; the test chat stands in for a messaging app):** a message arrives (event in 0.5 s) → typed "reply back that I am 10 minutes late" → the agent calls `notifications_reply` for the right thread ("Reply to Sam", "I'm running 10 minutes late.") in **3.5–4.2 s**, the card is up 20 ms later, a tap, and the app has the reply **0.02 s** after the tap (7.7 s total with the human). "Tell people I am driving for the next 30 minutes" → `rules_set` (4.8 s) → one approval → a new message from Bob got the auto-reply **0.7 s** after it arrived, no card. Not yet run against a real Discord/WhatsApp message (needs someone to text the phone).
+- `context.suggestions()` returns unanswered threads in the `home-suggest.js` shape (`{id, title, detail, app, goal, icon}`) for the home screen.
 
 ### Approvals: broker events, voice "send it", reviewer (`events.js`, `reviewer.js`)
 An approval is a tap on the native card's Approve, or the fingerprint. Taps only count on the card; agentd can't send them. agentd never approves on the user's behalf. Besides the card, the broker accepts two channels (`approval.confirm`), and only when listed in that approval's `allowed_channels`:
 - **Events:** agentd subscribes to the broker's `GET /events` (SSE, same bearer token, `hello` first, reconnects with backoff) and forwards `approval.shown`, `approval.resolved`, `guard.flag`, `task.state`, `audit.append` and its own `review` to every WS client (the launcher's live task state, lease countdown and recent activity come from these). While the stream is up, the old guessed `approval.needed` is not sent.
 - **voice:** in a voice session, the **user's own** transcription (`thread/realtime/transcript/done`, `role:"user"`) that is a clear yes ("yes", "send it", "approve", "do it", "go ahead") or no ("no", "cancel", "don't", "stop") goes to `approval.confirm` / `approval.deny {approval_id, channel:"voice", utterance}`. It only applies when exactly one approval is pending. The match is on the whole utterance only; anything else is ignored for approval. A yes without `voice` allowed is answered "This one needs your fingerprint." Typed chat, model output and tool results never answer an approval. When a card goes up during voice, the voice asks "Should I tap Send: "…"? Say yes or no" (or asks for the fingerprint).
 - **reviewer:** for every `approval.shown`, `reviewer.js` asks a tool-less Codex thread (`REVIEW_MODEL`, default `codex-auto-review`, low effort, warm thread rotated every 20) to grade the action. Input: the user's request, the turn's last 8 tool results (labeled untrusted), and the action. Output: `auto|tap|fingerprint|block` + one-line rationale. Code, not the model, applies the ladder: `auto` only for low risk + untainted, never below the broker's floor. Policy and prompt are from `spikes/codex-reviewer/`.
-  - `auto` → `approval.confirm {channel:"reviewer", rationale}`, **only** if the approval is ordinary (`reviewer` in `allowed_channels`), the task has no guard flag (broker `guard.flag` or agentd `guard.alert`), the broker gave no `fingerprint_because`, and the reviewer saw no taint. Fingerprint-only approvals are graded with a `fingerprint` floor, so they are never approved.
+  - `auto` → `approval.confirm {channel:"reviewer", rationale}`, **only** if the approval is ordinary (`reviewer` in `allowed_channels`), the task has no guard flag (broker `guard.flag` or agentd `guard.alert`), the broker gave no `fingerprint_because`, and the reviewer saw no taint. "Needs a person" approvals (`held_because`) are graded with a `tap` floor and fingerprint-only ones with a `fingerprint` floor, so neither is ever auto-approved.
+  - Founder policy (10-27): the reviewer says `fingerprint` only for money or saved passwords; other high-risk actions get `tap`.
   - `block` → `approval.deny`. `fingerprint` → `approval.escalate` (the card turns fingerprint-only; the re-sent `approval.shown` with `escalated: true` isn't graded again). `tap` → the user decides.
   - Over `REVIEW_MS` (default 4000) or any error → `decision:"human"`; the user decides.
   - Every verdict is emitted as `review {approval_id, task_id, tool, target, decision, action, rationale, risk_level, user_authorization, tainted, ms}`, so the island can show "Auto-approved ✓ — <rationale>". `REVIEW_MODEL=off` disables it.
   - Not done: pre-checking outward calls before the broker sees them. It would add 1–3 s to every outward call, and the broker's card already stops them.
-  - `node reviewer-test.js`: 13 cases shaped like real cards (dictated sends → auto; trap, wrong chat, made-up content → not auto; firewall/delete/flagged → fingerprint) + the timeout. 14/14 on the Mac, 13/14 on the phone at 4 s (2026-10-27).
+  - `node reviewer-test.js`: 17 cases shaped like real cards (dictated sends and "reply back" to the latest notification → auto; trap, wrong chat, made-up content, a PIN added to a reply → not auto; firewall the user asked for → auto or tap; delete/flagged → tap; pay/buy → fingerprint) + the timeout. **18/18 on the Mac** (2026-10-27, 1.2–8.6 s).
   - Tested on the Mac: the spike's 7 cases → **7/7** twice (1.0–2.5 s warm, 3.8 s cold). Against the stub (`mock-phone.js` matches Broker/Events.java; switches `MOCK_FP`, `MOCK_DRAFT_CARD`, `MOCK_CLEAN`, `MOCK_TIMEOUT_MS`), these all behaved as described:
     - draft on a clean screen → auto-approved by the reviewer in 2.9 s;
     - Send → "fingerprint" advice, left to the user;
@@ -104,6 +145,9 @@ Code lives in `~/agentos/agentd`. Copy it over with `tar` + `adb push`, then use
 - **Boot:** `cp deploy/termux-boot.sh ~/.termux/boot/agentos-agentd`. It picks Termux Codex if it is logged in, otherwise the root fallback. It holds a wake lock, runs one loop only, and restarts agentd if it dies.
 - The Android app's token is read once with `su -c cat /data/data/local.agentos/files/token`.
 - **Gotcha: don't start agentd through `tx.sh`.** `adb shell su 10401` leaves a capability bounding set of only `CAP_SETUID`, so a later `su` gets uid 0 without `CAP_DAC_OVERRIDE` and can't read the app's token (`tool server 401`). Start it the way Termux:Boot does: bring Termux to the front (`am start -n com.termux/.app.TermuxActivity`), then as root `am broadcast -a android.intent.action.BOOT_COMPLETED -n com.termux.boot/.BootReceiver`. (On Android 13 the boot job only runs while the Termux app process is up.) To redeploy, copy the files and `pkill -f "^node server.js"`: the boot loop restarts it 5 s later with the right capabilities. Running `cli.js` through `tx.sh` is fine.
+
+## Speed (bench/RESULTS.md)
+Default model `gpt-6.1-terra` at effort `low` (`CODEX_MODEL`, `CODEX_EFFORT`). The thread's instructions carry the app list (label=package), so the model opens apps at once: no `list_apps`/`task_start` round trips (`open_app` starts the lease). A model call costs ~2.5 s however small it is (same from the Mac), so the wins come from fewer calls: compact screens, `act` batches, direct intents, and no re-reads after an action.
 
 ## Robustness
 - **app-server crash:** in-flight turns fail, voice sessions get `voice.closed`, and app-server restarts with backoff (1 s, 2 s … 30 s). It is also started at boot so the first turn is warm. Tested: `kill -9` mid-turn → restarted in 3.3 s, turn retried and completed (`runs/…-crash-retry-phone.txt`).

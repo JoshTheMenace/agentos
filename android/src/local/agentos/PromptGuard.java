@@ -32,7 +32,7 @@ final class PromptGuard {
     private static final int WINDOW = 510, BATCH_TOKENS = 4096; // 512 positions minus [CLS]/[SEP]; tokens per batch
     // Fragments under 3 tokens (names, times, button labels) aren't scored alone: PG2-22M is unreliable on them
     // ("Unknown number" scores 0.98 even in fp32). They still count inside the whole-screen score.
-    private static final int MIN_TOKENS = 3;
+    private static final int MIN_TOKENS = 3, LABEL_TOKENS = 8;
     private static File[] dirs = {};
     private static OrtEnvironment env;
     private static OrtSession session;
@@ -102,8 +102,12 @@ final class PromptGuard {
                 JSONObject n = nodes.getJSONObject(i);
                 String t = (n.optString("text") + "\n" + n.optString("desc")).trim();
                 if (!n.optString("src").startsWith("APP:") || t.isEmpty() || t.equals("(hidden: secure screen)")) continue;
+                int len = tok.encode(t).length;
+                // A short label on a text-less button ("History mode off", "delete", "all clear") is the app's own chrome, and
+                // PG2-22M reads a list of them as commands (Calculator scored 0.99). Skip them everywhere; sentences still count.
+                if (n.optString("text").isEmpty() && String.valueOf(n.optJSONArray("actions")).contains("click") && len < LABEL_TOKENS) continue;
                 all.append(t).append('\n');
-                if (tok.encode(t).length < MIN_TOKENS) continue;
+                if (len < MIN_TOKENS) continue;
                 scored.add(n);
                 texts.add(t);
             }

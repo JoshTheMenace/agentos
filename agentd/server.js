@@ -10,6 +10,10 @@ import { endTurn, rpc, tasks } from './tools.js';
 import * as memory from './memory/index.js';
 import * as events from './events.js';
 import * as reviewer from './reviewer.js';
+import * as context from './context.js';
+import * as taskman from './tasks.js';
+import { Voice } from './voice.js';
+import * as homeSuggest from './home-suggest.js'; // TODO(context): context.js replaces this stand-in
 import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
 import { ClaudeCli, handleMcp } from './providers/claude-cli.js';
@@ -20,7 +24,9 @@ const cli = new ClaudeCli();
 const codex = new Codex();
 const providers = Object.fromEntries([codex, cli.available() ? cli : new Claude(), new Local()].map((p) => [p.id, p]));
 if (cfg.provider === 'codex') codex.ready().catch(() => {}); // warm start; it also restarts itself if it crashes
+taskman.init(codex); // background workers for voice (and typed task.start); see tasks.js
 events.watch(); // broker approvals/guard/task events -> every connected UI
+context.start(providers[cfg.provider], codex); // notification feed -> context block, memory, reply rules
 if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approval card; see reviewer.js for what it may do
   const turn = tasks.get(a.task_id);
   reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size }, events.publish);
@@ -28,7 +34,7 @@ if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approv
 if (cfg.reviewModel !== 'off') reviewer.grade(codex, { user: ['warm-up'], transcript: [], action: { tool: 'scroll' } }, 60_000); // first real review is warm (<4 s)
 // UI passthrough to the tool server, so the launcher needs no :7777 token. Read/UI methods only; approvals are never here
 // (firewall.set is allowed because the broker still puts up its fingerprint card for it).
-const UI_RPC = { 'audit.tail': 10_000, 'approval.list': 10_000, 'firewall.list': 10_000, 'firewall.set': 90_000, 'task.pause': 10_000, 'task.resume': 10_000, 'task.stop': 10_000 };
+const UI_RPC = { 'audit.tail': 10_000, 'approval.list': 10_000, 'firewall.list': 10_000, 'firewall.set': 90_000, 'task.pause': 10_000, 'task.resume': 10_000, 'task.stop': 10_000, 'trackers.list': 10_000 };
 const VOICE_PAGE = new URL('./voice.html', import.meta.url);
 const TOKEN = Buffer.from(agentdToken());
 const PROTO = 'agentos.bearer.'; // browsers/WebViews can't set headers on a WebSocket, so they may send the token as a subprotocol
@@ -59,18 +65,8 @@ wss.on('connection', (ws) => {
   const session = {}; // per-connection conversation state (codex thread, claude history, ...)
   let active = null;  // {provider, abort}
   const send = (m) => ws.readyState === 1 && ws.send(JSON.stringify(m));
-  const say = (text) => session.voice && codex.voiceSay(session.voice, text).catch(() => {});
-  const offEvents = events.onEvent((e) => {
-    if (!events.FORWARD.has(e.type)) return;
-    send(e);
-    if (e.type === 'approval.shown') say(events.prompt(e));
-  });
-  // The user's own spoken words that answer the pending approval (null = not an answer; it goes on as normal input).
-  async function approvalAnswer(text) {
-    const a = await events.answer(text, 'voice');
-    if (a) { send({ type: 'approval.answer', ...a }); say(a.text); }
-    return a;
-  }
+  const voice = new Voice(codex, send); // voice front desk: hands spoken jobs to background tasks (voice.js)
+  const offEvents = events.onEvent((e) => events.FORWARD.has(e.type) && send(e));
 
   // One model turn (typed, or a voice delegation). Resolves with the final text, or null if busy/unavailable.
   async function ask(text, provider, emit = send) {
@@ -82,7 +78,9 @@ wss.on('connection', (ws) => {
     active = { p, abort };
     const ctx = { provider: p.id, emit: (m) => { if (m.type === 'text.delta') said += m.text; emit(m); }, signal: abort.signal, turn };
     let r;
-    try { r = await p.run(session, turn.goal, ctx); }
+    const c = p.id === 'local' ? null : await context.block(); // "what's going on" (untrusted notifications etc.)
+    if (c) turn.log = c.log; // the reviewer sees which message "reply back" answers
+    try { r = await p.run(session, c ? `${c.text}\n\n${turn.goal}` : turn.goal, ctx); }
     catch (e) { r = { status: abort.signal.aborted ? 'interrupted' : 'failed', error: e.message }; }
     await endTurn(turn);
     active = null;
@@ -91,35 +89,8 @@ wss.on('connection', (ws) => {
     return r.text || said || (r.error ? `Sorry, that failed: ${r.error}` : '');
   }
 
-  // A spoken request the voice model handed off. It runs as a normal turn (our tools, same gate), then the voice says the answer.
-  const delegations = new Set();
-  async function delegate(itemId, text) {
-    if (!text || delegations.has(itemId)) return; // the page and app-server's sideband may both report it
-    delegations.add(itemId);
-    if (events.pending.size) { // the voice model may hand off a spoken "yes": the user's transcript answers it, not this
-      const t = Date.now();
-      return setTimeout(() => events.state.answeredAt < t && say('I am waiting for your approval. Say yes or no, or use your fingerprint.'), 3000);
-    }
-    send({ type: 'voice.delegation', item_id: itemId, text });
-    if (active) return say('I am still working on the last request.');
-    const emit = (m) => { send(m); if (m.type === 'approval.needed') say('Please approve that on your phone with your fingerprint.'); };
-    const answer = await ask(`(Spoken request: reply in one or two short sentences, it will be read aloud.) ${text}`, undefined, emit);
-    if (answer) { send({ type: 'voice.result', item_id: itemId, text: answer }); say(answer); }
-  }
-
-  function onVoice({ method, params: p }) { // realtime notifications for this connection's voice thread
-    if (method === 'thread/realtime/started') send({ type: 'voice.started', session_id: p.realtimeSessionId });
-    else if (method === 'thread/realtime/transcript/done') {
-      send({ type: 'voice.transcript', role: p.role, text: p.text, final: true });
-      if (p.role === 'user') approvalAnswer(p.text); // the user's words only, never the voice model's
-    }
-    else if (method === 'thread/realtime/itemAdded' && p.item?.type === 'handoff_request') delegate(p.item.handoff_id, p.item.input_transcript);
-    else if (method === 'thread/realtime/error') send({ type: 'voice.error', message: p.message ?? JSON.stringify(p) });
-    else if (method === 'thread/realtime/closed') { session.voice = null; send({ type: 'voice.closed', reason: p.reason }); }
-  }
-
   // Keyboard suggestions (local.agentos.keys). Only the newest id counts: a new request cancels the old one.
-  let suggesting = null;
+  let suggesting = null, offSuggest = null; // offSuggest: home suggestions feed (home-suggest.js)
   async function suggest(m) {
     suggesting?.abort();
     const abort = (suggesting = new AbortController()), t0 = Date.now(), reply = (x) => !abort.signal.aborted && send({ type: 'suggestions', id: m.id, ...x, ms: Date.now() - t0 });
@@ -146,29 +117,22 @@ wss.on('connection', (ws) => {
         active.abort.abort();
         return active.p.stop?.(session);
       case 'suggest': return suggest(msg);
+      case 'suggestions.watch': return (offSuggest ??= homeSuggest.watch(send, events.onEvent));
       case 'rpc': { // {id, method, params} -> {type:"rpc.result", id, method, result}
         const ms = UI_RPC[msg.method];
         if (!ms) return send({ type: 'rpc.result', id: msg.id, method: msg.method, result: { ok: false, error: 'method not allowed' } });
         const result = await rpc(msg.method, msg.params && typeof msg.params === 'object' ? msg.params : {}, ms).catch((e) => ({ ok: false, error: e.message }));
         return send({ type: 'rpc.result', id: msg.id, method: msg.method, result });
       }
-      case 'voice.start': { // {sdp}: WebRTC offer from the page -> answer; audio then flows page <-> OpenAI directly
-        if (session.voice) await codex.voiceStop(session.voice).catch(() => {});
-        const t0 = Date.now();
-        try {
-          const v = await codex.voiceStart(String(msg.sdp || ''), onVoice);
-          session.voice = v.threadId;
-          return send({ type: 'voice.answer', sdp: v.sdp, ms: Date.now() - t0 });
-        } catch (e) { return send({ type: 'voice.error', message: e.message }); }
-      }
-      case 'voice.stop': return session.voice && codex.voiceStop(session.voice).catch(() => {});
-      case 'voice.say': return say(String(msg.text || ''));
-      case 'voice.delegate': return delegate(String(msg.item_id), String(msg.text || '')); // page saw delegation.created first
+      case 'voice.start': case 'voice.stop': case 'voice.say': case 'voice.delegate': case 'voice.text': return voice.handle(msg);
+      case 'task.start': return taskman.start(String(msg.goal || ''), { origin: 'typed' }); // background task; progress comes as task.update
+      case 'task.list': return send({ type: 'task.list', tasks: taskman.list() });
+      case 'task.cancel': return taskman.stop(String(msg.id || ''));
       default:
         return send({ type: 'error', code: 'unknown_type', message: String(msg.type) });
     }
   });
-  ws.on('close', () => { offEvents(); suggesting?.abort(); active?.abort.abort(); active?.p.stop?.(session); if (session.voice) codex.voiceStop(session.voice).catch(() => {}); });
+  ws.on('close', () => { offEvents(); offSuggest?.(); suggesting?.abort(); active?.abort.abort(); active?.p.stop?.(session); voice.dispose(); });
 });
 
 if (process.platform === 'android') provisionClients(agentdToken());
