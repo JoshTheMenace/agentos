@@ -7,7 +7,7 @@ Every number on these slides is listed in `claims-check.md`. Anything marked [PE
 
 Design notes for the Fable designer:
 - 5 slides, one idea each. Big type, few words. The phone and the fingerprint are the heroes.
-- Reuse the visual language from `design/mockups/` (pick one of A, B, C) and the real screenshots in `demo-apps/shots/`.
+- UI direction: **Calm Glass** (`design/mockups/A-calm-glass.html`) with an iOS-like flavor: frosted glass, soft shadows, rounded cards, clean system-style type, lots of space. Use the real screenshots in `demo-apps/shots/` inside phone frames.
 - Colors: calm for "allowed", amber for "waiting for you", red for "blocked". Use the same three on every slide.
 
 ---
@@ -36,10 +36,11 @@ Design notes for the Fable designer:
 **On the slide:**
 - A rooted Moto G 5G, a budget phone, running AgentOS today.
 - Every action goes through one gate on the phone. Risky ones (send, pay, delete, network changes) need your fingerprint, which signs that exact action.
-- Works with ChatGPT (Codex), Claude, or a local model. Same rules for all.
+- Works with ChatGPT (Codex) or a local model, and any other provider (Claude, etc.) plugs in the same way. Same rules for all.
+- Its own AI keyboard, in every app. Suggestions fill the box; sending still goes through the gate.
 - Built this week vs before (small strip at the bottom):
   - **Before:** island overlay prototype, Binder status-bar experiments, Frida experiments, Codex running on the phone.
-  - **This week:** the security broker app, fingerprint-signed approvals, audit log, per-app firewall, the model bridge (3 providers), 2 test apps, live voice on the phone. About 2,600 lines.
+  - **This week:** the security broker app, fingerprint-signed approvals, audit log, per-app firewall, the model bridge (3 providers), 2 test apps, live voice on the phone, a custom AI keyboard. About 2,600+ lines.
 
 **Visual:** Three phone frames left to right, same colors as above:
 1. Calm: the agent typing "Running 10 min late, sorry!" in Pigeon.
@@ -61,10 +62,10 @@ A QR code to the 2-minute backup video in the corner.
 2. **Rule of Two, enforced in code.** Read untrusted text + private data + outward action = always ask a human. Codes read from the screen can never be typed out, even with approval.
 3. **Tamper-evident log.** Every decision is hash-chained. Anyone can re-check it offline with `openssl`.
 4. **Per-app firewall.** Root `iptables` rules by app ID. The agent can propose a block; only your fingerprint applies it.
-5. **Boxed-in models.** Codex runs with its shell off and a read-only sandbox. Claude gets only our 10 phone tools. Neither can approve its own actions.
+5. **Boxed-in models.** Codex runs with its shell off and a read-only sandbox. Any provider (local, Claude, others) gets only our 10 phone tools. None can approve its own actions.
 
 **Visual:** The restaurant diagram from `ARCHITECTURE.md`, redrawn:
-`Voice / keyboard / launcher -> agentd (the waiter: Codex | Claude | local) -> local.agentos (the bouncer: broker, fingerprint, audit, firewall) -> the phone's apps`.
+`Voice / keyboard / launcher -> agentd (the waiter: Codex | local | Claude, pluggable) -> local.agentos (the bouncer: broker, fingerprint, audit, firewall) -> the phone's apps`.
 A thick wall between agentd and the bouncer, labeled "models stop here". A small fingerprint icon on the wall's only door.
 
 **Speaker notes (about 45 s):**
@@ -99,13 +100,14 @@ A thick wall between agentd and the bouncer, labeled "models stop here". A small
 - **Day 30:** off root and onto a shippable path (managed-device app), open threat model, SBIR topic chosen with Nucleus Grow.
 - **Day 60:** 10-person Utah pilot running; independent red-team review.
 - **Day 90:** pilot results published; SBIR Phase I proposal ready for the first open solicitation.
-- **$10K:** devices $2,500 · pilot $3,000 · red-team $2,500 · model credits $1,000 · Utah LLC and registrations $1,000.
+- **$10K:** devices $2,500 · pilot $3,000 · red-team $2,500 · model credits $1,000 · SBIR registrations and legal $1,000.
+- **Already in place:** Utah-based founder and Utah LLC, so we're eligible now for UTIF, SBIR and a Nucleus Fund conversation.
 - **Ask beyond money:** an intro to a university co-PI (U of U or USU) and to UATP.
 
 **Visual:** One horizontal stacked bar for the $10K (five colored segments with labels), above a three-step timeline (30 / 60 / 90).
 
 **Speaker notes (about 40 s):**
-"Root is our lab, not our product. The shippable versions are a managed-device app, the same way device-management tools work today, and Android's new AppFunctions. The $10K buys the phones to make that move, a 10-person pilot here in Utah, and an outside security review, so our safety claim isn't just ours. SBIR was reauthorized in April through 2031, and we'd like Nucleus Grow's help picking the right agency. What we need besides money: an introduction to a university partner and to the assistive tech program at USU. Thank you."
+"Root is our lab, not our product. The shippable versions are a managed-device app, the same way device-management tools work today, and Android's new AppFunctions. The $10K buys the phones to make that move, a 10-person pilot here in Utah, and an outside security review, so our safety claim isn't just ours. We're a Utah LLC with a Utah-based founder, so we can apply for UTIF and SBIR right away. SBIR was reauthorized in April through 2031, and we'd like Nucleus Grow's help picking the right agency. What we need besides money: an introduction to a university partner and to the assistive tech program at USU. Thank you."
 
 ---
 
@@ -117,5 +119,5 @@ A thick wall between agentd and the bouncer, labeled "models stop here". A small
 | Root isn't shippable. | Agreed. Root is the lab. Production paths: managed-device (device-owner) app, a privileged app on a re-locked custom build, and Android AppFunctions. |
 | Is software hard tech? | The brief lists cyber and AI infrastructure. We work in the keystore, the accessibility layer and the kernel firewall, and we stop a published attack class live. |
 | One founder? | Yes, plus AI agents doing the building under my review. The $10K adds a co-PI, an assistive-tech specialist and an outside red team. |
-| Are you a Utah company? | [DECIDE: answer depends on founder residence and where the LLC is formed.] |
-| Do you use ChatGPT/Claude subscriptions? | The demo uses my own accounts. The product uses pluggable providers: API keys or local models. |
+| Are you a Utah company? | Yes. Utah-based founder, Utah LLC. That makes us eligible for UTIF, SBIR (with Nucleus Grow's help) and the Nucleus Fund. |
+| Do you use ChatGPT/Claude subscriptions? | The demo uses my own ChatGPT plan through OpenAI's Codex app-server, plus a local model. Claude plugs in through an API key. The product uses pluggable providers: API keys or local models. |

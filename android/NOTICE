@@ -1,0 +1,6 @@
+AgentOS (local.agentos) third-party notices
+
+Built with Llama. Llama 4 is licensed under the Llama 4 Community License, Copyright (c) Meta Platforms, Inc. All Rights Reserved.
+  (Llama Prompt Guard 2 22M, used by PromptGuard.java. The model file is pushed to the phone, not bundled in the APK.)
+ONNX Runtime 1.31.1 (lib/arm64-v8a/*.so and ai.onnxruntime classes in the APK): MIT License, Copyright (c) Microsoft Corporation.
+buddy-android (https://github.com/ghorbelhamdi/buddy-android): Apache License 2.0; see the headers of Guard, Screen and AutoPause.

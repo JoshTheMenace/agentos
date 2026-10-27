@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { cfg, log } from '../config.js';
-import { SYSTEM_PROMPT } from '../prompt.js';
+import { SUGGEST_PROMPT, SYSTEM_PROMPT } from '../prompt.js';
 import { TOOLS, runTool } from '../tools.js';
 
 // Turn off everything that would give the model a capability besides our tools.
@@ -16,6 +16,7 @@ const ARGS = ['app-server', ...OFF.flatMap((f) => ['-c', `features.${f}=false`])
 // Errors worth retrying (the hotspot's DNS is flaky; a crashed app-server is restarted below).
 const TRANSIENT = /dns|lookup|resolve|ENOTFOUND|EAI_AGAIN|error sending request|stream disconnected|connection (reset|refused|closed)|timed? ?out|network|unreachable|exited/i;
 const STALL_MS = 45_000;
+const SUGGEST_SCHEMA = { type: 'object', properties: { items: { type: 'array', items: { type: 'string' } } }, required: ['items'], additionalProperties: false };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Codex's own approval prompts: always say no (rule 1). Shapes per request type.
@@ -31,7 +32,7 @@ const DECLINE = {
 
 export class Codex {
   id = 'codex';
-  #proc; #ready; #nid = 0; #pending = new Map(); #turns = new Map(); #voice = new Map(); #gen = 0; #stderr = []; #fails = 0;
+  #proc; #ready; #nid = 0; #pending = new Map(); #turns = new Map(); #voice = new Map(); #gen = 0; #stderr = []; #fails = 0; #sug;
 
   available() { return true; }
   ready() { return (this.#ready ??= this.#start()); }
@@ -88,7 +89,7 @@ export class Codex {
     const t = this.#turns.get(m.params?.threadId);
     if (m.id != null) return this.#send({ id: m.id, ...(await this.#serverRequest(m, t)) });
     if (!t) return;
-    t.last = Date.now();
+    if (m.method !== 'error') t.last = Date.now(); // "Reconnecting..." errors are not progress
     switch (m.method) {
       case 'turn/started': t.turnId = m.params.turn.id; break;
       case 'item/agentMessage/delta': t.ctx.emit({ type: 'text.delta', text: m.params.delta }); break;
@@ -136,16 +137,42 @@ export class Codex {
       });
       s = session.codex = { threadId: r.thread.id, gen: this.#gen };
     }
+    return this.#turn(s.threadId, text, ctx, { effort: cfg.codexEffort });
+  }
+
+  #turn(threadId, text, ctx, extra) {
     return new Promise((resolve) => {
       // Watchdog: on a dead network Codex can wait silently for minutes. No progress for STALL_MS (approval waits
       // don't count) -> recycle app-server; the turn then fails as "exited" and run() retries it.
       const dog = setInterval(() => { if (!t.tools && Date.now() - t.last > STALL_MS) { log('codex turn stalled; restarting app-server'); this.#proc?.kill(); } }, 5000);
-      const t = { ctx, usage: null, tools: 0, last: Date.now(), done: (r) => { clearInterval(dog); this.#turns.delete(s.threadId); resolve(r); } };
-      this.#turns.set(s.threadId, t);
-      this.#req('turn/start', { threadId: s.threadId, effort: cfg.codexEffort, input: [{ type: 'text', text, text_elements: [] }] })
+      const t = { ctx, usage: null, tools: 0, last: Date.now(), done: (r) => { clearInterval(dog); this.#turns.delete(threadId); resolve(r); } };
+      this.#turns.set(threadId, t);
+      ctx.signal?.addEventListener('abort', () => t.turnId && this.#req('turn/interrupt', { threadId, turnId: t.turnId }).catch(() => {}), { once: true });
+      this.#req('turn/start', { threadId, ...extra, input: [{ type: 'text', text, text_elements: [] }] })
         .then((r) => { t.turnId ??= r.turn?.id; })
         .catch((e) => t.done({ status: 'failed', error: e.message }));
     });
+  }
+
+  // Keyboard suggestions: one warm tool-less thread (its connection and prompt cache make turns ~1 s instead of ~3 s),
+  // one request at a time, rotated every 30 requests so its history stays small. Returns items[]; abort = stale.
+  async suggest(text, signal) {
+    await this.ready();
+    let s = this.#sug;
+    if (!s || s.gen !== this.#gen || s.n >= 30) {
+      if (s) this.#req('thread/unsubscribe', { threadId: s.threadId }).catch(() => {});
+      const { thread } = await this.#req('thread/start', { ...(cfg.suggestModel && { model: cfg.suggestModel }), cwd: cfg.codexCwd,
+        ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: SUGGEST_PROMPT, dynamicTools: [] });
+      s = this.#sug = { threadId: thread.id, gen: this.#gen, n: 0, idle: Promise.resolve() };
+    }
+    await s.idle; // the stale request's turn is being interrupted; wait for it to end
+    if (signal.aborted) throw new Error('stale');
+    s.n++;
+    const turn = this.#turn(s.threadId, text, { emit: () => {}, signal }, { effort: cfg.suggestEffort, outputSchema: SUGGEST_SCHEMA });
+    s.idle = turn;
+    const r = await turn;
+    if (r.status !== 'completed') throw new Error(r.error || r.status);
+    return JSON.parse(r.text).items;
   }
 
   // Voice: a separate thread with NO tools. Delegations are handed to agentd (onEvent gets every realtime

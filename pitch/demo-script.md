@@ -21,6 +21,7 @@ Say once, early: **"Every app the agent attacks or inspects today is our own tes
 | 7 | Canary staged in "Unknown number" (see step 4 below for the text) | `am start ... --es inject '...' --es from 'Unknown number'` |
 | 8 | Beacon open, logging every 3 s, rows green | `adb shell "am start -n local.agentos.beacon/.Main --es analytics https://httpbin.org/post --ei interval 3000"` |
 | 9 | agentd running, Codex warmed with one throwaway ask | `node cli.js "what app is open?"` |
+| 9a | AgentOS keyboard set as the current keyboard; local model (`llama-server`) running and answered one prompt | `adb shell ime set <our IME id>`; `node cli.js --provider local "hi"` |
 | 10 | Backup video on the laptop desktop, full screen, sound checked | `pitch/backup-demo.mp4` [PENDING: record Tue night] |
 | 11 | Laptop terminal open in large font, with the fallback commands below pasted and ready | One tab per fallback |
 
@@ -35,11 +36,12 @@ Say once, early: **"Every app the agent attacks or inspects today is our own tes
 | 0:50-1:30 | 3. The agent replies to Alice; fingerprint approval | Q2, Q1 | [PENDING] (partly ready) |
 | 1:30-2:10 | 4. The injection canary, blocked with the guard off | Q1, Q2 | [READY] |
 | 2:10-2:40 | 5. Firewall blocks Beacon's tracker live | Q1, Q2 | [PENDING] (partly ready) |
-| 2:40-2:55 | 6. AI keyboard | Q2 | [PENDING] |
-| 2:55-3:15 | 7. Switch providers: Codex, Claude, local | Q1, Q2 | [PENDING] (2 of 3 ready) |
+| 2:40-3:00 | 6. AI keyboard (must-have) | Q2, Q1 | [PENDING] |
+| 3:00-3:15 | 7. Switch providers: Codex and local (Claude pluggable) | Q1, Q2 | [PENDING] (Codex ready, local not) |
 | 3:15-3:45 | 8. Close: Utah and the $10K | Q3, Q4 | [READY] |
 
-If running long, cut in this order: 6, then 7 (say it in one sentence), then 2.
+Must-haves, never cut: 3 (fingerprint), 4 (canary), 5 (firewall), 6 (keyboard).
+Optional add-ons (see the end of this file) are cut first, in this order: **watch, then plug, then memory graph.** After that, shorten 7 to one sentence, then 2 (voice) to a typed request.
 
 ---
 
@@ -99,29 +101,34 @@ python3 android/tools-client.py call type '{"id":<field>,"text":"AGENTOS-CANARY-
 2. If approval fails: the operator applies the same rule as root from the laptop. Say "I'm applying it by hand to save time." Then flush: `adb shell "su -c 'iptables -w -F AGENTOS_FW; ip6tables -w -F AGENTOS_FW'"`.
 3. Video clip.
 
-### 6. AI keyboard (2:40-2:55) [PENDING]
+### 6. AI keyboard (2:40-3:00) [PENDING, must-have]
 
-**What exists:** research and design only (`research/05`). agentd's `suggest` message returns an empty list today.
-**Do (if built):** in Pigeon, tap the reply box; the suggestion strip above Gboard offers replies; tap one.
-**Say:** "It works in any app, on top of the keyboard you already use. Suggestions only fill the box. Sending still goes through the gate."
-**Fallback:** cut. Show the design mockup in the backup video if needed.
+**What it is:** a full custom keyboard (our own `InputMethodService`), Calm Glass style, set as the phone's keyboard before the show. **What exists today:** research and design only (`research/05` §6); agentd's `suggest` message returns an empty list. Being built for Wednesday.
+**Do:** in Pigeon, tap the reply box. The AgentOS keyboard comes up with AI reply suggestions on its top row. Tap one, edit a word by typing, then tap Send (that goes to the fingerprint card as usual, or Deny to save time).
+**Say:** "This is our own keyboard, in every app. It suggests replies, but suggestions only fill the box. Sending still goes through the gate. And it switches its AI off on password fields and private fields, because a keyboard sees everything you type."
+**Fallbacks:**
+1. If the keyboard doesn't appear: switch to it from the laptop with `adb shell ime set <our IME id>` (have the exact id pasted in the terminal tab).
+2. If suggestions are slow or empty (model or network): type with it normally and say "suggestions come from the model; the room's network is slow". The keyboard itself still shows.
+3. Backup video clip of the keyboard.
 
-### 7. Switch providers: Codex, Claude, local (2:55-3:15) [PENDING, 2 of 3 ready]
+### 7. Switch providers: Codex and local, Claude pluggable (3:00-3:15) [PENDING, Codex ready]
 
-**What's verified:** Codex (ChatGPT login) drives the phone through agentd; the Claude provider is boxed to exactly our 10 tools. **Not ready:** the local model is a stub (needs `llama-server` and a small model on the phone); a provider switch in the phone UI isn't built.
+**Claude is not in the live demo.** Mention it only as pluggable.
+**What's verified:** Codex (ChatGPT plan, through OpenAI's Codex app-server) drives the phone through agentd. **Not ready:** the local model is a stub (needs `llama-server` and a small model such as Qwen3.5-0.8B on the phone); a provider switch in the phone UI isn't built.
 **Do:** on the laptop, same request, two providers:
 ```sh
-node cli.js --provider codex  "What app is open and what's the newest message?"
-node cli.js --provider claude "What app is open and what's the newest message?"
-node cli.js --provider local  "..."   # only if green at freeze
+node cli.js --provider codex "What app is open and what's the newest message?"
+node cli.js --provider local "What app is open and what's the newest message?"
 ```
-**Say:** "Same gate, same rules, any model. Agencies and families shouldn't have to bet on one AI company. Sensitive screens can stay on a local model."
-**Fallbacks:** if one provider errors, show the other and say it in a sentence. Never debug on stage.
+**Say:** "Same gate, same rules, any model. That was ChatGPT, and this is a small model running on the phone itself, with no internet needed. Claude and others plug in the same way. Agencies and families shouldn't have to bet on one AI company."
+**Fallbacks:**
+1. If local is slow or not ready: run only Codex and say "a local model runs behind the same gate; it's in the video."
+2. If Codex errors: show local only. Never debug on stage.
 
 ### 8. Close: Utah and the $10K (3:15-3:45) [READY]
 
 **Show:** slide 4, then slide 5.
-**Say:** "Who needs this first? Utahns who can't easily use a touchscreen: people with disabilities and older adults. They gain the most from an agent and lose the most from a hijacked one. Governor Cox's Pro-Human AI initiative says 'AI must be human-guided'. This is that, in code. The $10K buys the phones to move off root, a 10-person Utah pilot, and an outside security review, so in 90 days we have real users, independent proof, and an SBIR proposal. We'd love an intro to USU's assistive tech program and a university partner."
+**Say:** "Who needs this first? Utahns who can't easily use a touchscreen: people with disabilities and older adults. They gain the most from an agent and lose the most from a hijacked one. Governor Cox's Pro-Human AI initiative says 'AI must be human-guided'. This is that, in code. The $10K buys the phones to move off root, a 10-person Utah pilot, and an outside security review, so in 90 days we have real users, independent proof, and an SBIR proposal. We're already a Utah LLC, so we can apply for UTIF and SBIR right away. We'd love an intro to USU's assistive tech program and a university partner."
 
 ---
 
@@ -133,6 +140,16 @@ node cli.js --provider local  "..."   # only if green at freeze
 | Network down | Steps 1, 4 and the audit check need no internet. Do those live, play the video for 2, 3, 5, 7. |
 | A step runs over 15 s with nothing happening | Say "that's the network; here's the recorded run" and move on. |
 | Agent does something unexpected | Hold volume-down 1 s. "That's the kill switch. A human touch also pauses it." Move on. |
+
+## Optional add-ons (only if built and green at the Wed noon freeze)
+
+Cut order if time or stability is short: **watch first, then plug, then memory graph.** The 4:00 hard stop leaves about 15 s for add-ons, so pick at most one unless voice (step 2) is cut.
+
+| Add-on | Where it slots | Time | Status | Fallback |
+|---|---|---|---|---|
+| Watch approval: approve the step-3 send on the Galaxy Watch4 | Inside step 3 | +10 s | [PENDING] (research only, `research/06`) | Approve on the phone as planned |
+| Smart plug: voice or typed "turn on the lamp" toggles a real plug (low risk, no approval) | Inside step 2 | +10 s | [PENDING] (research only, `research/06`) | Skip; say "physical devices go through the same gate" |
+| Memory graph: consent card, graph grows, "Revoke" removes edges live | After step 7 | +15 s | [PENDING] (research only, `research/07`) | Skip; mention Utah's Digital Choice Act on slide 4 only |
 
 ## Backup video (record Tue night, 2:00 max, doubles as the optional submission video)
 

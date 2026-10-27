@@ -20,6 +20,8 @@ export const cfg = {
   codexBin: env.CODEX_BIN || 'codex',
   codexModel: env.CODEX_MODEL || null,
   codexEffort: env.CODEX_EFFORT || 'low', // phone control wants fast steps; raise for hard tasks
+  suggestModel: env.SUGGEST_MODEL || 'gpt-6-luna', // keyboard suggestions: small and fast, no tools
+  suggestEffort: env.SUGGEST_EFFORT || 'low',
   codexCwd: env.CODEX_CWD || join(STATE, 'codex-cwd'),
   claudeBin: env.CLAUDE_BIN || 'claude',            // Claude Code CLI (subscription); preferred
   claudeCliModel: env.CLAUDE_CLI_MODEL || null,
@@ -27,6 +29,8 @@ export const cfg = {
   claudeEffort: env.CLAUDE_EFFORT || 'medium',
   localUrl: env.LOCAL_URL || 'http://127.0.0.1:8080/v1/chat/completions',
   debug: !!env.AGENTD_DEBUG,
+  clientPkgs: (env.AGENTD_CLIENT_PKGS ?? 'local.agentos,local.agentos.keys').split(',').filter(Boolean), // apps that get the WS token
+
 };
 
 // Read a token file; if it is missing and `create` is set, make a new 256-bit token (mode 600).
@@ -50,3 +54,16 @@ export function phoneToken() {
 }
 
 export const log = (...a) => console.error(new Date().toISOString().slice(11, 23), ...a);
+
+// Give each allowed client app (launcher, keyboard) its own copy of the agentd token in ITS private dir:
+// /data/data/<pkg>/files/agentd.token, owned by the app's uid, mode 600, with the dir's SELinux label. Only that app
+// (and root) can read it. The token goes in on stdin, never argv. Apps that aren't installed are skipped.
+export function provisionClients(token) {
+  for (const pkg of cfg.clientPkgs) {
+    if (!/^[\w.]+$/.test(pkg)) continue;
+    const d = `/data/data/${pkg}`, f = `${d}/files/agentd.token`;
+    const sh = `[ -d ${d} ] || exit 3; u=$(stat -c %u ${d}); mkdir -p ${d}/files; cat > ${f}; chown $u:$u ${d}/files ${f}; chmod 600 ${f}; chcon $(stat -c %C ${d}) ${d}/files ${f}`;
+    try { execFileSync('su', ['-c', sh], { input: token + '\n', timeout: 5000, stdio: ['pipe', 'ignore', 'ignore'] }); log(`agentd token -> ${pkg}`); }
+    catch (e) { if (e.status !== 3) log(`could not give the agentd token to ${pkg}: ${e.message.split('\n')[0]}`); }
+  }
+}

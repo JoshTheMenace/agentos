@@ -4,7 +4,8 @@ import { timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
-import { agentdToken, cfg, log } from './config.js';
+import { agentdToken, cfg, log, provisionClients } from './config.js';
+import { classify } from './guard.js';
 import { endTurn } from './tools.js';
 import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
@@ -83,6 +84,24 @@ wss.on('connection', (ws) => {
     else if (method === 'thread/realtime/closed') { session.voice = null; send({ type: 'voice.closed', reason: p.reason }); }
   }
 
+  // Keyboard suggestions (local.agentos.keys). Only the newest id counts: a new request cancels the old one.
+  let suggesting = null;
+  async function suggest(m) {
+    suggesting?.abort();
+    const abort = (suggesting = new AbortController()), t0 = Date.now(), reply = (x) => !abort.signal.aborted && send({ type: 'suggestions', id: m.id, ...x, ms: Date.now() - t0 });
+    if ([0x81, 0x91, 0xe1, 0x12].includes((Number(m.field?.inputType) || 0) & 0xfff)) return reply({ items: [] }); // password fields: never
+    const lines = [];
+    for (const l of (Array.isArray(m.screen) ? m.screen : []).slice(-40).map((x) => String(x).slice(0, 300))) {
+      const g = await classify(l);
+      if (g.label !== 'benign') send({ type: 'guard.alert', source_pkg: m.field?.pkg, score: g.score, label: g.label, excerpt: l.slice(0, 160) });
+      lines.push(g.label === 'benign' ? l : `[withheld by guard: likely prompt injection, score ${g.score}]`);
+    }
+    const input = JSON.stringify({ mode: m.mode || 'reply', before: String(m.before || '').slice(-2000), after: String(m.after || '').slice(0, 500),
+      field: { pkg: m.field?.pkg, hint: m.field?.hint }, untrusted_screen_data: { source_pkg: m.field?.pkg, trusted: false, lines } });
+    try { reply({ items: (await codex.suggest(input, abort.signal)).slice(0, 3).map(String) }); }
+    catch (e) { reply({ items: [], error: e.message }); }
+  }
+
   ws.on('message', async (raw) => {
     let msg; try { msg = JSON.parse(raw); } catch { return send({ type: 'error', code: 'bad_json' }); }
     switch (msg.type) {
@@ -91,8 +110,7 @@ wss.on('connection', (ws) => {
         if (!active) return;
         active.abort.abort();
         return active.p.stop?.(session);
-      case 'suggest': // keyboard suggestions: placeholder until the local model is wired up
-        return send({ type: 'suggestions', items: [] });
+      case 'suggest': return suggest(msg);
       case 'voice.start': { // {sdp}: WebRTC offer from the page -> answer; audio then flows page <-> OpenAI directly
         if (session.voice) await codex.voiceStop(session.voice).catch(() => {});
         const t0 = Date.now();
@@ -109,7 +127,8 @@ wss.on('connection', (ws) => {
         return send({ type: 'error', code: 'unknown_type', message: String(msg.type) });
     }
   });
-  ws.on('close', () => { active?.abort.abort(); active?.p.stop?.(session); if (session.voice) codex.voiceStop(session.voice).catch(() => {}); });
+  ws.on('close', () => { suggesting?.abort(); active?.abort.abort(); active?.p.stop?.(session); if (session.voice) codex.voiceStop(session.voice).catch(() => {}); });
 });
 
+if (process.platform === 'android') provisionClients(agentdToken());
 http.listen(cfg.port, cfg.host, () => log(`agentd on ws://${cfg.host}:${cfg.port} (token in ${process.env.AGENTD_TOKEN ? 'env' : cfg.tokenFile}); phone tools at ${cfg.phoneUrl}; default provider ${cfg.provider}`));
