@@ -30,6 +30,9 @@ import org.json.JSONObject;
 final class PromptGuard {
     static final double FLAG = 0.5;
     private static final int WINDOW = 510, BATCH_TOKENS = 4096; // 512 positions minus [CLS]/[SEP]; tokens per batch
+    // Fragments under 3 tokens (names, times, button labels) aren't scored alone: PG2-22M is unreliable on them
+    // ("Unknown number" scores 0.98 even in fp32). They still count inside the whole-screen score.
+    private static final int MIN_TOKENS = 3;
     private static File[] dirs = {};
     private static OrtEnvironment env;
     private static OrtSession session;
@@ -99,9 +102,10 @@ final class PromptGuard {
                 JSONObject n = nodes.getJSONObject(i);
                 String t = (n.optString("text") + "\n" + n.optString("desc")).trim();
                 if (!n.optString("src").startsWith("APP:") || t.isEmpty() || t.equals("(hidden: secure screen)")) continue;
+                all.append(t).append('\n');
+                if (tok.encode(t).length < MIN_TOKENS) continue;
                 scored.add(n);
                 texts.add(t);
-                all.append(t).append('\n');
             }
             texts.add(all.toString()); // the whole screen as one text: catches injections split across nodes
             double[] p = score(texts);

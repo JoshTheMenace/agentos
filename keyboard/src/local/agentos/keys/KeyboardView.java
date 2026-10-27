@@ -257,6 +257,10 @@ final class KeyboardView extends View {
             s = label; invalidate();
         }
         void hide() { s = null; invalidate(); }
+        /** Takes no space of its own: the frame sizes itself to the strip + keys, then hands us that exact size. */
+        @Override protected void onMeasure(int w, int h) {
+            setMeasuredDimension(MeasureSpec.getMode(w) == MeasureSpec.EXACTLY ? MeasureSpec.getSize(w) : 0, MeasureSpec.getMode(h) == MeasureSpec.EXACTLY ? MeasureSpec.getSize(h) : 0);
+        }
         @Override protected void onDraw(Canvas c) {
             if (s == null) return;
             c.drawRoundRect(r, Theme.PREVIEW_R * d, Theme.PREVIEW_R * d, fill);

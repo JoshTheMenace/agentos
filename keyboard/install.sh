@@ -15,7 +15,7 @@ adb -s "$S" install -r build/keys.apk
 uid=$(adb -s "$S" shell pm list packages -U local.agentos.keys | grep "^package:local.agentos.keys " | sed "s/.*uid://" | tr -d '\r')
 # Tokens: agentd's (Termux home) and the AgentOS tool server's (app private dir). Only root can read them; copy, chown, relabel.
 D=/data/data/local.agentos.keys/files
-adb -s "$S" shell "su -c 'mkdir -p $D && cp /data/data/com.termux/files/home/.agentos/agentd.token $D/agentd.token && cp /data/data/local.agentos/files/token $D/phone.token && chown -R $uid:$uid $D && chmod 600 $D/*.token && restorecon -R /data/data/local.agentos.keys'"
-adb -s "$S" shell ime enable $IME
+adb -s "$S" shell "su -c 'mkdir -p $D && cp /data/data/com.termux/files/home/.agentos/agentd.token $D/agentd.token && cp /data/data/local.agentos/files/token $D/phone.token && chown -R $uid:$uid $D && chmod 600 $D/*.token && restorecon -RD /data/data/local.agentos.keys'"
+until adb -s "$S" shell ime enable $IME | grep -q "now enabled"; do sleep 1; done   # the IME list refreshes a moment after install
 [ "${1:-}" = --set ] && adb -s "$S" shell ime set $IME
 echo "installed; uid $uid; current IME: $(adb -s "$S" shell settings get secure default_input_method)"
