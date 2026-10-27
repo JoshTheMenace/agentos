@@ -30,7 +30,12 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 - Reviewer is DONE (agentd/reviewer.js, deployed), including `approval.escalate` to fingerprint. Retuned 10-27: a dictated send to the named contact is low risk → auto-approved ("Auto-approved ✓" seen on the phone, 2.0 s). Fingerprint-floor and flagged tasks are never approved. Tests: `node agentd/reviewer-test.js` (14/14).
 
 ## Stage hygiene (done 10-27)
-- Motorola OTA pop-up: notifications off (app can't be disabled). Magisk "granted Superuser" toasts: off for all granted uids (`magisk --sqlite "UPDATE policies SET notification=0"`; re-run if a new uid is granted).
+- Motorola nag notifications (10-27, verified: 0 records after airplane on/off + 75 s). The Settings toggle was a no-op: the OTA app's POST_NOTIFICATIONS is SYSTEM_FIXED and its channels are importance-locked. What holds:
+  - `com.motorola.ccc.ota`: `su 1000 -c "pm revoke com.motorola.ccc.ota android.permission.POST_NOTIFICATIONS"` (needs uid 1000, plain root is refused). Undo: `su 1000 -c "pm grant com.motorola.ccc.ota android.permission.POST_NOTIFICATIONS"`.
+  - `com.motorola.ccc.notification` (ch_hello_moto_content), `com.motorola.gamemode` (play_game, ch_games), `com.motorola.setup` (SetupWizardService): every channel set to importance 0 through INotificationManager.updateNotificationChannelForPackage, helper dex `/data/local/tmp/nh.dex` (source `/tmp/stagehygiene/NH.java`; run `su -c "CLASSPATH=/data/local/tmp/nh.dex app_process / NH list|block|cancelall|enabled <pkg> <uid>"`). Undo: Settings → Apps → app → Notifications → turn the channel back on (or `pm clear <pkg>` for the Moto ones). Uids: ota 10308, ccc.notification 10307, gamemode 10197, setup 10348.
+  - Cancelled once (not blocked): all Calendar, Google app (stories) and systemui "fully charged" notifications; they can come back, and Calendar reminders can pop up before an event. Left: Termux, plus the system "Developer options"/USB-debugging ongoing items (they stay while adb is on).
+  - No iptables, no firewall, no Magisk policy or reboot involved.
+- Magisk "granted Superuser" toasts: off for all granted uids (`magisk --sqlite "UPDATE policies SET notification=0"`; re-run if a new uid is granted).
 
 ## Waiting on the user
 - Claude on the phone: token installed 10-27 (`~/.agentos/claude.token`, works: `claude -p` ok in 10 s). Copied the new claude-cli.js; needs one agentd restart, then benchmark `node cli.js --provider claude`. Role: Codex is default; Claude is shown only as "you can switch brains".
