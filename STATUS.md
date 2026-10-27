@@ -2,13 +2,19 @@
 
 Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in research/. Pitch drafts are in pitch/.
 
-## Decisions
-- UI: **A2 · Calm Glass iOS Dark** (design/mockups/A2-calm-glass-ios-dark.html, tokens in design/A2-tokens.md). Keep text minimal and use progressive disclosure. Permissions go on their own screen. Keep the Watch/plug widgets small. Say "Fingerprint", never "Touch ID".
-- **All UI work goes to Fable agents** (model: fable).
-- Approvals have three levels: the reviewer model auto-approves low-risk actions with no taint (spikes/codex-reviewer). A real human **tap** handles normal outward actions. A **fingerprint** is required for risky ones (guard flag, copied-from-screen args, money/delete/install/firewall, or all 3 Rule-of-Two lamps). Voice "send it" is optional. There's no typed yes.
-- Demo providers: Codex (ChatGPT Pro on phone) plus a local model. Claude is mentioned only as pluggable.
-- Must-haves: phone control + broker, fingerprint approvals, AI keyboard, Prompt Guard, firewall, GPT-live voice, A2 UI. Cut order: watch → plug → memory graph.
-- Founder is Utah-based with an LLC. Real apps (e.g. Messages) may be operated. Frida/inspection only on our own apps. No Duolingo.
+## Decisions (rewritten 10-27 9:30 AM from founder direction; supersedes the older ones)
+- **Product: an AI-native phone OS ("the Siri we should have"), built security-first.** The demo should be mostly "whoa" capability; security is a supporting thread, not the whole show.
+- **Live demo uses real apps only** (no Pigeon/Beacon on stage; they stay as test fixtures). Real apps may be operated and, for the app-modification demo, modified on our own phone.
+- **Demo order and content: the founder is writing it.** Old pitch/demo-script.md and pitch/rehearsal/RUN.md are out of date; don't polish them.
+- **Approvals:** fingerprint ONLY for the most sensitive things (payments, using a vault password, and similar). Everything else is reviewer auto-approve or a tap. No red alert pop-ups: blocked/flagged actions go to a log (command center / settings). Island still shows what the agent is doing.
+- **Voice is the main way to start tasks.** GPT Live doesn't do the task; it starts a background Codex thread (with a task system prompt), gets its status ("how's it going?"), and says when it's done.
+- **Memory + notifications:** agents know recent notifications and cross-app context, so "reply back that I'm 10 min late" works without naming the person or app. Users can tell agents to handle notifications/replies for them.
+- **Home screen:** no dummy data (no lamp, no heart rate, no "no active grants"). Show what agents are doing now and proactive suggestions.
+- **Firewall demo:** in a real app, ask by voice "any trackers?", it finds them, "block them", it does; a blockers view lists what's blocked per app.
+- **Speed is a top priority:** hill-climb task latency (screen format, fewer round trips, Codex computer-use ideas, faster models e.g. GPT-6.1 Terra if available).
+- **Explore:** Claude Code on the phone as a provider (like Codex app-server), the Galaxy Watch, live-modifying a real app (e.g. calculator/camera: add a button), password vault + fingerprint fill (stretch).
+- UI: **A2 · Calm Glass iOS Dark** (design/mockups/A2-calm-glass-ios-dark.html, tokens in design/A2-tokens.md). Minimal text, progressive disclosure. Say "Fingerprint", never "Touch ID". **All UI work goes to Fable agents** (model: fable).
+- Founder is Utah-based with an LLC. No Duolingo. Code freeze Wed noon; judging Wed 5 PM.
 
 ## Done (on the phone, committed)
 - android/ `local.agentos`: tools, broker, leases, Rule of Two, fingerprint/tap/voice/reviewer approvals, audit chain, firewall, on-device Prompt Guard 2, /events SSE.
