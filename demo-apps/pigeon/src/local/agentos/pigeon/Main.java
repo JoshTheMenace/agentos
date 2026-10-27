@@ -134,6 +134,7 @@ public class Main extends Activity {
         page.addView(sv, new LinearLayout.LayoutParams(MATCH, 0, 1));
         if (listView != null) root.removeView(listView);
         listView = page;
+        hideList(chatView != null);
         root.addView(page, 0); // behind any open chat
     }
 
@@ -185,10 +186,17 @@ public class Main extends Activity {
         page.addView(bar);
 
         chatView = page;
+        hideList(true);
         root.addView(page, MATCH, MATCH);
         page.setTranslationX(root.getWidth());
         page.animate().translationX(0).setDuration(260).setInterpolator(new DecelerateInterpolator(2));
         scroller.post(() -> scroller.fullScroll(View.FOCUS_DOWN));
+    }
+
+    // Keep the list out of the accessibility tree while a chat covers it.
+    void hideList(boolean hide) {
+        if (listView != null) listView.setImportantForAccessibility(hide
+            ? View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS : View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
     }
 
     void closeChat() {
@@ -196,6 +204,7 @@ public class Main extends Activity {
         showList(); // refresh previews underneath
         View v = chatView;
         chatView = null;
+        hideList(false);
         v.animate().translationX(root.getWidth()).setDuration(220).withEndAction(() -> root.removeView(v));
     }
 
