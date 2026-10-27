@@ -13,6 +13,9 @@ const app = window.app = {};
 const info = JSON.parse(N.info());
 const hap = (k) => N.haptic(k || 'click');
 const ICON = (pkg) => `https://agentos.home/icon/${pkg}`;
+// App icon <img>; if the shell can't serve it (Mac, uninstalled app) the box shows the app's initial instead.
+const icon = (pkg, extra = {}) => Object.assign(new Image(), { src: ICON(pkg), alt: '', ...extra, onerror() { this.hidden = true; this.parentNode && (this.parentNode.textContent = (appName(pkg)[0] || '?').toUpperCase()); } });
+const ICOHTML = (pkg) => `<img src="${ICON(pkg)}" alt="" onerror="this.hidden=true;this.parentNode.textContent='${esc((appName(pkg)[0] || '?').toUpperCase())}'">`;
 const AGENTD = 'ws://127.0.0.1:8787/', GRAPH = 'http://127.0.0.1:8787/memory/graph.json';
 const FORBIDDEN = ['Settings', 'System UI', 'Magisk', 'Installer', 'AgentOS'];
 
@@ -57,13 +60,14 @@ clock(); setInterval(clock, 1000);
 
 // ---------- audit lines -> text ----------
 const auditLine = (e) => {
-  const app_ = appName(e.pkg), tgt = e.target ? `"${short(e.target, 24)}"` : '';
+  const raw = /^[A-Z]\w*(Layout|View|Group|Bar|Pane|Container)$/.test(e.target || '') || /^(android|com|androidx)\./.test(e.target || ''); // class name, not a label
+  const app_ = appName(e.pkg), tgt = e.target && !raw ? `"${short(e.target, 24)}"` : '';
   switch (e.tool) {
     case 'task.start': return ['Started · ' + short(e.goal, 40), 'a'];
     case 'task.stop': return [`Stopped · ${e.steps ?? 0} steps`, ''];
     case 'task.pause': return ['Paused', ''];
     case 'task.resume': return ['Resumed', ''];
-    case 'tap': return [`Tap ${tgt} · ${app_}`, e.decision === 'approved' ? 'g' : e.decision === 'denied' || e.decision === 'blocked' ? 'c' : e.tier?.startsWith('T3') ? 'b' : 'a'];
+    case 'tap': return [tgt ? `Tap ${tgt} · ${app_}` : `Tap in ${app_}`, e.decision === 'approved' ? 'g' : e.decision === 'denied' || e.decision === 'blocked' ? 'c' : e.tier?.startsWith('T3') ? 'b' : 'a'];
     case 'type': return [`Type in ${app_}`, e.decision === 'blocked' ? 'c' : 'a'];
     case 'open_app': return [`Open ${app_}`, 'a'];
     case 'firewall.set': return [`Firewall · ${app_} ${e.mode || ''}`, e.decision === 'approved' ? 'g' : 'c'];
@@ -128,7 +132,7 @@ function renderSugg() {
   if (!items.length) return $('#sugg').replaceChildren(el('div', 'calm', `<svg width="14" height="14"><use href="#i-check"/></svg>All caught up`));
   $('#sugg').replaceChildren(...items.slice(0, 4).map((it, i) => {
     const b = el('button', 'glass sg'); b.style.animationDelay = i * .05 + 's';
-    const ic = it.app && S.names[it.app] ? `<span class="appic"><img src="${ICON(it.app)}" alt=""></span>` : `<span class="appic" style="background:${it.icon === 'eye' || it.icon === 'shield' ? 'var(--green)' : it.icon === 'car' ? 'var(--blue)' : 'var(--purple)'}"><svg width="18" height="18"><use href="${SICON[it.icon] || '#i-spark'}"/></svg></span>`;
+    const ic = it.app && S.names[it.app] ? `<span class="appic">${ICOHTML(it.app)}</span>` : `<span class="appic" style="background:${it.icon === 'eye' || it.icon === 'shield' ? 'var(--green)' : it.icon === 'car' ? 'var(--blue)' : 'var(--purple)'}"><svg width="18" height="18"><use href="${SICON[it.icon] || '#i-spark'}"/></svg></span>`;
     b.innerHTML = `${ic}<div><div class="t">${esc(it.title)}</div><div class="s">${esc(it.detail || '')}</div></div><span class="orb working sm"></span><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg>`;
     b.onclick = () => startSuggestion(it, b); return b;
   }));
@@ -165,13 +169,13 @@ function loadApps() {
   const dock = [];
   for (const [re] of want) { const a = S.apps.find((x) => re.test(x.pkg) && !dock.includes(x)); if (a) dock.push(a); }
   for (const a of S.apps) if (dock.length < 4 && !dock.includes(a)) dock.push(a);
-  $('#dock').replaceChildren(...dock.map((a) => { const b = el('button', 'ico'); b.append(Object.assign(new Image(), { src: ICON(a.pkg), alt: a.label })); b.onclick = () => { hap(); N.launch(a.pkg); }; return b; }));
+  $('#dock').replaceChildren(...dock.map((a) => { const b = el('button', 'ico'); b.append(icon(a.pkg)); b.onclick = () => { hap(); N.launch(a.pkg); }; return b; }));
   renderGrid('');
 }
 function renderGrid(q) {
   q = q.trim().toLowerCase();
   $('#grid').replaceChildren(...S.apps.filter((a) => !q || a.label.toLowerCase().includes(q)).map((a) => {
-    const b = el('button', 'app'); const i = el('i', 'ico'); i.append(Object.assign(new Image(), { src: ICON(a.pkg), loading: 'lazy' }));
+    const b = el('button', 'app'); const i = el('i', 'ico'); i.append(icon(a.pkg, { loading: 'lazy' }));
     b.append(i, el('span', '', esc(a.label))); b.onclick = () => { hap(); N.launch(a.pkg); setTimeout(() => close('drawer'), 250); }; return b;
   }));
 }
@@ -253,7 +257,7 @@ function renderGrants() {
   $('#grantNote').textContent = t ? 'expires' : '';
   if (!t) return box.replaceChildren(el('div', 'empty', 'None'));
   const left = Math.max(0, Math.round((t.expires - Date.now()) / 60000));
-  box.replaceChildren(...t.apps.map((pkg) => { const r = el('div', 'rowi', `<span class="appic"><img src="${ICON(pkg)}" alt=""></span><div>${esc(appName(pkg))}<span class="s">Tap · type</span></div><div class="r"><span class="tag a">${left} min</span><button class="tag">Revoke</button></div>`);
+  box.replaceChildren(...t.apps.map((pkg) => { const r = el('div', 'rowi', `<span class="appic">${ICOHTML(pkg)}</span><div>${esc(appName(pkg))}<span class="s">Tap · type</span></div><div class="r"><span class="tag a">${left} min</span><button class="tag">Revoke</button></div>`);
     $('button', r).onclick = async () => { hap(); send({ type: 'stop' }); await rpc('task.stop', { task_id: t.task_id }); refresh(); }; return r; }));
 }
 async function renderFirewall() {
@@ -261,7 +265,7 @@ async function renderFirewall() {
   const pkgs = [...new Set(['local.agentos.pigeon', 'local.agentos.beacon', 'com.termux', ...rules.map((x) => x.pkg)])].filter((p) => S.names[p] || rules.some((x) => x.pkg === p));
   $('#fw').replaceChildren(...pkgs.map((pkg) => {
     const blocked = rules.some((x) => x.pkg === pkg && /REJECT|DROP/i.test(x.action || 'REJECT'));
-    const b = el('button', 'ft ' + (blocked ? 'off' : 'on'), `<span class="c"><img src="${ICON(pkg)}" alt=""></span><div class="l">${esc(appName(pkg))}<span>${blocked ? 'Blocked' : 'Allowed'}</span></div>`);
+    const b = el('button', 'ft ' + (blocked ? 'off' : 'on'), `<span class="c">${ICOHTML(pkg)}</span><div class="l">${esc(appName(pkg))}<span>${blocked ? 'Blocked' : 'Allowed'}</span></div>`);
     b.onclick = async () => { hap(); b.className = 'ft wait'; $('.l span', b).textContent = 'Fingerprint…'; const res = await rpc('firewall.set', { pkg, mode: blocked ? 'allow' : 'block' }); if (res.decision !== 'approved') hap('heavy'); renderFirewall(); refresh(); };
     return b;
   }));
@@ -277,7 +281,7 @@ function renderBlockers() {
   if (!apps.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring"><svg width="30" height="30"><use href="#i-shield"/></svg></span>No trackers seen<small>Ask “any trackers?” in any app</small>`));
   box.replaceChildren(...apps.map((a) => {
     const open_ = a.trackers.filter((t) => !t.blocked), m = el('div', 'mod bk');
-    m.innerHTML = `<div class="hd"><span class="appic"><img src="${ICON(a.pkg)}" alt=""></span><div>${esc(a.label || appName(a.pkg))}<span class="s">${a.trackers.length - open_.length} blocked${open_.length ? ` · ${open_.length} open` : ''}</span></div>${open_.length ? '<button class="pillbtn blue">Block</button>' : '<span class="tag g">Protected</span>'}</div>
+    m.innerHTML = `<div class="hd"><span class="appic">${ICOHTML(a.pkg)}</span><div>${esc(a.label || appName(a.pkg))}<span class="s">${a.trackers.length - open_.length} blocked${open_.length ? ` · ${open_.length} open` : ''}</span></div>${open_.length ? '<button class="pillbtn blue">Block</button>' : '<span class="tag g">Protected</span>'}</div>
       <ul>${a.trackers.map((t) => `<li class="${t.blocked ? 'off' : ''}"><i></i><b>${esc(t.domain)}</b>${t.company ? ` · ${esc(t.company)}` : ''}<span>${t.hits || 0}</span></li>`).join('')}</ul>`;
     const b = $('.pillbtn', m); if (b) b.onclick = async () => { hap(); b.textContent = 'Fingerprint…'; const r = await rpc('firewall.set', { pkg: a.pkg, mode: 'block', domains: open_.map((t) => t.domain) }); if (r?.decision !== 'approved') hap('heavy'); openBlockers(); };
     return m;
@@ -396,7 +400,7 @@ function renderSources(box, consents = S.consents) {
 // ---------- boot ----------
 loadApps(); renderCalendar(); live(); go(0);
 // Browser-only styling aid (`index.html#demo` on the Mac, never on the phone): sample feed + a running task.
-if (!window.Native && location.hash.startsWith('#demo')) {
+if (location.hash.startsWith('#demo')) { // styling aid: only reachable through install.sh dev <url>#demo
   emit({ type: 'suggestions', items: [{ id: 1, title: 'Reply to Sam: running late?', detail: 'Messages · 12 min ago', app: 'local.agentos.pigeon', goal: 'x' }, { id: 2, title: 'Leave for 3 PM meeting in 12 min', detail: '18 min drive · Maps', icon: 'car', goal: 'x' }, { id: 3, title: '2 apps sent data to trackers today', detail: '1Weather, Chrome', icon: 'eye', goal: 'x' }] });
   if (location.hash === '#demo') S.active = { task_id: 't1', goal: 'Reply to Mom that I am 10 minutes late', apps: ['local.agentos.pigeon'], expires: Date.now() + 5e5, steps: 3, max_steps: 40 }; S.step = 'Tap "Send"'; S.tasks.set('k1', { id: 'k1', goal: 'Reply to Mom that I am 10 minutes late', state: 'running', step: 'Tapping Send in Pigeon', created: 1 }); live();
   if (location.hash === '#demo-blockers') { open('blockers'); S.trackers = [{ pkg: 'com.handmark.expressweather', label: '1Weather', trackers: [{ domain: 'app-measurement.com', company: 'Google', blocked: true, hits: 14 }, { domain: 'ads.mopub.com', company: 'MoPub', blocked: false, hits: 6 }] }, { pkg: 'com.android.chrome', label: 'Chrome', trackers: [{ domain: 'doubleclick.net', company: 'Google', blocked: true, hits: 3 }] }]; renderBlockers(); }
