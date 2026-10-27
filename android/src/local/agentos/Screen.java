@@ -62,6 +62,9 @@ final class Screen {
 
     boolean secure() { return !secureWhy.isEmpty(); }
 
+    /** Mods (on their own Screen): is the focused window FLAG_SECURE right now? Root, ~130 ms; fails closed. */
+    synchronized boolean secureNow() { dirty = true; refreshFocus(); return flagSecure; }
+
     /** The node behind an id from the last read. */
     synchronized AccessibilityNodeInfo node(int id) {
         if (id < 0 || id >= nodes.size()) throw new IllegalArgumentException("stale or unknown id " + id + "; call screen.read again");

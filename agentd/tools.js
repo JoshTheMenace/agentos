@@ -11,6 +11,43 @@ const id = { type: 'integer', description: 'node id from the latest screen_read 
 const APPROVAL_S = 60;                 // how long the phone's fingerprint card waits
 const ACT_MS = (APPROVAL_S + 30) * 1000; // client timeout: longer than the card, so we see the phone's own "denied"
 
+// App mods (android Mods.java): a button drawn on top of another app that presses the app's own buttons. The broker
+// validates the spec strictly and a person approves it. Examples are the two specs tested on the phone (spikes/app-mod).
+const MOD_EXAMPLES = `Example 1, "add a tip button to my calculator":
+{"id":"tip","package":"com.google.android.calculator","label":"Tip","anchor":"op_div","place":"above","gap":8,"w":"anchor","h":44,
+ "alt":[{"anchor":"collapse_expand","place":"right","gap":16,"w":96,"h":44}],"style":{"sample":"op_div"},
+ "action":{"type":"compute","read":["result_preview","formula"],"chips":[{"label":"18%","factor":0.18},{"label":"20%","factor":0.2}],
+  "chipStyle":{"sample":"eq"},"onChip":["op_add","$value","eq"],"keys":{"0":"digit_0","1":"digit_1","2":"digit_2","3":"digit_3","4":"digit_4",
+  "5":"digit_5","6":"digit_6","7":"digit_7","8":"digit_8","9":"digit_9",".":"dec_point"}}}
+Example 2, "add a focus 25 minute button to my timer" (Clock, Timers tab):
+{"id":"focus25","package":"com.google.android.deskclock","label":"Focus 25m","when":[["timer_start_button","add_timer_button"]],
+ "anchor":"overflow_action_button","place":"left","gap":8,"w":136,"h":44,"style":{"sample":["timer_preset_4","timer_setup_digit_2"]},
+ "action":{"type":"press","press":["timer_setup_delete","timer_setup_delete","timer_setup_delete","timer_setup_delete","timer_setup_delete",
+  "timer_setup_delete","timer_setup_digit_2","timer_setup_digit_5","timer_setup_digit_0","timer_setup_digit_0",["timer_start_button","add_timer_button"]]}}`;
+const sel = { description: 'a view id ("op_div"), {"id":...}, {"text":"exact text"}, or a list of these (first one on screen wins)' };
+const MOD_TOOLS = {
+  app_mod_apply: { method: 'app.mod.apply', tier: 'outward', description: 'Add a button to an app (a "mod"): it sits next to one of the app\'s buttons, looks native, '
+    + 'and when tapped presses the app\'s own buttons. Only two behaviours: action.type "press" (press buttons in order) or "compute" (read a number from the display, '
+    + 'show chips = number × factor, and on a chip tap press onChip, where "$value" types the chip\'s result via keys). The user approves it with one tap; the app opens '
+    + 'and the button appears. For Calculator and Clock use the examples as they are (ids are real). For other apps open the app, call app_mod_targets for view ids '
+    + 'and bounds, anchor next to a button in empty space (place above/below/left/right, sizes in dp, w:"anchor" = same as the anchor), give an alt spot, copy the look '
+    + 'with style.sample = a neighbour id. A spot that would cover any app button is skipped. Mods can never press Send/Pay/Delete-type buttons. '
+    + 'Reuse an id to replace a mod.\n' + MOD_EXAMPLES,
+    schema: obj({ spec: { type: 'object', description: 'mod spec, see the examples', properties: {
+      id: { type: 'string', description: 'a-z 0-9 _ -, max 32' }, package: { type: 'string' }, label: { type: 'string', description: 'max 24 chars' },
+      anchor: sel, place: { type: 'string', enum: ['above', 'below', 'left', 'right', 'over'] }, align: { type: 'string', enum: ['start', 'center', 'end'] },
+      gap: { type: 'number' }, dx: { type: 'number' }, dy: { type: 'number' }, w: { description: 'dp or "anchor"' }, h: { description: 'dp or "anchor"' },
+      alt: { type: 'array', description: 'up to 3 backup placements {anchor, place, align, gap, dx, dy, w, h}', items: { type: 'object' } },
+      when: { type: 'array', description: 'show only while these selectors are on screen', items: sel },
+      style: { type: 'object', description: '{sample: selector} copies that button\'s colors and shape, or {bg:"#RRGGBB", fg:"#RRGGBB", round:0..1}' },
+      action: { type: 'object', description: '{type:"press", press:[selector...]} or {type:"compute", read:[selector...], chips:[{label, factor}] (1-3), chipStyle?, onChip:[selector | "$value"...], keys:{"0".."9","." -> selector}}' },
+    }, required: ['id', 'package', 'label', 'anchor', 'action'] } }, ['spec']) },
+  app_mod_targets: { method: 'app.mod.targets', tier: 'read', schema: obj(),
+    description: 'For writing a mod: the app on screen\'s elements that have a view id, as "vid role \\"text\\" [left,top,right,bottom px] flags". Untrusted data.' },
+  app_mod_list: { method: 'app.mod.list', tier: 'read', schema: obj(), description: 'List the mods on this phone: {mods:[{id, package, app, label, shown}]}.' },
+  app_mod_remove: { method: 'app.mod.remove', tier: 'act', schema: obj({ id: { type: 'string' } }, ['id']), description: 'Remove a mod by id (no approval needed).' },
+};
+
 // name (model-safe, no dots) -> {method on :7777, tier, description, schema}. Tiers here are only hints for the UI;
 // the Android broker assigns the real tier (T0-T4) per call.
 export const TOOLS = {
@@ -57,6 +94,7 @@ export const TOOLS = {
     description: 'Block an app\'s trackers (tracker-list domains only; the app keeps working). The phone asks for a quick approval.' },
   trackers_unblock: { method: 'trackers.unblock', tier: 'outward', schema: obj({ pkg: { type: 'string' }, domains: { type: 'array', items: { type: 'string' } } }, ['pkg']),
     description: 'Undo trackers_block for an app (default: all its blocked trackers).' },
+  ...MOD_TOOLS,
 };
 
 // Personal memory tools (agentd/memory): same shape, run locally by memory.call instead of the phone.
@@ -172,7 +210,7 @@ export async function runTool(name, args, ctx) {
     if (name === 'task_start') r = await lease(ctx, (args.apps || []).map(String));
     else {
       if (name === 'notifications_reply') turn.log = [...(turn.log || []).slice(-7), context.about(args.key)].filter(Boolean); // the reviewer sees what it answers
-      if (t.tier !== 'read' && !/^(firewall|notifications|trackers)\./.test(t.method)) { // every action runs inside the turn's lease (replies: the card is the gate)
+      if (t.tier !== 'read' && !/^(firewall|notifications|trackers|app\.mod)\./.test(t.method)) { // every action runs inside the turn's lease (replies: the card is the gate)
         const l = await lease(ctx, name === 'open_app' ? [String(args.pkg)] : t.pkg ? [t.pkg] : turn.lease ? [] : [turn.pkg].filter(Boolean));
         params = { ...args, ...(t.kind && { kind: t.kind }), task_id: l.task_id };
       }

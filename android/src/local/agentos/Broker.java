@@ -95,6 +95,8 @@ final class Broker {
     private final Audit audit;
     private final Object actLock = new Object(), startLock = new Object();
     private final LeaseCard leaseCard;
+    /** App mods (Mods.java): buttons drawn on top of other apps. */
+    final Mods mods;
     /** Open approvals as announced on /events (approval_id -> approval.shown payload): approval.list returns these. */
     private final Map<String, JSONObject> shown = new ConcurrentHashMap<>();
     private volatile Lease lease, last; // last: the most recent lease, even after stop (for carry-over)
@@ -108,6 +110,7 @@ final class Broker {
         this.svc = svc;
         leaseCard = new LeaseCard(svc);
         audit = new Audit(svc.getFilesDir());
+        mods = new Mods(svc, audit);
         PromptGuard.init(svc);
         Trackers.start(svc);
         self = this;
@@ -132,6 +135,10 @@ final class Broker {
             case "trackers.list": return Trackers.list(svc);
             case "notifications.list": return notifications(p);
             case "approval.list": return approvals();
+            case "app.mod.list": return ok(true).put("mods", mods.list());
+            case "app.mod.targets": return mods.targets();
+            case "app.mod.remove": return mods.remove(p.getString("id"), p.optString("by", "agent"));
+            case "app.mod.apply": synchronized (actLock) { return mod(p); }
             case "approval.confirm": return confirm(p, uid);
             case "approval.deny": return deny(p);
             case "approval.escalate": return escalate(p, uid);
@@ -373,6 +380,46 @@ final class Broker {
         return finish(log, res, decision, done ? why : "Android refused the action", read());
     }
 
+    /**
+     * app.mod.apply {spec}: strict schema (Mods.validate: only "press" the app's buttons or "compute" chips), then a person
+     * approves on the card (tap or voice; never the reviewer: they should see what is added to their app), audited with the
+     * full spec. The app is brought to the front so the mod shows up at once.
+     */
+    private JSONObject mod(JSONObject p) throws Exception {
+        Lease l = lease;
+        JSONObject spec = p.optJSONObject("spec");
+        String pkg = spec == null ? "" : spec.optString("package"), bad = null;
+        try { if (spec == null) throw new IllegalArgumentException("spec is required"); Mods.validate(spec); }
+        catch (IllegalArgumentException e) { bad = "bad spec: " + e.getMessage(); }
+        if (bad == null && svc.getPackageManager().getLaunchIntentForPackage(pkg) == null) bad = pkg + " is not installed";
+        else if (bad == null && mods.count(spec.optString("id")) >= Mods.MAX_MODS) bad = "at most " + Mods.MAX_MODS + " mods: remove one first";
+        else if (bad == null && svc.getSystemService(KeyguardManager.class).isKeyguardLocked()) bad = "phone is locked";
+        String app = labels(Collections.singleton(pkg)), target = "Add “" + (spec == null ? "" : spec.optString("label")) + "” to " + app;
+        JSONObject log = entry("app.mod.apply", l).put("pkg", pkg).put("target", target).put("tier", "T2 UI change");
+        if (bad != null) return finish(log, ok(false), "blocked", bad, null);
+        String text = mods.describe(spec);
+        log.put("id", spec.getString("id")).put("label", spec.getString("label")).put("text", text)
+                .put("spec_sha256", Audit.sha256(spec.toString())).put("spec", spec);
+        JSONObject r2 = new JSONObject().put("untrusted", l != null && l.h.untrusted).put("private", false).put("outward", false);
+        Approvals.Pending a = approve("app.mod.apply", pkg, target, text, l, "T2 UI change", "adds a button to " + app, r2, HUMAN,
+                "a person should see what is added to their app", Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
+        log.put("allowed_channels", new JSONArray(a.channels));
+        if (a.channel.isEmpty()) return finish(log, ok(false), "denied", a.reason, null);
+        log.put("approver", a.channel);
+        if (!a.note.isEmpty()) log.put("utterance", a.note);
+        AccessibilityNodeInfo root = svc.getRootInActiveWindow();
+        boolean front = root != null && pkg.equals(pkg(root));
+        if (front) { /* already there */ }
+        else if (pkg.equals("com.google.android.deskclock") && spec.toString().contains("timer")) // a Timers mod: open on that tab
+            svc.startActivity(new Intent(android.provider.AlarmClock.ACTION_SHOW_TIMERS).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        else Actions.openApp(svc, pkg);
+        JSONObject r = mods.apply(spec, l == null ? "agent" : l.id, front ? 1500 : 3000);
+        log.put("shown", r.getBoolean("shown"));
+        JSONObject res = ok(true).put("id", r.get("id")).put("shown", r.get("shown")).put("app", app);
+        if (r.has("ms")) res.put("ms", r.get("ms")); else res.put("note", r.get("note"));
+        return finish(log, res, "approved", "mod added", null);
+    }
+
     private JSONObject finish(JSONObject log, JSONObject res, String decision, String reason, JSONObject screen) throws JSONException {
         audit.log(log.put("decision", decision).put("reason", reason).put("ok", res.getBoolean("ok")));
         res.put("decision", decision).put("reason", reason);
@@ -399,7 +446,7 @@ final class Broker {
             List<String> channels, String fp, long timeoutMs) throws Exception {
         ApprovalCard.Model m = new ApprovalCard.Model();
         m.title = tool.equals("type") ? "type into \"" + target + "\"" : tool.equals("tap") ? "tap \"" + target + "\""
-                : tool.startsWith("notifications.") || tool.startsWith("trackers.") ? target : tool + " " + target;
+                : tool.startsWith("notifications.") || tool.startsWith("trackers.") || tool.startsWith("app.") ? target : tool + " " + target;
         m.app = pkg; m.target = target; m.text = text; m.tier = tier; m.reason = why;
         m.task = l == null ? "(no task)" : l.id + " · " + l.goal;
         m.untrusted = r2.getBoolean("untrusted"); m.priv = r2.getBoolean("private"); m.outward = r2.getBoolean("outward");

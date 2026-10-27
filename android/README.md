@@ -25,6 +25,7 @@ It asks for your fingerprint when money moves and writes everything in a ledger.
 | `Audit` | Hash-chained `files/audit.jsonl` |
 | `Firewall` | Root iptables/ip6tables `--uid-owner` rules in chain `AGENTOS_FW`; domain blocks match the name (SNI/Host), not IPs |
 | `Trackers` | Tracker radar: which tracker companies each app talks to (TLS SNI per uid), and tracker blocks. See "Tracker radar" |
+| `Mods` | App mods: native-looking buttons drawn on top of other apps that press the app's own buttons (from `spikes/app-mod`). See "App mods" |
 | `Server` | `POST /rpc` and `GET /events` on 127.0.0.1:7777, bearer token in `files/token`; finds the calling app's uid from `/proc/net/tcp*` (root) |
 | `Root` | `su -c` helper (Magisk) |
 
@@ -85,6 +86,10 @@ It always has `ok`; errors are `{ok:false, error}`.
 | `trackers.scan` | `{pkg?, seconds?=3 (max 15)}` | T0 | Waits `seconds`, then `{pkg, label, trackers:[{domain, company, blocked, hits}], summary}`. pkg defaults to the app on screen (else the app that last hit a tracker). |
 | `trackers.list` | | T0 | `{apps:[{pkg, label, trackers:[{domain, company, blocked, hits}]}]}`: the Blockers view. `hits` counts connection attempts, blocked ones too. |
 | `trackers.block` / `trackers.unblock` | `{pkg?, domains?[]}` | T3, ordinary | Default: every tracker seen for the app (unblock: every blocked one). Only domains on the bundled tracker list; anything else is `firewall.set`. Tap, voice or reviewer approval (no fingerprint), no lease needed. |
+| `app.mod.apply` | `{spec, approval_timeout_s?}` | T2 UI change, **person only** (tap or voice; never the reviewer) | Strict spec check (see "App mods"), the card says "Add “Tip” to Calculator?" + what it reads and presses, then the app opens and the mod shows. → `{id, shown, ms?, app}`. Audited with the full spec and its sha256. No lease needed. |
+| `app.mod.remove` | `{id, by?}` | free | Always allowed, audited. Also: long-press the mod. |
+| `app.mod.list` | | T0 | `{mods:[{id, package, app, label, shown, created, by}]}` |
+| `app.mod.targets` | | T0 | For writing a spec: the foreground app's buttons/displays with a view id, `"vid role \"text\" [l,t,r,b] flags"`, under `untrusted_app_data`. Refused in forbidden/private apps. |
 | `notifications.list {n?=20}` | | T0 | `{listener, notifications:[{key, pkg, app, conversation, sender, text, when, group, from_me, message, can_reply, removed, guard:{score, label}}] (newest first), foreground:{pkg, app}}`. The text is untrusted: reading it marks the active task untrusted (and flagged if Prompt Guard flagged one). |
 | `notifications.reply {key, text}` | | T3 | Fills the notification's own Reply box and fires it (like the shade's inline reply): no app opening, ~0.1 s after approval. No lease needed: the card is the gate. Always *untrusted* (it answers someone else's text); *private* for messaging apps. |
 | `notifications.autoreply {text, minutes≤240}` | | T3 (a person) | A standing grant: one tap or spoken "yes" allows replies with exactly this text for N minutes; such replies then need no card (audit `approver: "standing auto-reply"`). `minutes: 0` stops it (no approval). |
@@ -180,6 +185,16 @@ Every HTTPS connection starts with a "ClientHello" that names the server in plai
 - **Limits:** rules are lost on reboot (the radar comes back, blocks don't). Encrypted ClientHello (ECH) or QUIC-only traffic would hide names; Android 13 apps don't use ECH, and QUIC is cut while blocking. A name rule also resets an app's plain-HTTP request whose body contains that domain. `pkg` defaults to the top app window; pass `pkg` if a full-screen AgentOS activity is in front.
 
 Loopback is never filtered (`-o lo -j RETURN`), so agentd can always reach :7777.
+
+### App mods (`Mods`)
+Like a sticky note on an app, not a change to it. "Add a tip button to my calculator" → the model writes a small JSON spec → one tap → a Tip key appears next to `÷`, copying the look of the app's own keys. Tap it: chips show 18% / 20% of the number on the display; tap a chip and the mod presses the calculator's own `+`, digits and `=`.
+- **Only two behaviours, checked strictly** (`Mods.validate`, unknown fields are errors): `press` (a list of the app's buttons) or `compute` (read a number, chips = number × a constant factor, then press buttons, with `$value` typed through a `keys` map). No code, no expressions. ≤ 24-char label, ≤ 3 chips, ≤ 20 presses, ≤ 10 mods. Not in forbidden apps (system, AgentOS) or private ones (messaging, mail, money, store). Ids only inside the target package.
+- **Never outward:** text selectors and labels with Send/Pay/Delete-type words are rejected up front. At press time every target is resolved first and checked with `Guard.riskyLabel`; one outward button (or the app not in front, or a FLAG_SECURE screen via root, failing closed) refuses the whole sequence, audited as `app.mod.press` `blocked`. The one exception is a keypad's Delete/Backspace (a digit key in its group), which only erases a typed digit (Clock's timer keypad needs it).
+- **Never read by the agent:** mods are `TYPE_ACCESSIBILITY_OVERLAY` windows of `local.agentos`; `screen.read` skips overlays and our package, so neither the model nor Prompt Guard sees them, and the agent can't tap them. Verified: `screen.read` with the Tip key up has no "Tip".
+- **Follows the app:** shows only while its app is in front and its anchor is on screen (`when` for a given page); re-placed on every window/content/scroll event; a spot that would cover any app button is skipped (then `alt`, else hidden). Long-press removes it.
+- **Persistence and warm colors:** specs and the sampled colors are in the `mods` SharedPreferences, so mods survive app restarts/updates and the color sample (one screenshot, `canTakeScreenshot`) happens once per app/orientation/theme, ever. Sampling waits 400 ms after an app comes to the front and never while our card is open (it would sample the card).
+- **Phone results (10-27, through agentd, Codex gpt-6.1-terra):** "add a tip button to my calculator" from the home screen: the model wrote a valid spec in one call (first try), card up at 9.4 s (cold prompt cache) / 5.3–6.1 s (warm), tap, Calculator opened with Tip on screen 530–773 ms after the tap; total 13.6 s (incl. ~2 s for the scripted tap). First color sample 77 ms (Calculator) / 159 ms (Clock); 125 → Tip → 20% → 150, 4 presses in 55 ms. "add a focus 25 minute button to my timer": one call, card at 5.3 s, Clock opens on Timers (`ACTION_SHOW_TIMERS`), on screen 658 ms after the tap, 9.4 s total; one tap on the mod → a 25:00 timer running (11 presses, 309–625 ms incl. the root FLAG_SECURE check).
+- **Limits:** the reviewer still grades the card (it can't approve: person only) and doesn't see the goal because mods run without a lease. Apps that build views in code (Pigeon) have no view ids: use `{"text": ...}` selectors. Camera is a poor target (SurfaceView).
 
 ## Prompt Guard (on-device injection detector)
 

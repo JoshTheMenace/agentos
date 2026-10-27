@@ -45,6 +45,12 @@ public class AgentA11y extends AccessibilityService {
     @Override public void onAccessibilityEvent(AccessibilityEvent e) {
         lastEvent = SystemClock.uptimeMillis();
         if (e.getEventType() != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) screen.markDirty();
+        if (broker != null) broker.mods.onEvent();
+    }
+
+    @Override public void onConfigurationChanged(android.content.res.Configuration c) {
+        super.onConfigurationChanged(c);
+        if (broker != null) broker.mods.onConfig();
     }
 
     @Override protected boolean onKeyEvent(KeyEvent e) {
@@ -87,6 +93,7 @@ public class AgentA11y extends AccessibilityService {
         if (server != null) server.stop();
         try { unregisterReceiver(demo); } catch (Exception ignored) {}
         if (island != null) island.hide();
+        if (broker != null) broker.mods.hideAll();
         if (autoPause != null) autoPause.stop();
         super.onDestroy();
     }

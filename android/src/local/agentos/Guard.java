@@ -78,6 +78,9 @@ final class Guard {
         return null;
     }
 
+    /** Mods: the outward word in a label or selector text ("Send", "Pay now"), or null. */
+    static String riskyText(String s) { return s != null && RISKY.matcher(s.trim()).find() ? s.trim() : null; }
+
     private static String risky(AccessibilityNodeInfo n) {
         for (CharSequence cs : new CharSequence[]{n.getText(), n.getContentDescription(), n.getTooltipText()}) {
             if (cs == null) continue;

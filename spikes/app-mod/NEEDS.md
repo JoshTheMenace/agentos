@@ -1,5 +1,7 @@
 # NEEDS: wiring app mods into the broker
 
+**Done 10-27:** wired into `local.agentos` (`android/src/local/agentos/Mods.java`, broker `app.mod.*`, agentd `app_mod_*`). See android/README.md "App mods". The spike app is no longer needed on the phone.
+
 Goal: the user says "add a tip button to my calculator", the agent writes a mod spec, one tap approves it, and the mod is on screen. Mods are audited, listed in Settings, and removable.
 
 ## 1. Where the code goes (recommended: fold into AgentA11y)

@@ -163,6 +163,9 @@ final class Island extends FrameLayout {
     }
 
     /** Close the card back into the pill. The pill then auto-hides unless a task is active. */
+    /** A card is open or still closing (Mods won't sample colors under it). */
+    boolean carded() { return open || closing; }
+
     void collapse() {
         if (!open) return;
         open = false;
