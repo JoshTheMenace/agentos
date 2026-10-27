@@ -5,7 +5,8 @@ to Mac port $AGENTOS_PORT, default 17777).
   tools-client.py call METHOD ['{"json":"params"}']   one call, prints the JSON reply
   tools-client.py e2e [--no-firewall] [--press-approve]
                                                       Pigeon chat task (P3 block, fingerprint Send) + Beacon firewall
-  tools-client.py audit [N]                            last N audit entries + offline chain check
+  tools-client.py audit [N]                            last N audit entries + offline check of the whole chain (exit 1 if broken)
+  tools-client.py audit mark REASON                    adb only: append one audit.break line naming today's link breaks (never rewrites)
   tools-client.py events [SECONDS]                     print the GET /events stream (server-sent events)
   tools-client.py settings ['{"require_user_lease":false}']
                                                       write (as root) or, with no JSON, delete files/settings.json
@@ -172,6 +173,13 @@ def approvals():
         th.start()
         return lambda: (th.join(), box["r"])[1]
 
+    def tap_card(a, xy, secs=25):  # under load the card opens late: re-tap only while this approval is still open
+        end = time.time() + secs
+        time.sleep(1.5)
+        while time.time() < end and any(x["approval_id"] == a["approval_id"] for x in call(tok, "approval.list")["approvals"]):
+            adb("shell", f"input tap {xy}")
+            time.sleep(2)
+
     print("hello event:", wait_for("hello")["approvals"])
     # Test harness (not the agent): a clean Pigeon with a benign message from Alice, and her chat open, before any lease (a harness tap during a task auto-pauses it), so the task never
     # reads the chat list (its seeded "Unknown number" preview is a prompt injection that Prompt Guard flags).
@@ -190,9 +198,7 @@ def approvals():
     r = res()
     print("  no tap ->", r["ok"], r.get("reason"), "| resolved:", wait_for("approval.resolved")["decision"])
     res = bg("task.start", {"goal": "approvals test", "apps": [PIGEON], "ttl_s": 120})
-    wait_for("approval.shown")
-    time.sleep(4)  # let the island card finish opening
-    adb("shell", f"input tap {LEASE_ALLOW}")
+    tap_card(wait_for("approval.shown"), LEASE_ALLOW)
     r = res()
     print("  tap Allow ->", r["ok"], "user_granted:", r.get("user_granted"), "| resolved:", wait_for("approval.resolved")["approver"])
     # 2. taint carry-over: read the screen, then re-lease (same caller, same apps: no new card, history kept)
@@ -223,7 +229,7 @@ def approvals():
     send("Reviewer test: running 10 min late", confirm("reviewer", rationale="benign reply in a chat the user named"))
     send("Voice test: running 10 min late", confirm("voice", utterance="send it"))
     send("Tap test: running 10 min late", lambda a: (time.sleep(4), subprocess.run(ADB + ["exec-out", "screencap -p"], stdout=open("/tmp/agentos-card.png", "wb")),
-                                                       adb("shell", f"input tap {CARD_APPROVE}")))
+                                                       tap_card(a, CARD_APPROVE)))
     send("RPC tap test", lambda a: (confirm("tap")(a), call(tok, "approval.deny", {"approval_id": a["approval_id"], "channel": "test"})))
     # 3. copied from the screen -> a person must approve: the reviewer is refused, a spoken "send it" works
     send("the north gate at six tonight", lambda a: (print("  held because:", a.get("held_because")), confirm("reviewer", rationale="x")(a),
@@ -357,14 +363,33 @@ def audit(tok, n):
     a = call(tok, "audit.tail", {"n": n})
     for e in a["entries"]:
         print(f"  {e['ts']} {e['task']:9} {e['tool']:14} {e.get('decision', ''):9} {e.get('target', '')[:40]!r} {e.get('reason', '')[:60]}")
-    print(f"chain_ok={a['chain_ok']} count={a['count']} head={a['head'][:16]}…")
-    # Independent check of the whole file: body = line minus ',"hash":"<64>"}' plus '}'; hash = sha256(prev + body).
-    prev, ok = "0" * 64, True
-    for line in adb("exec-out", "su -c 'cat /data/data/local.agentos/files/audit.jsonl'").splitlines():
+    print(f"phone: chain_ok={a['chain_ok']} broken_at={a.get('broken_at')} marked_breaks={a.get('marked_breaks')} count={a['count']} head={a['head'][:16]}…")
+    ok = verify(adb("exec-out", "su -c 'cat /data/data/local.agentos/files/audit.jsonl'").splitlines())
+    if not ok:
+        sys.exit(1)
+
+
+def verify(lines):
+    """Independent walk of the whole chain (Mac side). body = line minus ',"hash":"<64>"}' plus '}'; hash = sha256(prev_hash + body).
+    A link break (the line's own seal is fine but prev_hash points elsewhere) passes only if a later audit.break line names it."""
+    lines = [l for l in lines if l]
+    marked = {(b["line"], b["hash"]) for l in lines if '"tool":"audit.break"' in l for b in json.loads(l).get("breaks", [])}
+    prev, bad, n_marked = "0" * 64, [], 0
+    for i, line in enumerate(lines):
         body, h = line[:-75] + "}", line[-66:-2]
-        ok = ok and json.loads(body)["prev_hash"] == prev and hashlib.sha256((prev + body).encode()).hexdigest() == h
+        own = json.loads(body)["prev_hash"]
+        if hashlib.sha256((own + body).encode()).hexdigest() != h:
+            bad.append(f"line {i}: content altered")
+        elif own != prev:
+            if (i, h) in marked:
+                n_marked += 1
+            else:
+                bad.append(f"line {i}: prev_hash {own[:12]}… expected {prev[:12]}…")
         prev = h
-    print("offline chain check (Mac side):", ok)
+    print(f"offline chain check (Mac side): {'OK' if not bad else 'BROKEN'}, {len(lines)} lines, {n_marked} marked break(s)")
+    for b in bad[:10]:
+        print("  ", b)
+    return not bad
 
 
 def main():
@@ -390,6 +415,8 @@ def main():
         settings(sys.argv[2] if len(sys.argv) > 2 else None)
     elif cmd == "vault":
         vault([a for a in sys.argv[2:] if a != "--press-approve"])
+    elif cmd == "audit" and sys.argv[2:3] == ["mark"]:  # adb only: one audit.break line naming the current breaks
+        print(json.dumps(call(token(), "audit.mark_breaks", {"reason": " ".join(sys.argv[3:]) or "marked by the operator over adb"}), indent=2))
     elif cmd == "audit":
         audit(token(), int(sys.argv[2]) if len(sys.argv) > 2 else 20)
     elif cmd == "call":

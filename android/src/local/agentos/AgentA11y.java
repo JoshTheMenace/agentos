@@ -64,6 +64,12 @@ public class AgentA11y extends AccessibilityService {
 
     @Override public void onInterrupt() {}
 
+    /** Re-bound by the system: free :7777 so the new instance's broker serves, not two brokers side by side. */
+    @Override public boolean onUnbind(Intent i) {
+        if (server != null) server.stop();
+        return super.onUnbind(i);
+    }
+
     /** am broadcast -a local.agentos.UI --es island working|approval|done|alert|hide --es label L --ei pct N --es goal G
      *  --es card approval|lease|auto [--es pkg P --es text T --ei min M --ez finger true]
      *  --es notify TEXT [--es from NAME]: a test chat notification with a real Reply action (Notifs.postTest) */

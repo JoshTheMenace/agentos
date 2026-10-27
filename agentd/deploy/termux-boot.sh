@@ -1,10 +1,11 @@
 #!/data/data/com.termux/files/usr/bin/sh
-# Termux:Boot entry (install as ~/.termux/boot/agentos-agentd). Runs as the Termux app user, NOT root.
-# Starts agentd at boot and restarts it if it dies.
+# The agentd loop. Runs as the Termux user, NOT root. Started by Magisk (magisk-service.sh, outside the Termux app, so
+# lmkd killing Termux can't take agentd with it); Termux:Boot (~/.termux/boot/agentos-agentd) is the old way.
+# Starts agentd and restarts it if it dies.
 L="$TMPDIR/agentd-boot.lock"   # one loop only (Termux:Boot can queue the script more than once)
 mkdir "$L" 2>/dev/null || { kill -0 "$(cat "$L/pid" 2>/dev/null)" 2>/dev/null && exit 0; }
 echo $$ > "$L/pid"
-termux-wake-lock 2>/dev/null
+[ -n "$AGENTOS_NATIVE" ] || termux-wake-lock 2>/dev/null   # under Magisk the boot script holds a kernel wake lock
 export LD_PRELOAD="$PREFIX/lib/libtermux-exec.so" # Termux:Boot leaves it out; without it "#!/usr/bin/env node" (the claude CLI) can't start
 cd "$HOME/agentos/agentd" || exit 1
 if codex login status >/dev/null 2>&1; then

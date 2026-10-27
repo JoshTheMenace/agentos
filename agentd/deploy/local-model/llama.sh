@@ -19,7 +19,7 @@ start)
     # 2 threads pinned to the 2 big cores (cpu6-7) beat 4-8 threads: the little cores only slow the big ones down
     nohup $(command -v taskset >/dev/null && echo taskset c0) "$B" -m "$M" --host 127.0.0.1 --port "$P" -c "${LOCAL_CTX:-4096}" -np 1 -t "${LOCAL_THREADS:-2}" \
       --jinja --no-webui -b 512 -ub 256 --cache-ram 128 --no-repack >"$LOG" 2>&1 &
-    echo $! >"$PIDF"; }
+    echo $! >"$PIDF"; echo 1000 >/proc/$!/oom_score_adj; } # under memory pressure the model dies first, never agentd (-900)
   i=0; until up; do i=$((i + 1)); [ $i -gt 120 ] || [ -z "$(pid)" ] && { echo "failed, see $LOG"; tail -5 "$LOG"; exit 1; }; sleep 0.5; done
   echo "up on :$P (pid $(pid), $(awk '/VmRSS/{print $2/1024 " MB RSS"}' /proc/$(pid)/status))" ;;
 stop) p=$(pid || pgrep -f "llama-server.*--port $P") && kill $p && echo "stopped $p" || echo "not running"; rm -f "$PIDF" ;; # pgrep: a stale pid file must not leave the port taken

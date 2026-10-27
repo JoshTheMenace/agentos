@@ -146,6 +146,9 @@ final class Broker {
             case "task.pause": return pause(true, "task.pause");
             case "task.resume": return pause(false, "task.resume");
             case "audit.tail": return audit.tail(Math.max(1, Math.min(500, p.optInt("n", 20)))).put("pubkey", Approvals.publicKeyB64(svc));
+            case "audit.mark_breaks": // adb only: names today's chain breaks in one new line; history is never rewritten
+                if (uid != 2000) return ok(false).put("reason", "audit.mark_breaks only over adb, not from " + who(uid));
+                return audit.markBreaks(p.optString("reason", "marked by the operator over adb"));
             case "firewall.list": return Firewall.list(svc);
             case "trackers.scan": return Trackers.scan(svc, p);
             case "trackers.list": return Trackers.list(svc);
