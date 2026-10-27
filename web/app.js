@@ -37,7 +37,7 @@ function connect() {
 const send = (m) => wsOk ? (ws.send(JSON.stringify(m)), true) : false;
 connect();
 
-// ---------- tool server RPC through agentd's allow-listed passthrough (firewall.set blocks natively for the fingerprint) ----------
+// ---------- tool server RPC through agentd's allow-listed passthrough (firewall.set waits on the native tap card) ----------
 let rid = 0; const pend = {};
 const rpc = (method, params = {}) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; if (!send({ type: 'rpc', id, method, params })) app.rpcDone(id, { ok: false, error: 'offline' }); });
 const nget = (path) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; N.get(id, path); }); // agentd GET via the shell (cross-origin)
@@ -45,7 +45,7 @@ app.rpcDone = (id, r) => { pend[id]?.(r); delete pend[id]; };
 on('rpc.result', (m) => app.rpcDone(m.id, m.result));
 
 // ---------- state ----------
-const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [], sugg: [], step: null, home: null, trackers: null, tasks: new Map() }; // tasks = agentd background workers (task.update) // active = latest task.state; home = a turn started from a home suggestion
+const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [], sugg: [], step: null, home: null, trackers: null, tasks: new Map(), mods: null }; // tasks = agentd background workers (task.update) // active = latest task.state; home = a turn started from a home suggestion
 const appName = (pkg) => S.names[pkg] || (pkg || '').split('.').pop().replace(/^\w/, (c) => c.toUpperCase());
 const fmtT = (ts, sec) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}) }).replace(/\s?[AP]M/i, '');
 const short = (s, n = 48) => (s = String(s || '')).length > n ? s.slice(0, n - 1) + '…' : s;
@@ -87,7 +87,7 @@ async function refresh() {
   const [a, l] = await Promise.all([rpc('audit.tail', { n: 80 }), rpc('approval.list')]);
   if (a?.entries) S.audit = a.entries;
   if (l?.approvals) { S.active = alive(l.task); S.pending = l.approvals[0] || null; }
-  live(); renderCalendar();
+  live(); renderCalendar(); if (!S.mods) loadMods();
 }
 on('task.state', (m) => { if (m.state === 'stopped') { if (S.active?.task_id === m.task_id) S.active = null; } else S.active = alive(m); live(); });
 on('audit.append', (m) => { S.audit = [...S.audit.slice(-199), m]; renderNow(); renderCenter(); });
@@ -215,6 +215,8 @@ $('#permsBack').onclick = () => close('perms');
 $('#drawer .grab').onclick = () => close('drawer');
 $('#toBlockers').onclick = $('#toBlockers2').onclick = () => { hap(); openBlockers(); };
 $('#blockersBack').onclick = () => close('blockers');
+$('#toMods').onclick = () => { hap(); openMods(); };
+$('#modsBack').onclick = () => close('mods');
 $('#toPerms').onclick = () => { hap(); openPerms(); };
 $('#toSettings').onclick = () => { hap(); N.settings(''); };
 $('#cmd').onclick = (e) => { if (e.target.closest('.mic')) return; hap(); open('sheet'); setTimeout(() => $('#askIn').focus(), 350); };
@@ -237,6 +239,7 @@ function renderCenter() {
   $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Flagged' : e.decision === 'blocked' ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (e.approver === 'reviewer' || e.channel === 'reviewer' ? 'Auto' : 'Approved') : '';
     return el('li', c === 'c' ? 'flag' : '', `<time>${fmtT(e.ts, true)}</time><i class="${c}"></i><span>${esc(txt)}</span>${tg ? `<em class="tg ${c === 'g' ? 'g' : ''}">${tg}</em>` : ''}`); }));
   if (!recent.length) $('#recent').replaceChildren(el('li', '', `<span class="empty">Nothing yet</span>`));
+  $('#modNote').textContent = S.mods?.length ? `${S.mods.length}` : '';
   $('#blockNote').textContent = S.trackers ? `${S.trackers.reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0)} blocked` : '';
 }
 function taskRow(t) {
@@ -266,7 +269,7 @@ async function renderFirewall() {
   $('#fw').replaceChildren(...pkgs.map((pkg) => {
     const blocked = rules.some((x) => x.pkg === pkg && /REJECT|DROP/i.test(x.action || 'REJECT'));
     const b = el('button', 'ft ' + (blocked ? 'off' : 'on'), `<span class="c">${ICOHTML(pkg)}</span><div class="l">${esc(appName(pkg))}<span>${blocked ? 'Blocked' : 'Allowed'}</span></div>`);
-    b.onclick = async () => { hap(); b.className = 'ft wait'; $('.l span', b).textContent = 'Fingerprint…'; const res = await rpc('firewall.set', { pkg, mode: blocked ? 'allow' : 'block' }); if (res.decision !== 'approved') hap('heavy'); renderFirewall(); refresh(); };
+    b.onclick = async () => { hap(); b.className = 'ft wait'; $('.l span', b).textContent = 'Waiting…'; const res = await rpc('firewall.set', { pkg, mode: blocked ? 'allow' : 'block' }); if (res.decision !== 'approved') hap('heavy'); renderFirewall(); refresh(); };
     return b;
   }));
   if (!pkgs.length) $('#fw').replaceChildren(el('div', 'empty', 'No apps'));
@@ -282,11 +285,22 @@ function renderBlockers() {
   box.replaceChildren(...apps.map((a) => {
     const open_ = a.trackers.filter((t) => !t.blocked), m = el('div', 'mod bk');
     m.innerHTML = `<div class="hd"><span class="appic">${ICOHTML(a.pkg)}</span><div>${esc(a.label || appName(a.pkg))}<span class="s">${a.trackers.length - open_.length} blocked${open_.length ? ` · ${open_.length} open` : ''}</span></div>${open_.length ? '<button class="pillbtn blue">Block</button>' : '<span class="tag g">Protected</span>'}</div>
-      <ul>${a.trackers.map((t) => `<li class="${t.blocked ? 'off' : ''}"><i></i><b>${esc(t.domain)}</b>${t.company ? ` · ${esc(t.company)}` : ''}<span>${t.hits || 0}</span></li>`).join('')}</ul>`;
-    const b = $('.pillbtn', m); if (b) b.onclick = async () => { hap(); b.textContent = 'Fingerprint…'; const r = await rpc('firewall.set', { pkg: a.pkg, mode: 'block', domains: open_.map((t) => t.domain) }); if (r?.decision !== 'approved') hap('heavy'); openBlockers(); };
+      <ul>${a.trackers.map((t) => `<li class="${t.blocked ? 'off' : ''}"><i></i><b>${esc(t.domain)}</b>${t.company ? `<em>${esc(t.company)}</em>` : ''}<span>${t.hits || 0}</span></li>`).join('')}</ul>`;
+    const b = $('.pillbtn', m); if (b) b.onclick = async () => { hap(); b.textContent = 'Waiting…'; const r = await rpc('firewall.set', { pkg: a.pkg, mode: 'block', domains: open_.map((t) => t.domain) }); if (r?.decision !== 'approved') hap('heavy'); openBlockers(); };
     return m;
   }));
 }
+// ---------- mods: buttons agents added to apps ({mods:[{id, package, app, label, shown, created, by}]}) ----------
+async function openMods() { open('mods'); renderMods(); await loadMods(); }
+async function loadMods() { const r = await rpc('app.mod.list', {}); if (r?.mods) S.mods = r.mods; renderMods(); renderCenter(); }
+function renderMods() {
+  const box = $('#mlist'), mods = S.mods || [];
+  $('#modsNote').textContent = mods.length ? `${mods.length} added` : '';
+  if (!mods.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring blue"><svg width="30" height="30"><use href="#i-mod"/></svg></span>Ask to add a button to any app<small>“Add a tip button to Calculator”</small>`));
+  box.replaceChildren(...mods.map((m) => { const r = el('div', 'rowi mod', `<span class="appic">${ICOHTML(m.package)}</span><div>${esc(m.label)}<span class="s">${esc(m.app || appName(m.package))}${m.shown ? '' : ' · hidden'}</span></div><div class="r"><button class="tag">Remove</button></div>`);
+    $('button', r).onclick = async () => { hap(); r.style.opacity = .4; await rpc('app.mod.remove', { id: m.id, by: 'settings' }); loadMods(); }; return r; }));
+}
+on('mod.changed', () => loadMods());
 on('tracker.blocked', (m) => { S.audit = [...S.audit.slice(-199), { ...m, tool: 'tracker.blocked', ts: m.ts || Date.now() }]; renderCenter(); if ($('#blockers').classList.contains('on')) openBlockers(); });
 
 // ---------- ask sheet ----------

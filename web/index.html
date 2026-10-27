@@ -30,6 +30,7 @@
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m16 16 4.5 4.5"/></symbol>
   <symbol id="i-cloud" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" d="M7 18a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.3A3.4 3.4 0 0 1 17 18H7Z"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-mod" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="1.9"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 8.5v7M8.5 12h7"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" d="M12 2.5l1.6 2.6 3-.5 1 2.9 2.9 1-.5 3L22 12l-2 2 .5 3-2.9 1-1 2.9-3-.5L12 21.5l-1.6-2.6-3 .5-1-2.9-2.9-1 .5-3L2 12l2-1.5-.5-3 2.9-1 1-2.9 3 .5z"/></symbol>
 </svg>
 
@@ -64,6 +65,7 @@
     <div class="mod rise" style="animation-delay:.08s"><div class="k">Model</div><div class="seg" id="prov"><button data-p="codex">Codex</button><button data-p="local">Local</button></div></div>
     <div class="mod rise" style="animation-delay:.16s"><div class="k">Activity<span id="recentNote">today</span></div><ul class="log" id="recent"></ul></div>
     <button class="mod link rise" id="toBlockers" style="animation-delay:.2s"><svg width="18" height="18"><use href="#i-shield"/></svg>Blockers<span class="k" id="blockNote"></span><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg></button>
+    <button class="mod link rise" id="toMods" style="animation-delay:.22s"><svg width="18" height="18"><use href="#i-mod"/></svg>Mods<span class="k" id="modNote"></span><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg></button>
     <button class="mod link rise" id="toPerms" style="animation-delay:.24s"><svg width="18" height="18"><use href="#i-key"/></svg>Permissions<svg width="16" height="16" class="chev"><use href="#i-chev"/></svg></button>
     <button class="mod link rise" id="toSettings" style="animation-delay:.3s"><svg width="18" height="18"><use href="#i-gear"/></svg>Settings<svg width="16" height="16" class="chev"><use href="#i-chev"/></svg></button>
   </section>
@@ -91,6 +93,12 @@
 <section class="over slide" id="blockers">
   <div class="bar"><button class="back" id="blockersBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Blockers</h2><span class="k" id="blockersNote"></span></div>
   <div class="scroll body" id="blist"></div>
+</section>
+
+<!-- MODS -->
+<section class="over slide" id="mods">
+  <div class="bar"><button class="back" id="modsBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Mods</h2><span class="k" id="modsNote"></span></div>
+  <div class="scroll body" id="mlist"></div>
 </section>
 
 <!-- APP DRAWER -->

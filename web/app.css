@@ -160,9 +160,12 @@ body{position:fixed;inset:0}
 .bk li i{width:7px;height:7px;border-radius:50%;flex:none;background:var(--orange)}
 .bk li.off i{background:var(--green)}
 .bk li b{color:var(--l1);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk li em{font-style:normal;color:var(--l3);flex:none;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bk li span{margin-left:auto;flex:none;font-variant-numeric:tabular-nums;color:var(--l3)}
 .bempty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:48px 20px;color:var(--l2);text-align:center;font-size:14px;font-weight:500}
 .bempty .ring{width:64px;height:64px;border-radius:50%;background:rgba(48,209,88,.14);display:grid;place-items:center;color:var(--green);box-shadow:0 0 30px rgba(48,209,88,.18)}
+.bempty .ring.blue{background:rgba(10,132,255,.16);color:var(--blue);box-shadow:0 0 30px rgba(10,132,255,.2)}
+.rowi.mod{margin-bottom:6px;padding:10px 12px}
 .bempty small{color:var(--l3);font-size:12.5px}
 
 /* app drawer */

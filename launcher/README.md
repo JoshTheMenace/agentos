@@ -5,11 +5,11 @@ Design: A2 · Calm Glass iOS Dark (`design/mockups/A2-calm-glass-ios-dark.html`,
 Think of a picture frame. The frame is a tiny native HOME activity (`src/local/agentos/home/Home.java`); the picture is `web/`
 (HTML/CSS/vanilla JS, bundled into the APK as assets). The frame only hands the page a few things: the app list and launching,
 haptics, system settings, the next calendar event, the agentd token, and a GET on agentd. Tool-server calls go through agentd's
-`rpc` passthrough, so this app holds no `:7777` token. Approvals never happen here: a fingerprint card drawn by `local.agentos`
-is the gate.
+`rpc` passthrough, so this app holds no `:7777` token. Approvals never happen here: the approval card drawn by `local.agentos`
+(tap or voice; fingerprint only for money, installs and saved passwords) is the gate.
 
 ```
-web/index.html + app.js ──ws://127.0.0.1:8787 (agentd: ask, voice.*, suggestions.watch, rpc {audit.tail, approval.list, firewall.*, task.*, trackers.list}, forwarded broker events)
+web/index.html + app.js ──ws://127.0.0.1:8787 (agentd: ask, voice.*, suggestions.watch, rpc {audit.tail, approval.list, firewall.*, task.*, trackers.list, app.mod.list/remove}, forwarded broker events)
                         ──Native.get ──▶ Home.java ──GET 127.0.0.1:8787/memory/graph.json
 ```
 
@@ -23,8 +23,9 @@ No polling: one `audit.tail` + `approval.list` snapshot on connect/resume, then 
 | Ask sheet | sends `ask` to agentd; streams the reply, tool steps (orb → done/denied) and guard alerts. Approvals are not here: on `approval.shown` the header says "Waiting for your approval", on `approval.resolved` "Approved" / "Auto-approved ✓" / "Denied". The native card is the only gate. |
 | Voice | Siri-like rotating edge + glows, transcript, hold-the-orb push-to-talk over WebRTC (`voice.start` offer/answer), tool steps for delegated requests |
 | Command center | active task (from `task.state`) with Pause/Stop, model switch (Codex / Local), **Activity** (today's audit log, live via `audit.append`, plus `guard.flag` and `tracker.blocked` lines; Blocked / Denied / Flagged / Auto tags. This replaces the red alert pop-ups), links to Blockers, Permissions and Settings. "Stop all" = agentd `stop` + `task.stop` |
-| Blockers | per app: trackers seen and blocked (`trackers.list` → `{apps:[{pkg,label,trackers:[{domain,company,blocked,hits}]}]}`), green = blocked, orange = open, "Block" = `firewall.set {pkg, mode:"block", domains}` (fingerprint). Refreshes on `tracker.blocked`. Empty state: "No trackers seen". Reached from the command center or Permissions › Network. |
-| Permissions | grants (lease apps, minutes left, Revoke), per-app network toggles (`firewall.set`, fingerprint), memory sources (consent ledger), the never-list |
+| Blockers | per app: trackers seen and blocked (`trackers.list` → `{apps:[{pkg,label,trackers:[{domain,company,blocked,hits}]}]}`), green = blocked, orange = open, "Block" = `firewall.set {pkg, mode:"block", domains}` (tap or voice on the native card; fingerprint is only for money, installs and saved passwords). Refreshes on `tracker.blocked`. Empty state: "No trackers seen". Reached from the command center or Permissions › Network. |
+| Mods | buttons agents added to apps (`app.mod.list` → `{mods:[{id,package,app,label,shown}]}`): app icon, label, Remove (`app.mod.remove {id, by:"settings"}`, no approval). Refreshes on `mod.changed`. Empty state: "Ask to add a button to any app". |
+| Permissions | grants (lease apps, minutes left, Revoke), per-app network toggles (`firewall.set`, tap approval), memory sources (consent ledger), the never-list |
 | Memory | force-laid-out graph of `/memory/graph.json` (tap a node for a one-line detail) and sources |
 
 ## Build, install, test
