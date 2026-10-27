@@ -102,7 +102,7 @@ final class Island extends FrameLayout {
         if (!shown) show();
         removeCallbacks(autoHide);
         if (st != null && !st.equals(state)) { state = st; tint(color(st)); }
-        active = !"idle".equals(state) && !"done".equals(state);
+        active = "working".equals(state); // only a running task keeps the pill; other states are moments that fade
         if (p >= 0 != (ring.getVisibility() == VISIBLE)) { ring.setVisibility(p >= 0 ? VISIBLE : GONE); fit(); }
         if (p >= 0) ring.to(p / 100f);
         pct = p;
@@ -210,10 +210,12 @@ final class Island extends FrameLayout {
             invalidate();
         });
         anim.addListener(new AnimatorListenerAdapter() {
+            boolean cancelled;
+            @Override public void onAnimationCancel(Animator a) { cancelled = true; } // a newer morph took over: its end work is not ours
             @Override public void onAnimationEnd(Animator a) {
                 if (f != null) f.setLayerType(LAYER_TYPE_NONE, null);
                 pill.setLayerType(LAYER_TYPE_NONE, null);
-                if (end != null) end.run();
+                if (end != null && !cancelled) end.run();
             }
         });
         anim.start();
@@ -224,22 +226,27 @@ final class Island extends FrameLayout {
     void show() {
         if (shown) return;
         shown = true;
-        setAlpha(0); setScaleX(.6f); setScaleY(.6f);
-        setPivotY(0);
-        wm.addView(this, lp);
+        removeCallbacks(autoHide);
+        animate().cancel();
+        if (getParent() == null) { setAlpha(0); setScaleX(.6f); setScaleY(.6f); setPivotY(0); wm.addView(this, lp); }
         animate().alpha(1).scaleX(1).scaleY(1).setDuration(420).setInterpolator(SPRING).start();
     }
 
+    /** Fade out and remove the window. State resets now; only the removal waits for the fade, and show() can cancel it. */
     void hide() {
         if (!shown) return;
+        shown = false; open = false; active = false; state = "idle"; pct = -1;
         removeCallbacks(autoHide);
+        if (anim != null) anim.cancel();
+        if (face != null) removeView(face);
+        face = null;
+        pill.setAlpha(1);
+        sw = pillW; sh = dp(PILL_H); sr = sh / 2;
+        lp.width = dp(WIN_PILL_W); lp.height = dp(PILL_H + 4);
+        wm.updateViewLayout(this, lp);
         animate().alpha(0).scaleX(.6f).scaleY(.6f).setDuration(260).setInterpolator(EASE).withEndAction(() -> {
+            if (shown) return; // shown again during the fade
             try { wm.removeView(this); } catch (Exception ignored) {}
-            shown = false; open = false; active = false;
-            if (face != null) removeView(face);
-            face = null; state = "idle"; pct = -1;
-            window(dp(WIN_PILL_W), dp(PILL_H + 4));
-            sw = pillW; sh = dp(PILL_H); sr = sh / 2;
         }).start();
     }
 

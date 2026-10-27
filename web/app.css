@@ -177,6 +177,7 @@ body{position:fixed;inset:0}
 .vsteps li{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--l3);animation:rise .4s var(--soft) both}
 .sorb{position:relative;width:76px;height:76px;margin-top:auto;z-index:1;touch-action:none}
 .sorb i{position:absolute;inset:0;border-radius:50%;pointer-events:none}
+.sorb::before{content:"";position:absolute;inset:-34px} /* thumb-sized hit area */
 .sorb .core{background:radial-gradient(circle at 36% 32%,#fff 0,#9AD0FF 18%,#4D8CFF 40%,#A24DFF 68%,#FF4D8C 100%);box-shadow:0 0 40px rgba(90,120,255,.75),0 0 90px rgba(191,90,242,.45);animation:breathe 2.6s ease-in-out infinite;transition:transform .3s var(--spring)}
 .sorb.hot .core{animation:none;transform:scale(1.18)}
 .sorb .halo{inset:-14px;border:1.5px solid rgba(160,140,255,.35);animation:halo 2.6s ease-in-out infinite}

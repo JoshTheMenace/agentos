@@ -43,4 +43,4 @@ Tokens: like the keyboard, `install.sh` copies `~/.agentos/agentd.token` (Termux
 - 3-button navigation. Edge to edge; the shell passes status/nav/IME insets to CSS variables.
 - Only `transform`/`opacity` animate; no blur, no libraries. Inter is bundled (`web/fonts`, 350 KB).
 - Watch heart rate and the smart plug are stubbed demo tiles (marked "demo").
-- `shots/`: screenshots from the phone.
+- `shots/` (phone, 2026-10-27): `home`, `center`, `memory`, `permissions`, `drawer`, `voice` (SDP answered, "Hold to talk"), `ask-thinking` (live `list apps` step), `ask-reply` (streamed answer, Done).
