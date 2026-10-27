@@ -66,8 +66,6 @@ public class Home extends Activity {
     getWindow().setDecorFitsSystemWindows(false); // edge to edge: the page pads itself with insets()
     getWindow().setStatusBarColor(0); getWindow().setNavigationBarColor(0);
     getWindow().setNavigationBarContrastEnforced(false);
-    WindowInsetsController ic = getWindow().getInsetsController();
-    if (ic != null) ic.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
     WebView.setWebContentsDebuggingEnabled(true); // chrome://inspect from the Mac
     web = new WebView(this);
     web.setBackgroundColor(0xFF000000);
@@ -98,6 +96,8 @@ public class Home extends Activity {
       return ins;
     });
     setContentView(web);
+    WindowInsetsController ic = web.getWindowInsetsController(); // light icons on dark bars (needs the decor view: after setContentView)
+    if (ic != null) ic.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
     String dev = null;
     try { dev = new String(Files.readAllBytes(new File(DEV_FLAG).toPath()), StandardCharsets.UTF_8).trim(); } catch (Exception ignored) {}
     if (dev != null && dev.startsWith("http://127.0.0.1")) { devOrigin = dev.replaceAll("^(https?://[^/]+).*$", "$1"); web.loadUrl(dev); Log.i(TAG, "dev page " + dev); }

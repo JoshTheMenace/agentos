@@ -62,6 +62,7 @@ export async function grade(codex, req, ms = cfg.reviewMs) {
 // - block: approval.deny. fingerprint: the broker has no escalate method yet, so this is advice shown to the user.
 // - tap / human: the person decides on the card.
 export async function onApproval(codex, a, { turn, flagged }, emit) {
+  if (a.kind && a.kind !== 'action') return; // lease cards are the user's own tap; nothing to grade
   const ordinary = !!a.allowed_channels?.includes('reviewer');
   const v = await grade(codex, { user: turn ? [turn.goal] : [], transcript: turn?.log || [],
     action: { tool: a.tool, app: a.pkg, args: { target: a.target, text: a.text || undefined } }, floor: ordinary ? 'auto' : 'fingerprint' });

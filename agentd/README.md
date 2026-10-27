@@ -39,7 +39,7 @@ Auth uses `Authorization: Bearer <token>`. A WebView can't set that header on a 
 `approval.needed` is sent just before a call the phone will hold for a fingerprint (outward tool, `submit`, a node with `risk:"T3"`, or any tap on a secure screen). The tool server has no `approval_pending` reply: the call simply blocks for up to 60 s, then returns `approved` or `denied` (`reason:"timed out"`). It is display-only: the fingerprint card on the phone is the real gate.
 
 ### Lease
-The model calls `task_start {apps}` first (the prompt tells it to). If it acts without one, agentd starts one itself with the foreground app (or the `open_app` target). Every action carries the lease's `task_id`, and `endTurn` stops the task. Restarting a lease clears the broker's "has read the screen" taint, so if the model has already seen screen text, agentd does one extra `screen.read` inside the new lease to keep the Rule of Two honest.
+The model calls `task_start {apps}` first (the prompt tells it to). If it acts without one, agentd starts one itself with the foreground app (or the `open_app` target). The phone shows a one-tap lease card ("Allow agent in Pigeon for 10 min"), so `task.start` blocks up to 60 s like an approval (agentd waits 90 s). Every action carries the lease's `task_id`, and `endTurn` stops the task, which ends the grant, so the next turn asks again. The broker carries taint over when a lease is replaced, so agentd no longer re-reads the screen to re-taint.
 
 ### Voice (`gpt-live-1-codex` via `thread/realtime/start`, see `spikes/voice/README.md`)
 | Direction | Message | Meaning |

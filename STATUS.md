@@ -16,12 +16,12 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 - keyboard/ `local.agentos.keys`: A2 AI keyboard (Gboard is currently re-selected as default).
 - demo-apps/: Pigeon (canary chat) and Beacon (tracker demo).
 - agentd/memory: consent ledger, ingestion, graph.json.
+- Local model: Qwen3.5-0.8B on the phone via llama-server :8081 (off by default; `agentd/deploy/local-model/llama.sh start`). Use it for the airplane-mode demo "open Pigeon and read me the last message from Mom". Fix-ups for the agentd owner: tools.js task-approval timeout is 10 s (needs ≥75 s), config.js localUrl default should be 8081.
 
 ## In progress when this was written (check each folder's README/NEEDS for state)
 - launcher/ `local.agentos.home` (Fable): home, command center, permissions, voice, memory graph.
 - android/ island + approval card restyle (Fable). Known bug: a card that opens within about 2 s of the last one closing is lost (android/NEEDS-UI.md).
 - agentd reviewer wiring (agentd/reviewer.js).
-- Local model on the phone (agentd/providers/local.*, agentd/deploy/local-model/).
 - Pigeon IME send-action build isn't installed yet: `adb install -r demo-apps/pigeon/build/pigeon.apk`.
 
 ## Waiting on the user

@@ -2,7 +2,7 @@
 # The on-phone model server: llama-server (OpenAI-compatible API, tool calls via --jinja) on 127.0.0.1:8081.
 # Usage: llama.sh start|stop|status          (agentd runs this too: `node providers/local.js start|stop|status`)
 # Env: LOCAL_MODEL (gguf path), LOCAL_PORT (8081), LOCAL_CTX (4096), LOCAL_THREADS (2), LLAMA_SERVER
-# Prefers our native build (~/agentos/llama/bin, built with -mcpu=native: uses the CPU's dot-product instructions);
+# Prefers our native build (~/agentos/llama/bin, from build.sh: uses the CPU's dot-product instructions);
 # Termux's `pkg install llama-cpp` works too but is built for baseline ARMv8 and prefill is ~3x slower.
 B=${LLAMA_SERVER:-$HOME/agentos/llama/bin/llama-server}; [ -x "$B" ] || B=llama-server
 M=${LOCAL_MODEL:-$HOME/models/Qwen3.5-0.8B-Q4_0.gguf}; P=${LOCAL_PORT:-8081}

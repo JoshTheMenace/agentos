@@ -73,19 +73,18 @@ export async function rpc(method, params = {}, ms = ACT_MS) {
   return body.result ?? body;
 }
 
-// Lease: one task per turn. (Re)starting a lease resets the broker's "has read the screen" taint, so if the model
-// has already seen screen text we read once more inside the new lease to keep the Rule of Two honest.
+// Lease: one task per turn. The phone shows a one-tap "Allow agent in <app>?" card, so task.start blocks like an approval.
+// The broker carries the task's taint over when a lease is replaced.
 export const tasks = new Map(); // task_id -> the turn that holds it (the reviewer reads its goal and log)
 
 async function lease(ctx, apps) {
   const turn = ctx.turn, l = turn.lease;
   if (l && apps.every((a) => l.apps.includes(a) || l.refused_apps?.includes(a))) return l;
-  const r = await rpc('task.start', { goal: turn.goal.slice(0, 200), apps: [...new Set([...(l?.apps || []), ...apps])] }, 10_000);
+  const r = await rpc('task.start', { goal: turn.goal.slice(0, 200), apps: [...new Set([...(l?.apps || []), ...apps])], approval_timeout_s: APPROVAL_S }, ACT_MS);
   if (!r.task_id) throw new Error(`task.start failed: ${r.reason || r.error || 'no task_id'}`);
   if (l) tasks.delete(l.task_id);
   turn.lease = r;
   tasks.set(r.task_id, turn);
-  if (turn.sawScreen) await rpc('screen.read', {}, 15_000);
   ctx.emit({ type: 'task.started', task_id: r.task_id, apps: r.apps, refused_apps: r.refused_apps });
   return r;
 }
