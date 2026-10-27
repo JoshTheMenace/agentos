@@ -185,3 +185,37 @@ export function graph(ctx = {}) {
 export const ingest = (source, opts = {}, ctx = {}) => runIngest(dbOf(ctx), source, opts);
 export const sources = Object.keys(INGESTORS);
 export { open } from './store.js';
+
+// Live messages (context.js, from the phone's notification feed). Saved only while "notifications" is granted.
+// m: {pkg, app, conversation, sender, text, when, group, dir: 'in'|'out'}. People link to the app (role 'app') so
+// "which app do I talk to Alice in?" is one query. Returns the event id, or null (no grant / already saved).
+export function noteMessage(m, ctx = {}) {
+  const db = dbOf(ctx);
+  if (!S.active(db, 'notifications')) return null;
+  return S.tx(db, () => {
+    const who = m.dir === 'out' || !m.group ? m.conversation : m.sender; // 1:1: the thread is the person
+    if (!who || who === 'me') return null;
+    const p = S.person(db, 'notifications', who, [{ kind: 'chat', value: `${m.pkg}|${m.conversation}` }].filter(() => !m.group));
+    const roles = [[p, m.dir === 'out' ? 'to' : 'from'], [S.entity(db, 'app', m.app || m.pkg), 'app']];
+    if (m.group) roles.push([S.entity(db, 'group', m.conversation), 'group']);
+    const id = S.addEvent(db, { source: 'notifications', kind: 'message', ts: m.when || Date.now(), title: `${m.app}: ${m.conversation}`,
+      body: m.text, ext_id: `${m.pkg}|${m.conversation}|${m.when}|${m.dir}|${String(m.text).slice(0, 40)}` }, roles);
+    if (id) S.rebuildRelations(db);
+    return id;
+  });
+}
+
+// People you've messaged recently: [{name, apps:[...], last, text}], newest first (redacted for cloud models).
+export function recentPeople(ctx = {}, limit = 6) {
+  const db = dbOf(ctx), cloud = ctx.cloud !== false, srcs = S.readable(db, cloud);
+  const rows = db.prepare(`SELECT e.ts, ${cloud ? 'e.body_redacted' : 'e.body'} AS text, p.name, a.name AS app FROM event e
+    JOIN event_entity pe ON pe.event_id=e.id AND pe.role IN ('from','to') JOIN entity p ON p.id=pe.entity_id AND p.type='person'
+    LEFT JOIN event_entity ae ON ae.event_id=e.id AND ae.role='app' LEFT JOIN entity a ON a.id=ae.entity_id
+    WHERE e.kind='message' AND e.source IN (${srcs.map(() => '?').join(',')}) ORDER BY e.ts DESC LIMIT 300`).all(...srcs);
+  const out = new Map();
+  for (const r of rows) {
+    const k = r.name, cur = out.get(k) ?? (out.size < limit ? out.set(k, { name: cloud ? S.redact(db, k) : k, apps: [], last: r.ts, text: r.text }).get(k) : null);
+    if (cur && r.app && !cur.apps.includes(r.app)) cur.apps.push(r.app);
+  }
+  return [...out.values()];
+}
