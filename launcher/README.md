@@ -9,7 +9,7 @@ haptics, system settings, the next calendar event, the agentd token, and a GET o
 is the gate.
 
 ```
-web/index.html + app.js ──ws://127.0.0.1:8787 (agentd: ask, voice.*, rpc {audit.tail, approval.list, firewall.*, task.*}, forwarded broker events)
+web/index.html + app.js ──ws://127.0.0.1:8787 (agentd: ask, voice.*, suggestions.watch, rpc {audit.tail, approval.list, firewall.*, task.*, trackers.list}, forwarded broker events)
                         ──Native.get ──▶ Home.java ──GET 127.0.0.1:8787/memory/graph.json
 ```
 
@@ -19,10 +19,11 @@ No polling: one `audit.tail` + `approval.list` snapshot on connect/resume, then 
 ## Screens
 | Page | What |
 |---|---|
-| Home | clock, status line, trust pill (active lease + minutes left), next calendar event, two quiet demo tiles (watch, plug), "What should I do?" bar, squircle dock of real apps. Swipe up: app drawer with search. Swipe down: notification shade. Swipe left: command center, again: memory. |
+| Home | clock, status line, **Now** (the live task: goal, current step from `tool.request`/`audit.append`, a sliding progress bar, pause/stop; tap opens the sheet; a task started from home lingers 20 s with its answer), **For you** (suggestions from agentd's `suggestions` feed plus "Leave for …" from the real next calendar event; one tap sends the item's `goal` as an `ask`, or opens a view), the next calendar event (tap opens Calendar), "What should I do?" bar, squircle dock of real apps. No dummy data; empty state is one line, "All caught up". Swipe up: app drawer with search. Swipe down: notification shade. Swipe left: command center, again: memory. |
 | Ask sheet | sends `ask` to agentd; streams the reply, tool steps (orb → done/denied) and guard alerts. Approvals are not here: on `approval.shown` the header says "Waiting for your approval", on `approval.resolved` "Approved" / "Auto-approved ✓" / "Denied". The native card is the only gate. |
 | Voice | Siri-like rotating edge + glows, transcript, hold-the-orb push-to-talk over WebRTC (`voice.start` offer/answer), tool steps for delegated requests |
-| Command center | active task (from `task.state`) with Pause/Stop, model switch (Codex / Local), recent activity (audit log, live via `audit.append`), links to Permissions and Settings. "Stop all" = agentd `stop` + `task.stop` |
+| Command center | active task (from `task.state`) with Pause/Stop, model switch (Codex / Local), **Activity** (today's audit log, live via `audit.append`, plus `guard.flag` and `tracker.blocked` lines; Blocked / Denied / Flagged / Auto tags. This replaces the red alert pop-ups), links to Blockers, Permissions and Settings. "Stop all" = agentd `stop` + `task.stop` |
+| Blockers | per app: trackers seen and blocked (`trackers.list` → `{apps:[{pkg,label,trackers:[{domain,company,blocked,hits}]}]}`), green = blocked, orange = open, "Block" = `firewall.set {pkg, mode:"block", domains}` (fingerprint). Refreshes on `tracker.blocked`. Empty state: "No trackers seen". Reached from the command center or Permissions › Network. |
 | Permissions | grants (lease apps, minutes left, Revoke), per-app network toggles (`firewall.set`, fingerprint), memory sources (consent ledger), the never-list |
 | Memory | force-laid-out graph of `/memory/graph.json` (tap a node for a one-line detail) and sources |
 
@@ -44,5 +45,6 @@ same at start (`local.agentos.home` is in the default `AGENTD_CLIENT_PKGS`). The
 ## Notes
 - 3-button navigation. Edge to edge; the shell passes status/nav/IME insets to CSS variables.
 - Only `transform`/`opacity` animate; no blur, no libraries. Inter is bundled (`web/fonts`, 350 KB).
-- Watch heart rate and the smart plug are stubbed demo tiles (marked "demo").
-- `shots/` (phone, 2026-10-27): `home` (live lease pill from `task.state`), `center` (recent activity via `audit.append`), `memory`, `permissions`, `drawer`, `voice` (SDP answered, "Hold to talk"), `ask-thinking`, `ask-waiting` (native lease card up, sheet says only "Waiting for your approval"), `ask-reply` (steps + answer, Done).
+- Suggestions: the page sends `{type:"suggestions.watch"}` on connect; agentd answers with `{type:"suggestions", items:[{id,title,detail,app?,goal?,icon?,view?}]}` now and whenever it changes (`agentd/home-suggest.js` is the stand-in until `context.js` lands; keyboard replies carry an `id`, the home feed doesn't). `icon`: msg | car | eye | shield | cal | spark; `view`: blockers | activity.
+- Styling on the Mac without the phone: `python3 -m http.server 5173 -d web`, then `index.html#demo` (feed + a running task), `#demo-blockers`, `#demo-center`. Only in a browser, never on the phone.
+- `shots/` (phone, 2026-10-27): `home` = `home-idle` (phone, nothing running: next event + "All caught up"), `home-feed-mac` (Mac `#demo` render: Now card + For you; the phone's agentd predates the feed), `center` (Activity log with tags, Blockers link), `blockers` (empty state), `memory`, `permissions`, `drawer`, `voice`, `ask-*`.

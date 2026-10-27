@@ -42,7 +42,7 @@ app.rpcDone = (id, r) => { pend[id]?.(r); delete pend[id]; };
 on('rpc.result', (m) => app.rpcDone(m.id, m.result));
 
 // ---------- state ----------
-const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [] }; // active = latest task.state
+const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [], sugg: [], step: null, home: null, trackers: null, tasks: new Map() }; // tasks = agentd background workers (task.update) // active = latest task.state; home = a turn started from a home suggestion
 const appName = (pkg) => S.names[pkg] || (pkg || '').split('.').pop().replace(/^\w/, (c) => c.toUpperCase());
 const fmtT = (ts, sec) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}) }).replace(/\s?[AP]M/i, '');
 const short = (s, n = 48) => (s = String(s || '')).length > n ? s.slice(0, n - 1) + '…' : s;
@@ -68,12 +68,16 @@ const auditLine = (e) => {
     case 'open_app': return [`Open ${app_}`, 'a'];
     case 'firewall.set': return [`Firewall · ${app_} ${e.mode || ''}`, e.decision === 'approved' ? 'g' : 'c'];
     case 'firewall.clear': return ['Firewall cleared', e.decision === 'approved' ? 'g' : 'c'];
-    default: return [`${e.tool} ${tgt} ${app_ || ''}`.trim(), e.decision === 'approved' ? 'g' : e.decision === 'denied' || e.decision === 'blocked' ? 'c' : 'a'];
+    case 'guard.flag': return [`Suspicious text in ${app_} · hidden from the agent`, 'c'];
+    case 'tracker.blocked': return [`Blocked ${short(e.domain, 28)} · ${app_}`, 'g'];
+    case 'notifications.reply': return [`Reply ${tgt} · ${app_}`, e.decision === 'approved' ? 'g' : e.decision === 'denied' || e.decision === 'blocked' ? 'c' : 'a'];
+    case 'notifications.autoreply': return [`Auto-reply ${tgt} · ${app_}`, e.decision === 'blocked' || e.decision === 'denied' ? 'c' : 'g'];
+    default: return [`${e.tool.replace(/[._]/g, ' ').replace(/^\w/, (c) => c.toUpperCase())} ${tgt} ${app_ || ''}`.trim(), e.decision === 'approved' ? 'g' : e.decision === 'denied' || e.decision === 'blocked' ? 'c' : 'a'];
   }
 };
 
 // One snapshot on connect/resume; after that the broker's events (via agentd) keep it live: no polling.
-const live = () => { renderStatus(); renderCenter(); if ($('#perms').classList.contains('on')) renderGrants(); };
+const live = () => { renderStatus(); renderNow(); renderCenter(); if ($('#perms').classList.contains('on')) renderGrants(); };
 const alive = (t) => t && t.expires > Date.now() ? t : null;
 async function refresh() {
   const [a, l] = await Promise.all([rpc('audit.tail', { n: 80 }), rpc('approval.list')]);
@@ -82,7 +86,8 @@ async function refresh() {
   live(); renderCalendar();
 }
 on('task.state', (m) => { if (m.state === 'stopped') { if (S.active?.task_id === m.task_id) S.active = null; } else S.active = alive(m); live(); });
-on('audit.append', (m) => { S.audit = [...S.audit.slice(-119), m]; renderCenter(); });
+on('audit.append', (m) => { S.audit = [...S.audit.slice(-199), m]; renderNow(); renderCenter(); });
+on('guard.flag', (m) => { S.audit = [...S.audit.slice(-199), { ...m, tool: 'guard.flag', ts: Date.now() }]; renderCenter(); });
 setInterval(() => S.active && live(), 30000); // the minutes-left countdown
 
 // ---------- home ----------
@@ -90,15 +95,62 @@ function renderStatus() {
   const orb = $('#sorb'), corb = $('#corb');
   const cls = S.pending ? 'approval' : S.turn || S.active ? 'working' : '';
   orb.className = corb.className = 'orb ' + cls;
-  $('#status').textContent = S.pending ? 'Waiting for you' : S.turn || S.active ? '1 task running' : wsOk ? 'Ready' : 'Agent offline';
-  const t = S.active, left = t ? Math.max(0, Math.round((t.expires - Date.now()) / 60000)) : 0;
-  $('#trustTxt').innerHTML = t ? `Agent can tap in ${esc(t.apps.map(appName).join(', ') || 'an app')} <b>· ${left} min</b>` : 'No active grants';
+  $('#status').textContent = S.pending ? 'Waiting for you' : S.turn || S.active ? 'Working' : wsOk ? 'Ready' : 'Agent offline';
 }
+// Now: the live task (goal, current step, gentle progress). Hidden when nothing runs; a finished home task lingers with its answer.
+const WORKING = new Set(['queued', 'running', 'waiting']);
+function workerCard(w) {
+  const on = WORKING.has(w.state), cls = w.state === 'waiting' ? 'approval' : on ? 'working' : w.state === 'done' ? 'done' : 'alert';
+  const c = el('button', `glass now ${cls}${on ? '' : ' done'}`, `<div class="hd"><span class="orb ${cls}"></span><div><div class="t">${esc(short(w.goal, 40))}</div><div class="s">${esc(short(on ? w.step : w.result || w.error || w.step, 70))}</div></div>${on ? `<button class="ib red" data-a="cancel"><svg width="14" height="14"><use href="#i-stop"/></svg></button>` : ''}</div><div class="bar2"><i></i></div>`);
+  c.onclick = (e) => { hap(); if (e.target.closest('[data-a]')) { send({ type: 'task.cancel', id: w.id }); return; } open('sheet'); };
+  return c;
+}
+on('task.update', (m) => { const w = m.task; if (!w?.id) return; S.tasks.set(w.id, w); if (!WORKING.has(w.state)) setTimeout(() => { if (S.tasks.get(w.id) === w) { S.tasks.delete(w.id); renderNow(); renderCenter(); } }, 20000); renderNow(); renderCenter(); });
+on('task.list', (m) => { S.tasks = new Map((m.tasks || []).filter((w) => WORKING.has(w.state)).map((w) => [w.id, w])); renderNow(); renderCenter(); });
+function renderNow() {
+  const box = $('#now'), t = S.active, h = S.home, ws_ = [...S.tasks.values()].sort((a, b) => WORKING.has(b.state) - WORKING.has(a.state) || b.created - a.created);
+  if (ws_.length) return box.replaceChildren(...ws_.slice(0, 3).map(workerCard));
+  if (!t && !S.turn) { if (h?.done) { const c = el('button', 'glass now done', `<div class="hd"><span class="orb done"></span><div><div class="t">${esc(short(h.goal, 40))}</div><div class="s">${esc(short(h.text || 'Done', 60))}</div></div></div>`); c.onclick = () => { hap(); open('sheet'); }; return box.replaceChildren(c); } return box.replaceChildren(); }
+  const goal = short(t?.goal || h?.goal || 'Thinking', 40), last = t && S.audit.filter((e) => e.task === t.task_id && !/^task\./.test(e.tool)).pop();
+  const step = S.pending ? 'Waiting for you' : t?.paused ? 'Paused' : S.step || (last ? auditLine(last)[0] : 'Starting'), cls = S.pending ? 'approval' : 'working';
+  const c = el('button', 'glass now ' + cls, `<div class="hd"><span class="orb ${cls}"></span><div><div class="t">${esc(goal)}</div><div class="s">${esc(step)}${t ? ' · ' + esc(t.apps.map(appName).join(', ')) : ''}</div></div>${t ? `<button class="ib" data-a="${t.paused ? 'resume' : 'pause'}"><svg width="14" height="14"><use href="#i-${t.paused ? 'play' : 'pause'}"/></svg></button>` : ''}<button class="ib red" data-a="stop"><svg width="14" height="14"><use href="#i-stop"/></svg></button></div><div class="bar2"><i></i></div>`);
+  c.onclick = async (e) => { const a = e.target.closest('[data-a]')?.dataset.a; hap(); if (!a) return open('sheet'); if (a === 'stop') { send({ type: 'stop' }); S.turn = false; } if (t) await rpc('task.' + a, { task_id: t.task_id }); refresh(); };
+  box.replaceChildren(c);
+}
+// Suggestions: agentd's feed (context) plus one from the real next calendar event. One tap starts the task; nothing else to read.
+const SICON = { chat: '#i-msg', msg: '#i-msg', car: '#i-car', eye: '#i-eye', shield: '#i-shield', cal: '#i-cal', spark: '#i-spark' };
+function renderSugg() {
+  const items = [...S.sugg];
+  const c = S.cal, mins = c ? Math.round((c.begin - Date.now()) / 60000) : 0;
+  if (c && c.location && mins > 0 && mins <= 120 && !c.allDay) items.unshift({ id: 'leave', title: `Leave for ${short(c.title, 22)} soon`, detail: `${fmtT(c.begin)} · ${short(c.location, 30)}`, icon: 'car', goal: `Open directions to ${c.location} in Maps` });
+  $('#forK').textContent = items.length ? 'For you' : '';
+  $('.feed').classList.toggle('none', !items.length);
+  if (!items.length) return $('#sugg').replaceChildren(el('div', 'calm', `<svg width="14" height="14"><use href="#i-check"/></svg>All caught up`));
+  $('#sugg').replaceChildren(...items.slice(0, 4).map((it, i) => {
+    const b = el('button', 'glass sg'); b.style.animationDelay = i * .05 + 's';
+    const ic = it.app && S.names[it.app] ? `<span class="appic"><img src="${ICON(it.app)}" alt=""></span>` : `<span class="appic" style="background:${it.icon === 'eye' || it.icon === 'shield' ? 'var(--green)' : it.icon === 'car' ? 'var(--blue)' : 'var(--purple)'}"><svg width="18" height="18"><use href="${SICON[it.icon] || '#i-spark'}"/></svg></span>`;
+    b.innerHTML = `${ic}<div><div class="t">${esc(it.title)}</div><div class="s">${esc(it.detail || '')}</div></div><span class="orb working sm"></span><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg>`;
+    b.onclick = () => startSuggestion(it, b); return b;
+  }));
+}
+function startSuggestion(it, b) {
+  hap('heavy');
+  if (it.view === 'blockers') return openBlockers();
+  if (it.view === 'activity') return go(1);
+  if (!it.goal) return;
+  b.classList.add('busy');
+  S.goal = it.goal; if (!send({ type: 'task.start', goal: it.goal })) return b.classList.remove('busy'); // a background worker; progress arrives as task.update
+  S.sugg = S.sugg.filter((x) => x !== it);
+  setTimeout(() => { b.classList.add('gone'); setTimeout(renderSugg, 400); }, 500);
+}
+on('suggestions', (m) => { if (m.id) return; S.sugg = (m.items || []).filter((x) => x && typeof x === 'object'); renderSugg(); }); // keyboard replies carry an id; the home feed doesn't
 function renderCalendar() {
-  const j = N.calendarNext(); const c = j && JSON.parse(j);
+  const j = N.calendarNext(); const c = S.cal = j && JSON.parse(j);
   const cal = S.apps.find((a) => /calendar/i.test(a.pkg));
-  $('#calBtn').hidden = !cal; $('#calBtn').onclick = () => { hap(); N.launch(cal.pkg); };
-  if (!c) { $('#calWhen').textContent = 'Next'; $('#calTitle').textContent = 'Nothing scheduled'; $('#calSub').textContent = 'This week'; return; }
+  $('#wcal').onclick = () => { hap(); cal && N.launch(cal.pkg); };
+  renderSugg();
+  $('#wcal').classList.toggle('quiet', !c);
+  if (!c) { $('#calWhen').textContent = 'Next'; $('#calTitle').textContent = 'Nothing scheduled this week'; return; }
   const mins = Math.round((c.begin - Date.now()) / 60000), days = Math.floor((c.begin - new Date().setHours(0, 0, 0, 0)) / 864e5);
   $('#calWhen').textContent = mins <= 0 ? 'Now' : mins < 60 ? `Next · in ${mins} min` : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : new Date(c.begin).toLocaleDateString([], { weekday: 'long' });
   $('#calTitle').textContent = c.title || 'Untitled';
@@ -157,7 +209,8 @@ app.resume = () => { W = innerWidth; wsOk && refresh(); if (page === 2) loadMemo
 $('#scrim').onclick = () => close('sheet');
 $('#permsBack').onclick = () => close('perms');
 $('#drawer .grab').onclick = () => close('drawer');
-$('#trust').onclick = () => { hap(); openPerms(); };
+$('#toBlockers').onclick = $('#toBlockers2').onclick = () => { hap(); openBlockers(); };
+$('#blockersBack').onclick = () => close('blockers');
 $('#toPerms').onclick = () => { hap(); openPerms(); };
 $('#toSettings').onclick = () => { hap(); N.settings(''); };
 $('#cmd').onclick = (e) => { if (e.target.closest('.mic')) return; hap(); open('sheet'); setTimeout(() => $('#askIn').focus(), 350); };
@@ -167,16 +220,20 @@ $('#micBtn').onclick = () => { hap('heavy'); voiceStart(); };
 function renderCenter() {
   const box = $('#tasks'), rows = [];
   const t = S.active;
-  if (t) rows.push(taskRow(t));
+  for (const w of S.tasks.values()) if (WORKING.has(w.state)) rows.push(el('div', 'rowi', `<span class="orb ${w.state === 'waiting' ? 'approval' : 'working'}"></span><div>${esc(short(w.goal, 34))}<span class="s">${esc(w.step)}</span></div>`));
+  if (t && ![...S.tasks.values()].some((w) => w.lease_id === t.task_id)) rows.push(taskRow(t));
   if (S.turn && !t) rows.push(el('div', 'rowi', `<span class="orb working"></span><div>Thinking<span class="s">${esc(S.provider)}</span></div>`));
   if (!rows.length) rows.push(el('div', 'empty', 'Nothing running'));
   box.replaceChildren(...rows);
   $('#taskCount').textContent = rows.length && !box.querySelector('.empty') ? `${rows.length} running` : '';
   $$('#prov button').forEach((b) => b.classList.toggle('on', b.dataset.p === S.provider));
   const today = new Date().setHours(0, 0, 0, 0);
-  const recent = S.audit.filter((e) => e.ts >= today).slice(-12).reverse();
-  $('#recentNote').textContent = recent.length ? 'today' : 'quiet today';
-  $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); return el('li', '', `<time>${fmtT(e.ts, true)}</time><i class="${c}"></i><span>${esc(txt)}</span>`); }));
+  const recent = S.audit.filter((e) => e.ts >= today).slice(-60).reverse(), bad = recent.filter((e) => e.tool === 'guard.flag' || /denied|blocked/.test(e.decision || '')).length;
+  $('#recentNote').textContent = recent.length ? `${recent.length} today${bad ? ` · ${bad} blocked` : ''}` : 'quiet today';
+  $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Flagged' : e.decision === 'blocked' ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (e.approver === 'reviewer' || e.channel === 'reviewer' ? 'Auto' : 'Approved') : '';
+    return el('li', c === 'c' ? 'flag' : '', `<time>${fmtT(e.ts, true)}</time><i class="${c}"></i><span>${esc(txt)}</span>${tg ? `<em class="tg ${c === 'g' ? 'g' : ''}">${tg}</em>` : ''}`); }));
+  if (!recent.length) $('#recent').replaceChildren(el('li', '', `<span class="empty">Nothing yet</span>`));
+  $('#blockNote').textContent = S.trackers ? `${S.trackers.reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0)} blocked` : '';
 }
 function taskRow(t) {
   const r = el('div', 'rowi ' + (S.pending ? 'approval' : 'working'));
@@ -211,24 +268,41 @@ async function renderFirewall() {
   if (!pkgs.length) $('#fw').replaceChildren(el('div', 'empty', 'No apps'));
 }
 
+// ---------- blockers: trackers seen and blocked per app ({apps:[{pkg,label,trackers:[{domain,company,blocked,hits}]}]}) ----------
+async function openBlockers() { open('blockers'); renderBlockers(); const r = await rpc('trackers.list', {}); S.trackers = r?.apps || []; renderBlockers(); renderCenter(); }
+function renderBlockers() {
+  const box = $('#blist'), apps = (S.trackers || []).filter((a) => a.trackers?.length);
+  const nb = apps.reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0), ns = apps.reduce((n, a) => n + a.trackers.length, 0);
+  $('#blockersNote').textContent = ns ? `${nb} of ${ns} blocked` : '';
+  if (!apps.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring"><svg width="30" height="30"><use href="#i-shield"/></svg></span>No trackers seen<small>Ask “any trackers?” in any app</small>`));
+  box.replaceChildren(...apps.map((a) => {
+    const open_ = a.trackers.filter((t) => !t.blocked), m = el('div', 'mod bk');
+    m.innerHTML = `<div class="hd"><span class="appic"><img src="${ICON(a.pkg)}" alt=""></span><div>${esc(a.label || appName(a.pkg))}<span class="s">${a.trackers.length - open_.length} blocked${open_.length ? ` · ${open_.length} open` : ''}</span></div>${open_.length ? '<button class="pillbtn blue">Block</button>' : '<span class="tag g">Protected</span>'}</div>
+      <ul>${a.trackers.map((t) => `<li class="${t.blocked ? 'off' : ''}"><i></i><b>${esc(t.domain)}</b>${t.company ? ` · ${esc(t.company)}` : ''}<span>${t.hits || 0}</span></li>`).join('')}</ul>`;
+    const b = $('.pillbtn', m); if (b) b.onclick = async () => { hap(); b.textContent = 'Fingerprint…'; const r = await rpc('firewall.set', { pkg: a.pkg, mode: 'block', domains: open_.map((t) => t.domain) }); if (r?.decision !== 'approved') hap('heavy'); openBlockers(); };
+    return m;
+  }));
+}
+on('tracker.blocked', (m) => { S.audit = [...S.audit.slice(-199), { ...m, tool: 'tracker.blocked', ts: m.ts || Date.now() }]; renderCenter(); if ($('#blockers').classList.contains('on')) openBlockers(); });
+
 // ---------- ask sheet ----------
 const body = $('#shbody'); let aiMsg = null, steps = {};
 const scrollDown = () => (body.scrollTop = body.scrollHeight);
 function setSheet(state, cls) { $('#shstate').textContent = state; $('#shorb').className = 'orb ' + (cls || ''); $('#shstop').hidden = !S.turn; }
 function sendUser(text) {
   if (!text) return;
-  body.append(el('div', 'msg me', esc(text))); aiMsg = null;
+  body.append(el('div', 'msg me', esc(text))); aiMsg = null; S.home = null;
   if (!send({ type: 'ask', text, provider: S.provider })) body.append(el('div', 'msg err', 'Agent offline'));
   else { S.turn = true; setSheet('Thinking', 'working'); renderStatus(); }
   scrollDown();
 }
 $('#askForm').onsubmit = (e) => { e.preventDefault(); const t = $('#askIn').value.trim(); $('#askIn').value = ''; hap('tick'); sendUser(t); };
 $('#shstop').onclick = () => { hap(); send({ type: 'stop' }); };
-on('text.delta', (m) => { if (!aiMsg) body.append(aiMsg = el('div', 'msg ai')); aiMsg.textContent += m.text; scrollDown(); });
+on('text.delta', (m) => { if (!aiMsg) body.append(aiMsg = el('div', 'msg ai')); aiMsg.textContent += m.text; if (S.home) S.home.text = aiMsg.textContent; scrollDown(); });
 on('tool.request', (m) => {
   const a = m.args || {}, what = m.name === 'open_app' ? appName(a.pkg) : m.name === 'task.start' ? (a.apps || []).map(appName).join(', ') : a.text ? `“${short(a.text, 30)}”` : a.id != null ? `#${a.id}` : a.key || a.pkg || '';
   const s = el('div', 'step', `<span class="orb working"></span><span>${esc(m.name.replace(/[._]/g, ' '))} ${esc(what)}</span>`);
-  body.append(s); steps[m.name] = s; aiMsg = null; S.turn = true; setSheet('Working', 'working'); scrollDown();
+  body.append(s); steps[m.name] = s; aiMsg = null; S.turn = true; S.step = `${m.name.replace(/[._]/g, ' ')} ${what}`.trim().replace(/^\w/, (c) => c.toUpperCase()); setSheet('Working', 'working'); scrollDown(); renderNow();
 });
 on('tool.result', (m) => {
   const s = steps[m.name]; if (!s) return;
@@ -245,9 +319,9 @@ on('approval.resolved', (m) => {
   setSheet(ok ? (m.approver === 'reviewer' ? 'Auto-approved ✓' : 'Approved') : m.decision === 'timeout' ? 'Timed out' : 'Denied', ok ? 'done' : 'alert'); live();
 });
 on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" height="14"><use href="#i-shield"/></svg><span>Suspicious message in ${esc(appName(m.source_pkg))}</span>`)); scrollDown(); });
-on('error', (m) => { body.append(el('div', 'msg err', esc(m.message))); scrollDown(); });
-on('turn.done', (m) => { S.turn = false; S.pending = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); live(); });
-on('ws.open', refresh); on('ws.close', () => { S.turn = false; S.active = null; for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
+on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; } body.append(el('div', 'msg err', esc(m.message))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
+on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
+on('ws.open', () => { refresh(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- voice (WebRTC per agentd/voice.html; hold the orb to talk) ----------
 let pc, mic, micTrack;
@@ -320,4 +394,11 @@ function renderSources(box, consents = S.consents) {
 }
 
 // ---------- boot ----------
-loadApps(); live(); renderCalendar(); go(0);
+loadApps(); renderCalendar(); live(); go(0);
+// Browser-only styling aid (`index.html#demo` on the Mac, never on the phone): sample feed + a running task.
+if (!window.Native && location.hash.startsWith('#demo')) {
+  emit({ type: 'suggestions', items: [{ id: 1, title: 'Reply to Sam: running late?', detail: 'Messages · 12 min ago', app: 'local.agentos.pigeon', goal: 'x' }, { id: 2, title: 'Leave for 3 PM meeting in 12 min', detail: '18 min drive · Maps', icon: 'car', goal: 'x' }, { id: 3, title: '2 apps sent data to trackers today', detail: '1Weather, Chrome', icon: 'eye', goal: 'x' }] });
+  if (location.hash === '#demo') S.active = { task_id: 't1', goal: 'Reply to Mom that I am 10 minutes late', apps: ['local.agentos.pigeon'], expires: Date.now() + 5e5, steps: 3, max_steps: 40 }; S.step = 'Tap "Send"'; S.tasks.set('k1', { id: 'k1', goal: 'Reply to Mom that I am 10 minutes late', state: 'running', step: 'Tapping Send in Pigeon', created: 1 }); live();
+  if (location.hash === '#demo-blockers') { open('blockers'); S.trackers = [{ pkg: 'com.handmark.expressweather', label: '1Weather', trackers: [{ domain: 'app-measurement.com', company: 'Google', blocked: true, hits: 14 }, { domain: 'ads.mopub.com', company: 'MoPub', blocked: false, hits: 6 }] }, { pkg: 'com.android.chrome', label: 'Chrome', trackers: [{ domain: 'doubleclick.net', company: 'Google', blocked: true, hits: 3 }] }]; renderBlockers(); }
+  if (location.hash === '#demo-center') go(1);
+}
