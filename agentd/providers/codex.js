@@ -22,6 +22,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // allowed it), agentd shows that reply and ends the turn: the "tell the user it's done" model call (~2.5 s) is skipped.
 const FINISH = new Set(['set_alarm', 'set_timer', 'web_search', 'notifications_reply', 'act']);
 const DONE = { type: 'string', description: 'Only if this call completes the whole request and nothing is left to read or report: your final short reply to the user, e.g. "Alarm set for 7:00 AM." It is shown only if the call succeeds, and your turn ends there.' };
+const DONE_HINT = '- Finish in the same call: when an action call completes the request (set_alarm, set_timer, web_search, notifications_reply, or an act that ends with the result on screen), put your final reply in its `done` field. Then you are finished; don\'t send another message.';
 const tier = () => cfg.codexTier && { serviceTier: cfg.codexTier };
 // bench/climb.js: prompt and tool-description variants, applied without a code change.
 const patch = cfg.promptPatch ? JSON.parse(Buffer.from(cfg.promptPatch, 'base64').toString()) : {};
@@ -150,7 +151,7 @@ export class Codex {
     if (!s || s.gen !== this.#gen) {
       const r = await this.#req('thread/start', {
         ...(cfg.codexModel && { model: cfg.codexModel }), ...tier(), cwd: cfg.codexCwd, ephemeral: true,
-        sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: `${patched(SYSTEM_PROMPT)}\n\n# Apps on this phone (label=package)\n${await appList()}`,
+        sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: `${patched(SYSTEM_PROMPT)}${cfg.codexFinish ? `\n${DONE_HINT}` : ''}\n\n# Apps on this phone (label=package)\n${await appList()}`,
         dynamicTools: Object.entries(TOOLS).map(([name, t]) => ({ type: 'function', name, description: patch.tools?.[name] ?? t.description,
           inputSchema: cfg.codexFinish && FINISH.has(name) ? { ...t.schema, properties: { ...t.schema.properties, done: DONE } } : t.schema })),
       });
