@@ -8,6 +8,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -544,12 +545,20 @@ final class Broker {
         }
     }
 
-    /** The live text of the field this task last typed into (same app), for a "Send" card's bubble; "" if none. */
-    private static String draft(Lease l, String pkg) {
+    /** The live text of the field this task last typed into, else the screen's only text field (a draft left by an earlier task), same app; "" if none. */
+    private String draft(Lease l, String pkg) {
         AccessibilityNodeInfo f = l == null ? null : l.field;
-        if (f == null || !f.refresh() || f.isShowingHintText() || !pkg(f).equals(pkg)) return "";
+        if (f == null || !f.refresh()) { List<AccessibilityNodeInfo> e = new ArrayList<>(); editables(svc.getRootInActiveWindow(), e); f = e.size() == 1 ? e.get(0) : null; }
+        if (f == null || f.isShowingHintText() || !pkg(f).equals(pkg)) return "";
         CharSequence t = f.getText();
         return t == null ? "" : t.toString();
+    }
+
+    /** Collects editable nodes under n, stopping at 2 (callers only need "exactly one"). */
+    private static void editables(AccessibilityNodeInfo n, List<AccessibilityNodeInfo> out) {
+        if (n == null || out.size() > 1) return;
+        if (n.isEditable()) out.add(n);
+        for (int i = 0; i < n.getChildCount(); i++) editables(n.getChild(i), out);
     }
 
     private static boolean leaksSecret(History h, String text) {

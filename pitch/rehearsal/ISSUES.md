@@ -4,7 +4,7 @@ Fixed today are at the bottom. Open ones first, most important first.
 
 ## Open
 
-1. **Send card can show an empty message (security-relevant, android/Broker.java `draft()`).** The card's text is "the field this task typed into". If the draft was typed by an *earlier* task (e.g. after a timed-out send) and the new task just taps Send, the card shows no bubble and the fingerprint signs `""`, while Pigeon sends what is in the field. The post-approval check compares `"" == ""`, so it passes. Fix after the demo: when `l.field` is null, read the input-focused editable node in the Send button's window. Demo workaround: re-stage Pigeon (`scenario clean` + Alice) after any denied or timed-out send.
+1. (fixed, see below)
 2. **One flag taints the next 10 minutes (by design, but it shapes the run order).** Like a club hand stamp, the broker keeps a task's history (taint, guard flag) for the same caller within the old lease's TTL, and every new agentd task renews it. So after the trap beat, every send needs a fingerprint, and the reviewer can't auto-approve. Run the auto-approve beat **before** the canary is staged. Recovery: one operator task from the laptop resets the stamp (RUN.md, "reset the stamp").
 3. **Pigeon's chat list shows the canary preview**, so any task that passes the list gets flagged (Prompt Guard 0.95). That is correct behavior; it is why the run uses `scenario clean` until the trap beat.
 4. **The fingerprint prompt is black on scrcpy.** BiometricPrompt is a secure window: screencap and mirroring show nothing. Point a document camera at the phone for this beat, or say "the system fingerprint sheet is hidden from screen capture on purpose".
@@ -24,3 +24,4 @@ Fixed today are at the bottom. Open ones first, most important first.
 - **Prompt Guard flagged our own launcher:** the ask sheet's alert row "Ignored instructions in Pigeon" scored 0.999, so every later ask from home flagged itself. The copy is now "Suspicious message in Pigeon" (0.002; web/app.js).
 - **Pigeon `scenario clean`:** the seed without the "Unknown number" chat, so the auto-approve beat can run before the trap.
 - STATUS fix-ups already done: tools.js approval wait is 60 s card / 90 s RPC; config.js `localUrl` is 8081.
+- **Send card showed an empty message** for a draft typed by an earlier task (fingerprint signed `""`). `Broker.draft()` now falls back to the screen's only text field (none or several → still `""`). Verified on the phone: the card shows "Draft left by task one".
