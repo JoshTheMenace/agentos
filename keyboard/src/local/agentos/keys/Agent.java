@@ -153,7 +153,7 @@ final class Agent {
     }
 
     /** Closes the in-flight request (agentd aborts the turn when the socket closes). */
-    void cancel() { Ws w = current; if (w != null) w.close(); }
+    void cancel() { Ws w = current; if (w != null) new Thread(w::close).start(); } // callers are on the main thread: no network there
 
     private static void addAll(List<String> out, JSONArray a) {
         for (int i = 0; a != null && i < a.length(); i++) { String s = a.optString(i).trim(); if (!s.isEmpty()) out.add(s); }

@@ -63,6 +63,7 @@ An approval is a tap on the native card's Approve, or the fingerprint. Taps only
   - Over `REVIEW_MS` (default 4000) or any error → `decision:"human"`; the user decides.
   - Every verdict is emitted as `review {approval_id, task_id, tool, target, decision, action, rationale, risk_level, user_authorization, tainted, ms}`, so the island can show "Auto-approved ✓ — <rationale>". `REVIEW_MODEL=off` disables it.
   - Not done: pre-checking outward calls before the broker sees them. It would add 1–3 s to every outward call, and the broker's card already stops them.
+  - `node reviewer-test.js`: 13 cases shaped like real cards (dictated sends → auto; trap, wrong chat, made-up content → not auto; firewall/delete/flagged → fingerprint) + the timeout. 14/14 on the Mac, 13/14 on the phone at 4 s (2026-10-27).
   - Tested on the Mac: the spike's 7 cases → **7/7** twice (1.0–2.5 s warm, 3.8 s cold). Against the stub (`mock-phone.js` matches Broker/Events.java; switches `MOCK_FP`, `MOCK_DRAFT_CARD`, `MOCK_CLEAN`, `MOCK_TIMEOUT_MS`), these all behaved as described:
     - draft on a clean screen → auto-approved by the reviewer in 2.9 s;
     - Send → "fingerprint" advice, left to the user;

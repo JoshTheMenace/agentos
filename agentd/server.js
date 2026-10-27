@@ -25,6 +25,7 @@ if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approv
   const turn = tasks.get(a.task_id);
   reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size }, events.publish);
 });
+if (cfg.reviewModel !== 'off') reviewer.grade(codex, { user: ['warm-up'], transcript: [], action: { tool: 'scroll' } }, 60_000); // first real review is warm (<4 s)
 // UI passthrough to the tool server, so the launcher needs no :7777 token. Read/UI methods only; approvals are never here
 // (firewall.set is allowed because the broker still puts up its fingerprint card for it).
 const UI_RPC = { 'audit.tail': 10_000, 'approval.list': 10_000, 'firewall.list': 10_000, 'firewall.set': 90_000, 'task.pause': 10_000, 'task.resume': 10_000, 'task.stop': 10_000 };

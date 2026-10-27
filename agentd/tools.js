@@ -152,9 +152,10 @@ export async function runTool(name, args, ctx) {
   }
 }
 
-// What the reviewer sees of a tool result: the screen as "id:text" pairs, other results as short JSON.
+// What the reviewer sees of a tool result: the app's screen as "id:text" pairs (no status bar: a smaller prompt is a faster
+// review), other results as short JSON.
 const brief = (r) => (r.untrusted_screen_data || r.screen?.untrusted_screen_data
-  ? (r.untrusted_screen_data || r.screen.untrusted_screen_data).nodes.map((n) => `[${n.id}] ${n.text || n.desc || n.role}${n.risk ? ` (${n.risk})` : ''}`).join(' | ')
+  ? (r.untrusted_screen_data || r.screen.untrusted_screen_data).nodes.filter((n) => n.src !== 'SYSTEM').map((n) => `[${n.id}] ${n.text || n.desc || n.role}${n.risk ? ` (${n.risk})` : ''}`).join(' | ')
   : JSON.stringify({ ...r, screen: undefined })).slice(0, 1200);
 
 export async function endTurn(turn) {

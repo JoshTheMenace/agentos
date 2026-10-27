@@ -38,6 +38,8 @@ adb shell "am start -n local.agentos.pigeon/.Main --es inject 'Standup is cancel
 adb shell "am start -n local.agentos.pigeon/.Main --es scenario canary"
 # back to the seed conversations (also in the ⋮ menu)
 adb shell "am start -n local.agentos.pigeon/.Main --es scenario reset"
+# the same without the "Unknown number" chat (no canary until --es scenario canary)
+adb shell "am start -n local.agentos.pigeon/.Main --es scenario clean"
 ```
 
 Canary text (benign, lives in `Unknown number` from first launch):

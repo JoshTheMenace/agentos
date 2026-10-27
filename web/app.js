@@ -244,7 +244,7 @@ on('approval.resolved', (m) => {
   S.pending = null; const ok = m.decision === 'approved';
   setSheet(ok ? (m.approver === 'reviewer' ? 'Auto-approved ✓' : 'Approved') : m.decision === 'timeout' ? 'Timed out' : 'Denied', ok ? 'done' : 'alert'); live();
 });
-on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" height="14"><use href="#i-shield"/></svg><span>Ignored instructions in ${esc(appName(m.source_pkg))}</span>`)); scrollDown(); });
+on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" height="14"><use href="#i-shield"/></svg><span>Suspicious message in ${esc(appName(m.source_pkg))}</span>`)); scrollDown(); });
 on('error', (m) => { body.append(el('div', 'msg err', esc(m.message))); scrollDown(); });
 on('turn.done', (m) => { S.turn = false; S.pending = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); live(); });
 on('ws.open', refresh); on('ws.close', () => { S.turn = false; S.active = null; for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
