@@ -161,7 +161,9 @@ public class Main extends Activity {
         in.setPadding(dp(16), dp(10), dp(16), dp(10));
         in.setTextSize(16);
         in.setMaxLines(4);
-        in.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        in.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        in.setHorizontallyScrolling(false);
+        in.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEND);
         in.setTextColor(color(R.color.text));
         in.setHintTextColor(color(R.color.text2));
         bar.addView(in, new LinearLayout.LayoutParams(0, WRAP, 1));
@@ -183,6 +185,7 @@ public class Main extends Activity {
             in.setText("");
             addBubble(append(name, t, true, null, System.currentTimeMillis()));
         });
+        in.setOnEditorActionListener((v, id, e) -> send.performClick());
         page.addView(bar);
 
         chatView = page;

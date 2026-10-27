@@ -36,7 +36,7 @@ Tokens: agentd writes its token into `/data/data/local.agentos.keys/files/agentd
 4. **Privacy.** Password fields (`TYPE_TEXT_VARIATION_PASSWORD`, `VISIBLE_PASSWORD`, `WEB_PASSWORD`, `TYPE_NUMBER_VARIATION_PASSWORD`) and fields with `IME_FLAG_NO_PERSONALIZED_LEARNING`: red dot, no suggestions, no key previews, nothing sent; the detail line says "Password field · nothing sent". The dot's detail line otherwise shows exactly what was used: `Pigeon · 6 lines · 1 hidden · 1 flagged · agentd 1.6s`.
 
 ## Measured on the phone (Moto G 5G 2023, agentd with Codex `gpt-6-luna`, effort low)
-- Suggestion round trip, `suggest` path, warm: **1.0–2.0 s** (1.0, 1.3, 1.4, 1.7, 2.0 s); first request after an agentd thread rotation ~3.1 s. `screen.read` adds ~0.9 s before that (included in the numbers above the dot shows; the log line `suggest via agentd in N ms` is agentd only).
+- Suggestion round trip, `suggest` path, warm: **1.0–2.0 s** (1.0, 1.3, 1.4, 1.7, 2.0 s); first request after an agentd thread rotation ~3.1 s; 4.3 s once while another session was driving Codex through agentd at the same time. `screen.read` adds ~0.9 s before that (included in the numbers above the dot shows; the log line `suggest via agentd in N ms` is agentd only).
 - Build 2.3 s; install ~5 s.
 
 ## Screenshots (`shots/`)
