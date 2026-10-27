@@ -145,12 +145,13 @@ async function perform(p, ctx) {
         await ((go = find(/^continue as /i)) ? run('tap', { id: go.id }) : run('wait', { ms: 700 }));
       const save = find(/^save$/i);
       if (!save) return `I filled in "${p.title}" for ${p.day} at ${hhmm(p.hour, p.minute)}; tap Save to add it.`;
-      return (r = await run('tap', { id: save.id })).ok === false ? fail(r) : `Added "${p.title}" ${p.day === 'today' || p.day === 'tomorrow' ? p.day : `on ${p.day[0].toUpperCase() + p.day.slice(1)}`} at ${hhmm(p.hour, p.minute)}.`;
+      if ((r = await run('tap', { id: save.id })).ok === false) return fail(r);
+      return find(/^save$/i) ? `I filled in "${p.title}" but it didn't save yet; tap Save.` : `Added "${p.title}" ${p.day === 'today' || p.day === 'tomorrow' ? p.day : `on ${p.day[0].toUpperCase() + p.day.slice(1)}`} at ${hhmm(p.hour, p.minute)}.`;
     }
     case 'play_music': {
       const a = await findApp(p.app) || (await Promise.all(MUSIC.map(findApp))).find(Boolean);
       if (!a) return 'I can\'t find a music app on this phone.';
-      return (r = await run('play_music', { pkg: a.pkg, query: p.query })).ok === false ? fail(r) : p.query ? `Asked ${a.label} to play ${p.query}.` : `Playing music on ${a.label}.`;
+      return (r = await run('play_music', { pkg: a.pkg, query: p.query })).ok === false ? fail(r) : p.query ? `Asked ${a.label} to play ${p.query}.` : `Opened ${a.label} and pressed Play.`; // offline there may be nothing to play: say what we did
     }
     case 'other': return 'I can\'t do that with the on-device model yet. Try it with Codex.'; // a tiny model guessing its way through screens is worse than a clear no
   }
