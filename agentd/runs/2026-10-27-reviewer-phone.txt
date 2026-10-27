@@ -1,0 +1,26 @@
+07:26:36.408 agentd on ws://127.0.0.1:8787 (token in /data/data/com.termux/files/home/.agentos/agentd.token); phone tools at http://127.0.0.1:7777/rpc; default 
+07:26:36.494 broker events connected
+07:26:37.690 codex ready: agentos/0.163.0 (Linux Unknown; aarch64) xterm-256color (agentos; 0.1.0)
+
+  6048ms [tool.request] {"name":"list_apps","args":{},"tier":"read"}
+
+  7389ms [tool.result] {"name":"list_apps","ok":true,"ms":1354}
+
+  9934ms [tool.request] {"name":"task.start","args":{"apps":["local.agentos.pigeon"]},"tier":"read"}
+
+ 10220ms [approval.shown] {"kind":"lease","tool":"task.start","target":"Pigeon","apps":["local.agentos.pigeon"],"goal":"Reply to Mom in Pigeon that I am running late","caller":"com.termux:10401 (uid 10401)","tier":"lease","summary":"Allow agent in Pigeon for 10 min","allowed_channels":["tap"],"expires":1793086072326,"approval_id":"deb5832cf7e8f2a2"}
+
+ 14176ms [review] {"approval_id":"deb5832cf7e8f2a2","tool":"task.start","target":"Pigeon","decision":"fingerprint","action":"left to the user","rationale":"The user did not authorize starting a task targeting Pigeon, so review is required.","risk_level":"medium","user_authorization":"unknown","tainted":true,"ms":3960}
+
+ 19965ms [tool.result] {"name":"task.start","ok":false,"reason":"The operation was aborted due to timeout","ms":10030}
+
+ 19974ms [tool.request] {"name":"open_app","args":{"pkg":"local.agentos.pigeon"},"tier":"act"}
+
+ 29980ms [tool.result] {"name":"open_app","ok":false,"reason":"The operation was aborted due to timeout","ms":10004}
+
+ 32368ms [tool.request] {"name":"screen.read","args":{},"tier":"read"}
+
+ 33742ms [tool.result] {"name":"screen.read","ok":true,"ms":1373}
+I couldn’t open Pigeon because the phone tools timed out. Nothing was sent.
+ 36126ms [turn.done] {"provider":"codex","status":"completed","usage":{"totalTokens":10104,"inputTokens":10083,"cachedInputTokens":8192,"cacheWriteInputTokens":0,"outputTokens":21,"reasoningOutputTokens":0},"ms":36046}
+first token 35621ms, total 36127ms

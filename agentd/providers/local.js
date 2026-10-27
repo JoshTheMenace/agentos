@@ -35,7 +35,8 @@ function compact(text, goal = '') {
   }
   const s = r.untrusted_screen_data || r.screen?.untrusted_screen_data;
   const head = r.untrusted_screen_data ? '' : `ok:${r.ok !== false}${r.reason ? ` (${r.reason})` : ''}\n`;
-  if (!s) return head + (r.error || '');
+  if (r.ok === false || r.error) return `ok:false (${r.reason || r.error || r.decision || 'failed'})`;
+  if (!s) return head;
   // A tappable row with no text of its own (e.g. a chat in a list) takes the text of the nodes inside it, so it is one line.
   const app = s.nodes.filter((n) => !String(n.src).startsWith('SYSTEM')), used = new Set();
   const label = (n) => [n.text, n.desc].filter(Boolean).join(' / '), tappable = (n) => n.actions?.includes('click');
@@ -69,7 +70,11 @@ export class Local {
         if (c.function.name === 'answer') return ctx.emit({ type: 'text.delta', text: String(args.text ?? '') }), { status: 'completed', usage };
         const name = NAMES.includes(c.function.name) ? c.function.name : null;
         let out = name ? compact((await runTool(name, args, ctx)).text, text) : `Unknown tool ${c.function.name}`;
-        if (name && name !== 'list_apps' && !out.includes('UNTRUSTED screen')) out += `\n${compact((await runTool('screen_read', {}, ctx)).text)}`; // saves a slow model step
+        if (out.startsWith('ok:false')) { // a tiny model tends to invent an answer after a failure, so we say it ourselves
+          ctx.emit({ type: 'text.delta', text: `I couldn't finish that: ${name} said "${out.slice(10, -1)}".` });
+          return { status: 'completed', usage };
+        }
+        if (name && name !== 'list_apps' && out.startsWith('ok:true') && !out.includes('UNTRUSTED screen')) out += `\n${compact((await runTool('screen_read', {}, ctx)).text)}`; // saves a slow model step
         msgs.push({ role: 'tool', tool_call_id: c.id, content: out });
       }
     }
