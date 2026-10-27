@@ -43,7 +43,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
 
     // current field
     private String pkg = "", app = "", hint = "";
-    private int enterAction = EditorInfo.IME_ACTION_NONE;
+    private int enterAction = EditorInfo.IME_ACTION_NONE, inputType;
     private boolean privateField, capSentences;
     private int mode = MODE_REPLY;
     private int gen; // request generation: late answers for older generations are dropped
@@ -67,7 +67,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     // ---- field lifecycle ----
     @Override public void onStartInputView(EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
-        int it = info.inputType, cls = it & InputType.TYPE_MASK_CLASS, var = it & InputType.TYPE_MASK_VARIATION;
+        int it = inputType = info.inputType, cls = it & InputType.TYPE_MASK_CLASS, var = it & InputType.TYPE_MASK_VARIATION;
         boolean password = cls == InputType.TYPE_CLASS_TEXT && (var == InputType.TYPE_TEXT_VARIATION_PASSWORD || var == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD || var == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
             || cls == InputType.TYPE_CLASS_NUMBER && var == InputType.TYPE_NUMBER_VARIATION_PASSWORD;
         boolean incognito = (info.imeOptions & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0;
@@ -171,14 +171,15 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
             if (hit != null) { final List<String> h = hit; ui.post(() -> { if (g == gen) { strip.setContext(ctxLabel, Theme.GREEN, "cached"); strip.setItems(h, true); } }); return; }
             ui.post(() -> { if (g == gen) strip.setContext(ctxLabel, Theme.AMBER, "thinking"); });
             try {
-                JSONObject ctx = new JSONObject().put("pkg", pkg).put("app", app).put("hint", hint).put("before", Agent.redact(b, red)).put("after", Agent.redact(a, red))
+                JSONObject ctx = new JSONObject().put("pkg", pkg).put("app", app).put("hint", hint).put("inputType", inputType).put("before", Agent.redact(b, red)).put("after", Agent.redact(a, red))
                     .put("screen", lines).put("redacted", redacted).put("untrusted", true);
                 Agent.Result r = agent.suggest(ctx, mode);
                 Log.i(Agent.TAG, "suggest via " + r.how + " in " + r.ms + " ms: " + r.items);
                 if (!r.items.isEmpty()) synchronized (cache) { cache.put(cacheKey, r.items); }
                 ui.post(() -> {
                     if (g != gen) return;
-                    strip.setContext(ctxLabel, r.items.isEmpty() ? Theme.CORAL : Theme.GREEN, String.format("%s %.1fs", r.how, r.ms / 1000.0));
+                    String label = r.flagged > 0 && sc.flagged == 0 ? ctxLabel + " · " + r.flagged + " flagged" : ctxLabel; // agentd's guard withheld lines
+                    strip.setContext(label, r.items.isEmpty() ? Theme.CORAL : Theme.GREEN, String.format("%s %.1fs", r.how, r.ms / 1000.0));
                     strip.setItems(r.items.isEmpty() ? Arrays.asList("No suggestion") : r.items, !r.items.isEmpty());
                 });
             } catch (Exception e) {

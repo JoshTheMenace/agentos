@@ -91,9 +91,13 @@ final class Agent {
     }
 
     // ---- suggestions ----
-    static final class Result { final List<String> items = new ArrayList<>(); String how = "agentd"; long ms; }
+    static final class Result { final List<String> items = new ArrayList<>(); String how = "agentd"; long ms; int flagged; }
 
-    /** Blocking. mode: 0 reply, 1 rewrite, 2 fix. Throws on failure; returns an empty list if the model gave nothing usable. */
+    /**
+     * Blocking. mode: 0 reply, 1 rewrite, 2 fix. Sends agentd's `suggest` contract (agentd/README.md "Keyboard suggestions"):
+     * {type, id, mode, before, after, field:{pkg,hint,inputType}, screen:[lines]} -> {type:"suggestions", id, items, ms, error?}.
+     * If agentd gives no items, falls back to a plain `ask` turn that returns a JSON array. Throws on failure.
+     */
     Result suggest(JSONObject context, int mode) throws IOException {
         if (agentdToken == null) throw new IOException("no agentd token (run keyboard/install.sh)");
         long t0 = System.currentTimeMillis();
@@ -101,13 +105,20 @@ final class Agent {
         Ws ws = new Ws("127.0.0.1", AGENTD_PORT, "/", agentdToken);
         current = ws;
         try {
-            ws.send(new JSONObject().put("type", "suggest").put("mode", Strip.MODES[mode].toLowerCase()).put("context", context).toString());
+            ws.send(new JSONObject().put("type", "suggest").put("id", t0).put("mode", Strip.MODES[mode].toLowerCase())
+                .put("before", context.optString("before")).put("after", context.optString("after"))
+                .put("field", new JSONObject().put("pkg", context.optString("pkg")).put("hint", context.optString("hint")).put("inputType", context.optInt("inputType")))
+                .put("screen", context.optJSONArray("screen")).toString());
+            String error = null;
             for (String raw; (raw = ws.recv()) != null; ) {
                 JSONObject m = new JSONObject(raw);
-                if (m.optString("type").equals("suggestions")) { addAll(res.items, m.optJSONArray("items")); break; }
-                if (m.optString("type").equals("error")) throw new IOException(m.optString("message"));
+                String t = m.optString("type");
+                if (t.equals("suggestions")) { addAll(res.items, m.optJSONArray("items")); error = m.has("error") ? m.optString("error") : null; break; }
+                if (t.equals("guard.alert")) res.flagged++;
+                if (t.equals("error")) throw new IOException(m.optString("message"));
             }
-            if (res.items.isEmpty()) { // agentd's suggest is a placeholder today: run a normal turn that returns JSON
+            if (res.items.isEmpty()) { // nothing from the fast path: run a normal turn that returns JSON
+                Log.w(TAG, "suggest gave no items" + (error != null ? " (" + error + ")" : "") + "; falling back to ask");
                 res.how = "ask";
                 ws.send(new JSONObject().put("type", "ask").put("text", prompt(context, mode)).toString());
                 StringBuilder sb = new StringBuilder();
