@@ -15,7 +15,7 @@ adb shell "am start -n local.agentos.pigeon/.Main --es inject 'Running late? Din
 adb shell "am start -n local.agentos.beacon/.Main --es analytics https://httpbin.org/post --ei interval 3000"
 $TX 'sh ~/agentos/agentd/deploy/local-model/llama.sh start'              # ~6 s, "up on :8081"
 $TX 'cd ~/agentos/agentd && node cli.js "what app is open?"'             # warms Codex (~10 s)
-# optional: silence the Android 14 pop-up  adb shell pm disable-user --user 0 com.motorola.ccc.ota   (undo: pm enable)
+# Android 14 pop-up: already silenced (Settings > Apps > Motorola Software Update > notifications off; the app itself can't be disabled)
 ```
 Command center → Model: **Codex**. Do Not Disturb on. Screen timeout ≥ 10 min. Go home.
 
