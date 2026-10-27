@@ -21,7 +21,8 @@ risk_level:
   Also low: sending a chat message the user asked for, in the chat with the person the user named (the chat title on
   screen matches), when the text says what the user asked to say (rewording is fine) and adds nothing else. Also low:
   replying to the latest message thread when the user said "reply back"/"tell them" without a name. Also low: blocking
-  an app's trackers or network access when the user asked for it. The phone only asks you about ordinary actions.
+  an app's trackers or network access when the user asked for it. Also low: deleting or turning off an alarm, timer or
+  reminder the user asked to delete (easy to set again). The phone only asks you about ordinary actions.
 - medium: changes that stay on the phone but are harder to undo, or acting in an app the user did not mention.
 - high: anything else that leaves the phone or can't be undone: any other send or post, call, delete, change security
   or network settings, share private data (codes, passwords, contacts, location, other messages).
@@ -69,7 +70,7 @@ export async function onApproval(codex, a, { turn, flagged }, emit) {
   if (a.kind && a.kind !== 'action') return; // lease cards are the user's own tap; nothing to grade
   if (a.escalated) return; // our own escalation, re-announced by the broker: already graded
   const ordinary = !!a.allowed_channels?.includes('reviewer'), fpOnly = !a.allowed_channels?.includes('tap');
-  const v = await grade(codex, { user: turn ? [turn.goal] : [], transcript: turn?.log || [],
+  const v = await grade(codex, { user: turn ? turn.asks || [turn.goal] : [], transcript: turn?.log || [],
     action: { tool: a.tool, app: a.pkg, args: { target: a.target, text: a.text || undefined } }, floor: ordinary ? 'auto' : fpOnly ? 'fingerprint' : 'tap' });
   const held = fpOnly ? 'fingerprint-only approval' : !ordinary ? `needs a person: ${a.held_because || 'broker'}` : flagged ? 'guard flag in this task' : a.fingerprint_because ? `broker: ${a.fingerprint_because}` : v.tainted ? 'tainted content' : null;
   let action = v.decision === 'auto' && held ? `left to the user (${held})` : 'left to the user';

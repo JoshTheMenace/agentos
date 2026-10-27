@@ -80,7 +80,7 @@ final class Screen {
         n.getBoundsInScreen(r);
         if (interesting && !r.isEmpty()) { // zero-size nodes are invisible text: drop them
             JSONObject o = new JSONObject().put("id", nodes.size()).put("role", role(n.getClassName()));
-            if (n.isPassword()) { password = true; o.put("password", true); }
+            if (n.isPassword() || Vault.filled.contains(n)) { password = true; o.put("password", true); } // never the text (vault fills stay hidden)
             else if (!empty(text)) o.put("text", Guard.clip(text.toString(), 160));
             if (!empty(desc) && (empty(text) || !desc.toString().equals(String.valueOf(text)))) o.put("desc", Guard.clip(desc.toString(), 120));
             if (n.isEditable() && n.isShowingHintText()) o.put("hint", true);

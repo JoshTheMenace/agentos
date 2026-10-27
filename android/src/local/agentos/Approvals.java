@@ -49,6 +49,8 @@ final class Approvals {
         volatile String channel = "", note = "";
         /** Closes the fingerprint prompt showing this request, so a late touch can't land on a dead request. */
         volatile Runnable onDone;
+        /** vault.fill: the fingerprint unlocks this Cipher (one decrypt) instead of signing. */
+        volatile javax.crypto.Cipher cipher;
         volatile String reason = "timed out";
 
         Pending(String canonical, ApprovalCard.Model model, java.util.List<String> channels) {

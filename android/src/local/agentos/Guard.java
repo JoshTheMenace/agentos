@@ -97,7 +97,7 @@ final class Guard {
     /** What a human would call this node: its text, else description, else resource id, else class. */
     static String label(AccessibilityNodeInfo n) {
         if (n == null) return "";
-        if (n.isPassword()) return "(password field)";
+        if (n.isPassword() || Vault.filled.contains(n)) return "(password field)";
         for (CharSequence cs : new CharSequence[]{n.getText(), n.getContentDescription(), n.getHintText()})
             if (cs != null && cs.toString().trim().length() > 0) return clip(cs.toString(), 80);
         String id = n.getViewIdResourceName();

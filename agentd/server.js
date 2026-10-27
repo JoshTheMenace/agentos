@@ -74,6 +74,7 @@ wss.on('connection', (ws) => {
     const p = providers[provider || cfg.provider];
     if (!p?.available()) return void send({ type: 'error', code: 'provider_unavailable', message: `provider ${provider || cfg.provider} is not available` });
     const abort = new AbortController(), t0 = Date.now(), turn = { goal: String(text || '') };
+    turn.asks = session.asks = [...(session.asks || []), turn.goal].slice(-4); // the reviewer reads "block them" with the question before it
     let said = '';
     active = { p, abort };
     const ctx = { provider: p.id, emit: (m) => { if (m.type === 'text.delta') said += m.text; emit(m); }, signal: abort.signal, turn };

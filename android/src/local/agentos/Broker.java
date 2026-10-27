@@ -97,6 +97,8 @@ final class Broker {
     private final LeaseCard leaseCard;
     /** App mods (Mods.java): buttons drawn on top of other apps. */
     final Mods mods;
+    /** Saved passwords (Vault.java): filled behind a fingerprint, never shown to the model. */
+    final Vault vault;
     /** Open approvals as announced on /events (approval_id -> approval.shown payload): approval.list returns these. */
     private final Map<String, JSONObject> shown = new ConcurrentHashMap<>();
     private volatile Lease lease, last; // last: the most recent lease, even after stop (for carry-over)
@@ -105,12 +107,16 @@ final class Broker {
     /** The island pill's step label. */
     private volatile String step = "Starting";
     private static volatile Broker self; // for Notifs.flagged
+    /** Apps whose lease always needs the card (money, installs, passwords), even when the user asked by name. */
+    private static final java.util.regex.Pattern SENSITIVE = java.util.regex.Pattern.compile(
+            "(?i)(bank|pay|wallet|finance|credit|crypto|trading|broker|vending|packageinstaller|password|vault|bitwarden|lastpass|keepass|authenticator)");
 
     Broker(AgentA11y svc) {
         this.svc = svc;
         leaseCard = new LeaseCard(svc);
         audit = new Audit(svc.getFilesDir());
         mods = new Mods(svc, audit);
+        vault = new Vault(svc, audit);
         PromptGuard.init(svc);
         Trackers.start(svc);
         self = this;
@@ -140,6 +146,11 @@ final class Broker {
             case "app.mod.remove": return mods.remove(p.getString("id"), p.optString("by", "agent"));
             case "app.mod.apply": synchronized (actLock) { return mod(p); }
             case "approval.confirm": return confirm(p, uid);
+            case "vault.list": return vault.list();
+            case "vault.fill": synchronized (actLock) { return vault.fill(p, lease); }
+            case "vault.add": case "vault.remove": // operator only: adb on the Mac (shell uid 2000), never agentd or a model tool
+                if (uid != 2000) return ok(false).put("reason", m + " only over adb (tools-client.py vault ...), not from " + who(uid));
+                return m.equals("vault.add") ? vault.add(p) : vault.remove(p.getString("id"));
             case "approval.deny": return deny(p);
             case "approval.escalate": return escalate(p, uid);
             case "tap": case "type": case "scroll": case "press": case "open_app": case "intent": case "firewall.set": case "firewall.clear":
@@ -172,7 +183,13 @@ final class Broker {
             String caller = who(uid), goal = p.optString("goal");
             Lease prev = last;
             boolean same = prev != null && prev.caller.equals(caller) && now < prev.expires, granted = false;
-            if (settings().optBoolean("require_user_lease", true)) {
+            // The user's own words (typed or spoken to agentd) are the grant for ordinary apps. Still a card: money,
+            // installs and passwords, a running task that Prompt Guard flagged asking for more apps (an injected agent
+            // widening its scope), other callers. A new request after a flagged task is the user's again (sends stay human).
+            boolean asked = p.optBoolean("user_asked") && callerIn(uid, "lease_callers") && !(same && lease != null && prev.h.flagged)
+                    && apps.stream().noneMatch(x -> SENSITIVE.matcher(x).find());
+            if (asked) granted = true;
+            else if (settings().optBoolean("require_user_lease", true)) {
                 if (same && prev.granted && prev.apps.containsAll(apps)) expires = Math.min(expires, prev.expires);
                 else {
                     String no = askLease(apps, goal, caller, ttl, Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
@@ -186,6 +203,7 @@ final class Broker {
             }
             Lease l = new Lease(goal, apps, expires, Math.min(p.optInt("max_steps", 40), 200), caller, same ? prev.h : new History());
             l.granted = granted;
+            if (same && lease == null) l.h.steps = 0; // a new task after the old one stopped: keep the taint, reset the count
             if (p.optBoolean("untrusted")) l.h.untrusted = true;
             synchronized (this) {
                 if (lease != null) stop(lease.id, "replaced by a new task.start");
@@ -193,7 +211,7 @@ final class Broker {
             }
             svc.main.post(svc.autoPause::start);
             audit.log(entry("task.start", l).put("goal", l.goal).put("apps", new JSONArray(apps)).put("refused_apps", refused)
-                    .put("caller", caller).put("user_granted", granted).put("carried_over", same));
+                    .put("caller", caller).put("user_granted", granted).put("by_request", asked).put("carried_over", same));
             Events.emit("task.state", task(l).put("state", "started"));
             island(l, "Starting");
             return ok(true).put("task_id", l.id).put("apps", new JSONArray(apps)).put("expires", l.expires).put("max_steps", l.maxSteps)
@@ -653,7 +671,7 @@ final class Broker {
     private String draft(Lease l, String pkg) {
         AccessibilityNodeInfo f = l == null ? null : l.field;
         if (f == null || !f.refresh()) { List<AccessibilityNodeInfo> e = new ArrayList<>(); editables(svc.getRootInActiveWindow(), e); f = e.size() == 1 ? e.get(0) : null; }
-        if (f == null || f.isShowingHintText() || !pkg(f).equals(pkg)) return "";
+        if (f == null || f.isShowingHintText() || f.isPassword() || Vault.filled.contains(f) || !pkg(f).equals(pkg)) return "";
         CharSequence t = f.getText();
         return t == null ? "" : t.toString();
     }

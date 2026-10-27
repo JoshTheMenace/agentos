@@ -11,11 +11,16 @@ import { cfg, fileToken, log } from '../config.js';
 import { SYSTEM_PROMPT } from '../prompt.js';
 import { TOOLS, runTool } from '../tools.js';
 
+const probe = () => { // is the CLI there? Say why not in the log
+  const r = spawnSync(cfg.claudeBin, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  if (r.status !== 0) log(`claude CLI not available: ${r.error?.message || r.stderr?.trim().slice(0, 300) || `exit ${r.status}`}`);
+  return r.status === 0;
+};
 const live = new Map(); // mcp secret -> {ctx} of the session's running turn
 
 export class ClaudeCli {
   id = 'claude';
-  #ok = spawnSync(cfg.claudeBin, ['--version'], { stdio: 'ignore' }).status === 0;
+  #ok = probe();
   available() { return this.#ok; }
 
   #start(session) {

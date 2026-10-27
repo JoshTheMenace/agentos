@@ -569,7 +569,7 @@ final class Mods {
     private static double read(AccessibilityNodeInfo root, String pkg, JSONArray sels) {
         for (int i = 0; sels != null && i < sels.length(); i++) {
             AccessibilityNodeInfo n = find(root, pkg, sels.opt(i));
-            CharSequence t = n == null ? null : n.getText();
+            CharSequence t = n == null || n.isPassword() ? null : n.getText();
             if (t == null) continue;
             try { return Double.parseDouble(t.toString().replace(",", "").replace("−", "-").replace(" ", "")); }
             catch (NumberFormatException ignored) {}

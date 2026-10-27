@@ -3,7 +3,10 @@
 set -eu
 cd "$(dirname "$0")"
 . ../tooling/android-env.sh
-rm -rf build && mkdir -p build/gen build/classes build/dex build/ort build/apkroot/lib
+rm -rf build && mkdir -p build/gen/local/agentos build/classes build/dex build/ort build/apkroot/lib
+# AGENTOS_VAULT_TEST=1 ./build.sh = TEST BUILD: the vault fills WITHOUT a fingerprint (own key + file). Never ship one.
+[ "${AGENTOS_VAULT_TEST:-}" = 1 ] && VT=true || VT=false
+echo "package local.agentos; final class BuildFlags { static final boolean VAULT_TEST = $VT; }" > build/gen/local/agentos/BuildFlags.java
 # ONNX Runtime for Prompt Guard (research/04 3a): pinned AAR from Maven Central. We take only classes.jar and the arm64
 # .so files; the AAR's manifest (a telemetry ContentProvider + INTERNET) is never merged.
 ORT=third_party/onnxruntime-android-1.31.1.aar

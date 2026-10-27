@@ -76,7 +76,7 @@ final class Server {
                 JSONObject req = new JSONObject(new String(body, StandardCharsets.UTF_8));
                 JSONObject params = req.optJSONObject("params");
                 String m = req.getString("method");
-                int uid = java.util.Arrays.asList("task.start", "approval.confirm", "approval.escalate").contains(m) ? callerUid(s) : -1; // only these care who asks
+                int uid = java.util.Arrays.asList("task.start", "approval.confirm", "approval.escalate", "vault.add", "vault.remove").contains(m) ? callerUid(s) : -1; // only these care who asks
                 res = broker.call(m, params == null ? new JSONObject() : params, uid);
             } catch (Exception e) {
                 Log.w("AgentOS", "rpc error", e);

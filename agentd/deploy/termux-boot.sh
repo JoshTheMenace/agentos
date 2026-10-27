@@ -5,6 +5,7 @@ L="$TMPDIR/agentd-boot.lock"   # one loop only (Termux:Boot can queue the script
 mkdir "$L" 2>/dev/null || { kill -0 "$(cat "$L/pid" 2>/dev/null)" 2>/dev/null && exit 0; }
 echo $$ > "$L/pid"
 termux-wake-lock 2>/dev/null
+export LD_PRELOAD="$PREFIX/lib/libtermux-exec.so" # Termux:Boot leaves it out; without it "#!/usr/bin/env node" (the claude CLI) can't start
 cd "$HOME/agentos/agentd" || exit 1
 if codex login status >/dev/null 2>&1; then
   export CODEX_BIN=codex                 # preferred: Termux's own Codex (non-root, no DNS proxy needed)

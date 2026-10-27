@@ -11,6 +11,9 @@ to Mac port $AGENTOS_PORT, default 17777).
                                                       write (as root) or, with no JSON, delete files/settings.json
   tools-client.py approvals                            lease card, taint carry-over, approval channels + /events
   tools-client.py notifs                               notification feed: test chat, direct reply, P3, copy check, standing auto-reply
+  tools-client.py vault add ID LABEL PKG[,PKG] USERNAME  save a password (asked here, never echoed; adb-only on the phone)
+  tools-client.py vault list | vault rm ID
+  tools-client.py vault fill ID [--press-approve]      on the app's login screen: lease, find the password field, vault.fill
 
 The bearer token is read with root from /data/data/local.agentos/files/token and never printed.
 """
@@ -316,6 +319,40 @@ def notifs():
     audit(tok, 8)
 
 
+def vault(args):
+    """The operator's side of the vault. Passwords are typed here (getpass) and go over adb to the phone, never to a model."""
+    import getpass
+    tok, sub = token(), args[0] if args else "list"
+    if sub == "add" and len(args) == 5:
+        pw = getpass.getpass(f"Password for {args[2]} ({args[4]}): ")
+        r = call(tok, "vault.add", {"id": args[1], "label": args[2], "pkgs": args[3].split(","), "username": args[4], "password": pw})
+    elif sub == "rm" and len(args) == 2:
+        r = call(tok, "vault.remove", {"id": args[1]})
+    elif sub == "fill" and len(args) >= 2:  # what the agent does, step by step, on the screen as it is now
+        pkg = call(tok, "screen.read")["pkg"]
+        if PRESS:
+            threading.Timer(4, lambda: adb("shell", f"input tap {LEASE_ALLOW}")).start()
+        lease = call(tok, "task.start", {"goal": "vault test: fill the password", "apps": [pkg]})
+        s = call(tok, "screen.read")
+        field = find(s, lambda n: n.get("password"))
+        user = find(s, lambda n: "edit" in n["actions"] and not n.get("password"))
+        print("lease:", lease.get("task_id"), lease.get("reason", ""), "| screen:", brief(s), "| password field:", field)
+        if field is None:
+            sys.exit("no password field on screen")
+        print(">>> ON THE PHONE: touch the fingerprint sensor (60 s)", flush=True)
+        r = call(tok, "vault.fill", dict({"id": args[1], "field_id": field, "task_id": lease.get("task_id", "")}, **({"user_field_id": user} if user is not None else {})), timeout=90)
+        print("vault.fill ->", json.dumps(r))
+        after = call(tok, "screen.read")
+        print("screen.read of the field afterwards:", next((n for n in after["nodes"] if n.get("password")), None))
+        call(tok, "task.stop", {"task_id": lease.get("task_id", "")})
+        return
+    elif sub == "list":
+        r = call(tok, "vault.list")
+    else:
+        sys.exit(__doc__)
+    print(json.dumps(r, indent=2, ensure_ascii=False))
+
+
 def audit(tok, n):
     a = call(tok, "audit.tail", {"n": n})
     for e in a["entries"]:
@@ -351,6 +388,8 @@ def main():
                 pass
     elif cmd == "settings":
         settings(sys.argv[2] if len(sys.argv) > 2 else None)
+    elif cmd == "vault":
+        vault([a for a in sys.argv[2:] if a != "--press-approve"])
     elif cmd == "audit":
         audit(token(), int(sys.argv[2]) if len(sys.argv) > 2 else 20)
     elif cmd == "call":

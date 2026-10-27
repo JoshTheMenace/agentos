@@ -58,6 +58,11 @@ export const TOOLS = {
   tap: { method: 'tap', tier: 'act', schema: obj({ id }, ['id']), description: 'Tap a UI node by id. Risky buttons (Send, Pay, Delete...) wait up to 60 s for the user\'s fingerprint.' },
   type: { method: 'type', tier: 'act', description: 'Type text into an editable node (replaces its content). submit:true also presses enter and needs a fingerprint.',
     schema: obj({ id, text: { type: 'string' }, submit: { type: 'boolean' } }, ['id', 'text']) },
+  vault_list: { method: 'vault.list', tier: 'read', schema: obj(),
+    description: 'Saved passwords: {entries:[{id, label, apps, username}]}. Never the password itself.' },
+  vault_fill: { method: 'vault.fill', tier: 'act', schema: obj({ id: { type: 'string', description: 'entry id from vault_list' }, field_id: { ...id, description: 'the password field\'s node id ([password] flag)' },
+      user_field_id: { ...id, description: 'optional: the username/email field, filled with the saved username' } }, ['id', 'field_id']),
+    description: 'Fill a saved password into a password field. The phone asks the user for a fingerprint (waits up to 60 s) and fills it; you never see it. Only works in the entry\'s own apps. Pass user_field_id to fill the username too. Returns {filled}.' },
   scroll: { method: 'scroll', tier: 'act', description: 'Scroll a node (or the main list if no id).',
     schema: obj({ id, dir: { type: 'string', enum: ['up', 'down', 'left', 'right'] } }, ['dir']) },
   press: { method: 'press', tier: 'act', description: 'Press a system key.',
@@ -145,7 +150,8 @@ async function lease(ctx, apps) {
   const turn = ctx.turn, l = turn.lease;
   if (l && apps.every((a) => l.apps.includes(a) || l.refused_apps?.includes(a))) return l;
   const r = await rpc('task.start', { goal: turn.goal.slice(0, 200), apps: [...new Set([...(l?.apps || []), ...apps])], approval_timeout_s: APPROVAL_S,
-    untrusted: !!turn.untrusted || context.state.untrusted }, ACT_MS); // notification text in the prompt counts like screen text
+    untrusted: !!turn.untrusted || context.state.untrusted, // notification text in the prompt counts like screen text
+    user_asked: !turn.untrusted }, ACT_MS); // the user's own request is the grant (the broker still cards money/installs/passwords); a reply rule's turn isn't
   if (!r.task_id) throw new Error(`task.start failed: ${r.reason || r.error || 'no task_id'}`);
   if (l) tasks.delete(l.task_id);
   turn.lease = r;
