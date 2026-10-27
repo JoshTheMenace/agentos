@@ -29,6 +29,9 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 - android/ island + approval card restyle (Fable). The island now follows task state (working/step/pause/hide, auto-approved moment, guard alert), and Send cards show the drafted message. The back-to-back card bug is fixed (android/NEEDS-UI.md).
 - Reviewer is DONE (agentd/reviewer.js, deployed), including `approval.escalate` to fingerprint. Retuned 10-27: a dictated send to the named contact is low risk → auto-approved ("Auto-approved ✓" seen on the phone, 2.0 s). Fingerprint-floor and flagged tasks are never approved. Tests: `node agentd/reviewer-test.js` (14/14).
 
+## Stage hygiene (done 10-27)
+- Motorola OTA pop-up: notifications off (app can't be disabled). Magisk "granted Superuser" toasts: off for all granted uids (`magisk --sqlite "UPDATE policies SET notification=0"`; re-run if a new uid is granted).
+
 ## Waiting on the user
 - Claude on the phone: token installed 10-27 (`~/.agentos/claude.token`, works: `claude -p` ok in 10 s). Copied the new claude-cli.js; needs one agentd restart, then benchmark `node cli.js --provider claude`. Role: Codex is default; Claude is shown only as "you can switch brains".
 - Watch: founder to enable Wi-Fi debugging on the Watch4 and send IP:port + pairing code (watch/README.md).
