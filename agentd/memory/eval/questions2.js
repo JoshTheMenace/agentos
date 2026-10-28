@@ -47,7 +47,7 @@ export const QUESTIONS2 = [
   A('mom_addr', 'temporal', "what's Mom's new address?", /12 elm/i),
   A('alex_now', 'temporal', 'where does Alex work now?', /figma/i, { not: /works at: Adobe \(since/ }),
   A('alex_before', 'temporal', 'where did Alex work before?', /adobe/i),
-  A('rent_change', 'temporal', 'when does the rent go up?', /dec 1/i),
+  A('rent_change', 'temporal', 'when does the rent go up?', /dec(ember)? 1/i),
   A('jordan_number', 'temporal', "what's Jordan's number?", /0120|\[P:\d+\]/),
   A('dad_retired', 'temporal', 'did Dad retire?', /retired|delta/i),
   // contradictions: the newer statement wins, the old one is history

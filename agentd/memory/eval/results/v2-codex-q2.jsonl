@@ -45,3 +45,18 @@
 {"id":"sam_which","ok":true,"status":"completed","ms":6581,"calls":2,"tools":["memory_ask"],"answer":"I can’t tell whether it’s Sam Patel or Sam Lee; the Discord message only identifies them as “Sam.”"}
 {"id":"kai_bring","ok":true,"status":"completed","ms":2731,"calls":1,"tools":[],"answer":"Kai is bringing the crash pads."}
 {"id":"linda_pie","ok":true,"status":"completed","ms":2596,"calls":1,"tools":[],"answer":"Linda said Thanksgiving is at Aunt Rosa’s this year and asked you to bring a pie by 2."}
+{"id":"mom_thanks","ok":true,"status":"completed","ms":3960,"calls":1,"tools":[],"answer":"Mom said Thanksgiving is at Aunt Rosa’s this year and asked if you could bring a pie."}
+{"id":"alexis_pr","ok":true,"status":"completed","ms":3650,"calls":1,"tools":[],"answer":"Alex C asked if someone could review PR #482 today; I can’t confirm whether Alex C is Alexis Chen."}
+{"id":"alex_rivera_pr","ok":true,"status":"completed","ms":3433,"calls":1,"tools":[],"answer":"No. Alex C asked for a review of PR #482; Alex Rivera asked you to drop off a bear canister."}
+{"id":"sammy_controller","ok":true,"status":"completed","ms":2651,"calls":1,"tools":[],"answer":"Sammy asked about the Switch controller on Discord."}
+{"id":"act_joe","ok":true,"status":"completed","ms":2953,"calls":1,"tools":[],"answer":"I can’t say which Joe or which app without clarification; the message would say “Happy birthday!”"}
+{"id":"jordan_drive","ok":true,"status":"completed","ms":10006,"calls":1,"tools":[],"answer":"Jordan W. is driving, leaving Friday at 6 AM."}
+{"id":"act_joe_smith","ok":true,"status":"completed","ms":4269,"calls":1,"tools":[],"answer":"It would go to Joe Smith in Messages and say “Happy birthday!”"}
+{"id":"act_sam","ok":true,"status":"completed","ms":3647,"calls":1,"tools":[],"answer":"I can’t determine whether you mean Sam Lee or Sam Patel, or which app to use; the message would say, “I’m running late.”"}
+{"id":"act_chris","ok":true,"status":"completed","ms":5580,"calls":1,"tools":[],"answer":"It could go to Chris Park on Slack or Discord, or to the Chris Park contact; which one should receive “Any update on the deploy?”"}
+{"id":"act_becca","ok":true,"status":"completed","ms":4512,"calls":1,"tools":[],"answer":"I can’t determine whether you mean Becca T or Rebecca Torres, which app to use, or what you want to say about Tuesday."}
+{"id":"act_jordan","ok":true,"status":"completed","ms":4258,"calls":1,"tools":[],"answer":"It would go to Jordan W. on Discord: “Hey, did you book the Airbnb yet?”"}
+{"id":"act_linda","ok":true,"status":"completed","ms":2906,"calls":1,"tools":[],"answer":"It would go to Linda Gimenes in Messenger: “I’m bringing pumpkin.”"}
+{"id":"act_kai","ok":true,"status":"completed","ms":4633,"calls":1,"tools":[],"answer":"I can’t say which Kai, which app, or what the message would say without more detail."}
+{"id":"act_mom","ok":true,"status":"completed","ms":9066,"calls":1,"tools":[],"answer":"It would go to Mom (Linda Gimenes) in Pigeon and say, “I’ll call you tonight.”"}
+{"id":"act_alex","ok":false,"status":"completed","ms":3304,"calls":1,"tools":[],"answer":"It would go to Alex C in Slack, saying: “I’ll review PR #482.”"}

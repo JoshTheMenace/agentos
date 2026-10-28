@@ -13,3 +13,18 @@
 **Deletes, edits, owner consent (10-27 night).** `memory.noteApi(method, params, result)` mirrors a successful direct API write (calendar.add/update/delete, alarms.delete, set_alarm) right away; tools.js calls it after every non-read call. New store helpers `putEvent` (replace-if-changed) and `prune(db, source, liveIds)`; no schema changes. The launcher's Memory toggles send `{type:"memory.consent", source, action:"grant"|"revoke", scope?}` over the agentd WebSocket and get `{type:"memory.consent", ok, ...}` back. agentd honours it only when the connection's uid (root read of `/proc/net/tcp*`, like the broker's owner line) is `local.agentos.home`'s, so the keyboard, the tool server, agentd/Codex (Termux uid) and every model are refused; verified on the phone. Ledger actor `user:owner`. Revoke = the usual hard delete, and its connector stops (syncAll skips inactive sources); grant re-reads the source at once.
 
 **Live messages (context.js, 10-27).** `memory.noteMessage({pkg, app, conversation, sender, text, when, group, dir})` saves one message from the phone's notification feed (or a reply we sent, `dir:'out'`) as a `message` event from source `notifications`, linked to the person (`from`/`to`), the app (`app`) and, for group chats, the group. It does nothing unless `notifications` is granted. `memory.recentPeople({cloud}, n)` returns `[{name, apps, last, text}]`, newest first: "who do I talk to, and in which app". `context.js` puts it in every task's `<phone_context>`.
+
+**Memory v2 (10-27 night, `MEMORY_V2=1`; see MEMORY-API.md and eval/RESULTS-V2.md).** Off by default; v1 behaviour is byte-for-byte the
+same without the flag. With it: (1) `facts.js` keeps durable facts (preferences, where people live/work, relationships, plans, dates)
+with validity (`valid_from/valid_to`, `status active|superseded|retracted`), each citing its source event; rules run in-line in
+`noteMessage`/`memory_remember` (~0.1 ms) and the LLM pass (`extract-llm.js`, Claude CLI haiku, cached) runs on demand or from the
+connector tick. (2) `identity.js` replaces resolve.js for v2: evidence-scored links (same phone/email +8, owner answer ±10, same
+full name +3.5, first name only +2, two handles on one platform −6…), `same` ≥ 6 merges, 2–6 is `maybe` (reads show both,
+outward actions ask). A name-only match no longer merges cards at ingest unless the app shows address-book names (WhatsApp,
+SMS): "Chris Park" on Discord becomes "Chris Park (Discord)". (3) `<phone_context>` gains fact lines, "possibly also … (not
+confirmed)" on person lines, an "Ambiguous: … ask the user" line for sends to a name that fits two people, and the "about you"
+digest for "what do you know about me". New tools: `memory_person`, `memory_facts`, `memory_identity`, `memory_correct`,
+`memory_confirm_identity` (last two outward). Schema: tables `fact`, `identity_link`, `identity_evidence` (all additive, FKs cascade
+on revoke). Env for agentd: `MEMORY_V2=1`; optional `MEMORY_LLM_MODEL` (default haiku). Wiring still to do outside memory/*: the
+one-tap identity card and the "what I remember" list in the launcher (spec in MEMORY-API.md), and a `memory.identity` WebSocket
+message next to `memory.consent` in server.js.

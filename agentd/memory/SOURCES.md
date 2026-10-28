@@ -71,3 +71,7 @@ DB after checkpoint: 373 KB (`memory.db`), WAL grows to ~1.5 MB between checkpoi
 Sample queries (CLI, redacted view): "who did I text yesterday" → timeline 2026-10-26: 19 messages across 7 people and 1 group;
 "what's on this week" → 4 calendar events; "today" → 8 app-usage rows, 83 web visits, 1 photo. Redacted bodies contain no
 query strings or phone-shaped digits. Revoke chrome → 114 events deleted, ledger chain OK; re-grant → watermark reset, 114 re-read on the next round.
+
+**Photos, deletes (10-27 late):** the photo connector now diffs against MediaStore's live ids on every run (two id-only queries,
+~0.3 s), not hourly, so a shot deleted right after it was taken leaves memory by the next 10-minute tick. One stale test photo
+(event 1343, `Photo · agentos-test`) was removed from the phone DB by hand that night.

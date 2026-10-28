@@ -32,7 +32,7 @@ export const tools = [
     schema: obj({ text: str('what to remember'), about: str('entity name or id this is about') }, ['text']) },
   { name: 'memory_forget', tier: 'outward', description: 'Permanently delete one event, or one entity and every event involving it. Needs the user\'s confirmation.',
     schema: obj({ event_id: { type: 'integer' }, entity_id: { type: 'integer' } }) },
-  // ---- v2 (MEMORY_V2=1): durable facts, identity questions, owner corrections
+].concat(S.flags.v2 ? [ // ---- v2 (MEMORY_V2=1): durable facts, identity questions, owner corrections
   { name: 'memory_person', tier: 'read', description: 'Everything memory knows about one person: name, other names across apps, apps, phone/email ([P:n]/[E:n]), what they are to the user, durable facts (with history), and identity status (cards that are possibly the same person, not confirmed). Use before messaging someone whose name could fit two people.',
     schema: obj({ id: { type: 'integer' }, name: str('name as the user said it') }) },
   { name: 'memory_facts', tier: 'read', description: 'Durable facts memory keeps (preferences, favorites, where people live/work, relationships, plans, projects, dates), each cited to its source. Filter by words and/or a person. history:true includes superseded values ("lived in Provo until Oct 7").',
@@ -43,12 +43,13 @@ export const tools = [
     schema: obj({ name: str('a name to resolve for sending/calling') }) },
   { name: 'memory_confirm_identity', tier: 'outward', description: 'Record the user\'s answer to an identity question: card a and card b are the same person (same:true) or different (same:false). Only after the user said so. Needs confirmation.',
     schema: obj({ a: { type: 'integer' }, b: { type: 'integer' }, same: { type: 'boolean' } }, ['a', 'b', 'same']) },
+] : []).concat([
   { name: 'consent_list', tier: 'read', description: 'Which data sources the user has granted, their scope, row counts, and whether the consent ledger hash chain verifies.', schema: obj() },
   { name: 'consent_grant', tier: 'outward', description: 'Ask the user to allow a data source. scope "cloud" = redacted results may go to cloud models; "local" = local models only. Needs the user\'s confirmation.',
     schema: obj({ source, scope: str('cloud|local (default cloud)', { enum: S.SCOPES }) }, ['source']) },
   { name: 'consent_revoke', tier: 'outward', description: 'Revoke a data source: hard-deletes everything ingested from it. Needs the user\'s confirmation.',
     schema: obj({ source }, ['source']) },
-];
+]);
 
 async function confirm(ctx, summary) {
   if ((ctx.actor || 'agent') !== 'agent') return;

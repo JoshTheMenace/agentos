@@ -288,5 +288,120 @@
   "text": "[{\"subject\": \"Mom\", \"predicate\": \"address\", \"object\": \"12 Elm St, Boise ID\", \"op\": \"add\", \"valid_from\": \"2026-10-07\", \"worth\": 4}, {\"subject\": \"Mom\", \"predicate\": \"relationship\", \"object\": \"mom\", \"op\": \"add\", \"worth\": 4}, {\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"visit Mom in Boise in November 2026\", \"op\": \"add\", \"valid_from\": \"2026-10-07\", \"worth\": 3}]",
   "tokens": 7257,
   "ms": 5968
+ },
+ "7823743f890ea27651e3dcf2": {
+  "text": "[{\"subject\": \"Sam Patel\", \"predicate\": \"favorite:burger\", \"object\": \"Lucky 13\", \"op\": \"add\", \"valid_from\": \"2026-09-17\", \"worth\": 3}]",
+  "tokens": 7114,
+  "ms": 4129
+ },
+ "3b52dc121b64190c1214bf9b": {
+  "text": "[]",
+  "tokens": 6022,
+  "ms": 4287
+ },
+ "d59ae7b25bb519faa073d7d0": {
+  "text": "[]",
+  "tokens": 5178,
+  "ms": 1475
+ },
+ "bb515a49324118679ac2348d": {
+  "text": "[]",
+  "tokens": 5078,
+  "ms": 1478
+ },
+ "a3026def004a5e534e4d28be": {
+  "text": "[]",
+  "tokens": 5664,
+  "ms": 8960
+ },
+ "5ab6b1c9c1e2e2367be92088": {
+  "text": "[{\"subject\":\"Dad\",\"predicate\":\"relationship\",\"object\":\"father\",\"op\":\"add\",\"worth\":5},{\"subject\":\"Dad\",\"predicate\":\"likes\",\"object\":\"golf\",\"op\":\"add\",\"worth\":4},{\"subject\":\"Dad\",\"predicate\":\"status\",\"object\":\"golfs every day since retiring\",\"op\":\"add\",\"worth\":4},{\"subject\":\"Dad\",\"predicate\":\"likes\",\"object\":\"Catena Malbec 2021\",\"op\":\"add\",\"valid_from\":\"2026-10-25\",\"worth\":3}]",
+  "tokens": 6531,
+  "ms": 7417
+ },
+ "d32235be77c61c61c9f1e749": {
+  "text": "[]",
+  "tokens": 5305,
+  "ms": 1850
+ },
+ "e82ee6b2558a2f6dffc698b6": {
+  "text": "[]",
+  "tokens": 5237,
+  "ms": 1133
+ },
+ "a8ca0aa4d91b5b18137cff3e": {
+  "text": "[]",
+  "tokens": 5922,
+  "ms": 4383
+ },
+ "7cfcb605fa2f1b0d9fbb7654": {
+  "text": "[{\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"pottery class with Rebecca Torres on Tuesdays\", \"op\": \"add\", \"worth\": 3}]",
+  "tokens": 6367,
+  "ms": 5999
+ },
+ "5ee9d37e93428b6eda0aa0d7": {
+  "text": "[{\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"attend grandma's 80th birthday on the 12th (family party with tamales), bringing a cake\", \"op\": \"add\", \"valid_from\": \"2026-10-21\", \"worth\": 3}]",
+  "tokens": 6172,
+  "ms": 5073
+ },
+ "b1c0d7c8d54e510d6de75d93": {
+  "text": "```json\n[\n  {\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"bring a pie to Thanksgiving at Aunt Rosa's (Nov 26, 2026); Rosa wants it by 2pm; pumpkin or apple not yet chosen\", \"op\": \"add\", \"valid_from\": \"2026-10-21\", \"worth\": 4},\n  {\"subject\": \"Rosa\", \"predicate\": \"relationship\", \"object\": \"aunt\", \"op\": \"add\", \"valid_from\": \"2026-10-21\", \"worth\": 3}\n]\n```",
+  "tokens": 6801,
+  "ms": 6866
+ },
+ "874ba0159ee69e08603ccbea": {
+  "text": "[]",
+  "tokens": 5521,
+  "ms": 1373
+ },
+ "afa0d5d2a3e2e4558616e3f9": {
+  "text": "[]",
+  "tokens": 5528,
+  "ms": 1277
+ },
+ "489651c19ff7fcb4fbeae850": {
+  "text": "[]",
+  "tokens": 5858,
+  "ms": 3133
+ },
+ "5fb2d4e204b367db2c24ca58": {
+  "text": "[]",
+  "tokens": 5700,
+  "ms": 1678
+ },
+ "05a913f8d971746e31b283f0": {
+  "text": "[]",
+  "tokens": 5557,
+  "ms": 1671
+ },
+ "ce956b635fadbb3ee5cc52ae": {
+  "text": "[]",
+  "tokens": 5590,
+  "ms": 2272
+ },
+ "5125b3594085dfb99b17af86": {
+  "text": "[]",
+  "tokens": 5621,
+  "ms": 1976
+ },
+ "57fcef81cb3b1ae172eb5c69": {
+  "text": "[{\"subject\": \"Jordan W.\", \"predicate\": \"relationship\", \"object\": \"climbing partner\", \"op\": \"add\", \"worth\": 3}]",
+  "tokens": 6177,
+  "ms": 3839
+ },
+ "3a7aa9a151b3859685e83a4a": {
+  "text": "[]",
+  "tokens": 5495,
+  "ms": 1462
+ },
+ "a390ab90b7e24e381fa966fb": {
+  "text": "[]",
+  "tokens": 5936,
+  "ms": 2619
+ },
+ "978e4059f526cbbe78222466": {
+  "text": "[]",
+  "tokens": 5601,
+  "ms": 1204
  }
 }
