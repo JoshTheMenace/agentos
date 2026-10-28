@@ -56,7 +56,7 @@ function contacts(db) {
   for (const r of phones) add(r, { kind: 'phone', value: r.data4 || r.data1 });
   for (const r of emails) add(r, { kind: 'email', value: r.data1 });
   let removed = 0;
-  for (const a of db.prepare(`SELECT rowid, kind, value FROM alias WHERE source='contacts'`).all())
+  if (live.size) for (const a of db.prepare(`SELECT rowid, kind, value FROM alias WHERE source='contacts'`).all()) // empty read: keep them (see store.prune)
     if (!live.has(`${a.kind}|${a.value}`)) removed += db.prepare('DELETE FROM alias WHERE rowid=?').run(a.rowid).changes;
   for (const [id, ns] of names) {
     const [name] = ns;

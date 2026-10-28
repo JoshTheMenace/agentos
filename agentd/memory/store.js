@@ -233,6 +233,7 @@ export function putEvent(db, e, who = []) {
 // Think of it as checking the catalogue against the shelf: a card whose book is gone is thrown away. Returns how many.
 export function prune(db, source, live) {
   const ids = new Set([...live].map(String)), del = db.prepare('DELETE FROM event WHERE id=?');
+  if (!ids.size) return 0; // an empty read (provider hiccup, su failing) never counts as "everything was deleted"; revoke does that
   let n = 0;
   for (const r of db.prepare('SELECT id, ext_id FROM event WHERE source=?').all(source)) if (!ids.has(r.ext_id)) n += del.run(r.id).changes;
   if (n) gcEntities(db);

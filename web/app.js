@@ -847,22 +847,24 @@ async function loadMemory() {
 }
 function drawGraph(g) {
   const svg = $('#gsvg'), W = svg.clientWidth || innerWidth - 44, H = 320, cx = W / 2, cy = H / 2;
-  // Draw the strongest ~28 links only (a hairball says nothing); test fixtures and local hosts never belong in the picture.
+  // The whole graph, zoomed out: past 28 nodes everything shrinks by sc (dots, springs, push) and only the strongest names get a label.
+  // Test fixtures and local hosts never belong in the picture.
   const noise = (n) => /\btest\b|fixture|localhost|127\.0\.0\.1|^\d+\.\d+\.\d+\.\d+|agentos test/i.test(n.label || '');
-  const kept = g.nodes.map((n) => n.data).filter((n) => n.type === 'me' || !noise(n)).sort((a, b) => (b.type === 'me') - (a.type === 'me') || (b.weight || 0) - (a.weight || 0)).slice(0, 28);
-  const nodes = kept.map((n, i) => ({ ...n, x: cx + (Math.random() - .5) * 120, y: cy + (Math.random() - .5) * 120, r: n.type === 'me' ? 22 : 9 + Math.min(14, n.weight || 0) * .6 }));
-  for (const [i, n] of nodes.entries()) { n.text = i < (['me', 'person', 'group'].includes(n.type) ? 14 : 6) && !/^unknown$/i.test(n.label || '') ? short((n.label || '').replace(/^Unknown /, ''), 14) : ''; n.half = 6 + n.text.length * 3.4; } // label, kept inside the box
+  const kept = g.nodes.map((n) => n.data).filter((n) => n.type === 'me' || !noise(n)).sort((a, b) => (b.type === 'me') - (a.type === 'me') || (b.weight || 0) - (a.weight || 0)).slice(0, 240);
+  const sc = Math.sqrt(28 / Math.max(28, kept.length)), lab = { p: 0, o: 0 };
+  const nodes = kept.map((n) => ({ ...n, x: cx + (Math.random() - .5) * 120, y: cy + (Math.random() - .5) * 120, r: n.type === 'me' ? 14 + 8 * sc : Math.max(3, (9 + Math.min(14, n.weight || 0) * .6) * sc) }));
+  for (const n of nodes) { n.text = (['me', 'person', 'group'].includes(n.type) ? lab.p++ < 14 : lab.o++ < 6) && !/^unknown$/i.test(n.label || '') ? short((n.label || '').replace(/^Unknown /, ''), 14) : ''; n.half = 6 + n.text.length * 3.4; } // label, kept inside the box
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n])), me = byId[g.me]; if (me) { me.x = cx; me.y = cy; }
   const edges = g.edges.map((e) => e.data).filter((e) => byId[e.source] && byId[e.target]);
   for (let k = 0; k < 260; k++) { // tiny force layout: repel, spring along edges, drift to center
-    for (const a of nodes) for (const b of nodes) if (a !== b) { const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 1, f = 9000 / d2; a.x += dx * f / Math.sqrt(d2) * .5; a.y += dy * f / Math.sqrt(d2) * .5; }
-    for (const e of edges) { const a = byId[e.source], b = byId[e.target], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, f = (d - (90 - Math.min(30, e.weight * 4))) * .02; a.x += dx / d * f; a.y += dy / d * f; b.x -= dx / d * f; b.y -= dy / d * f; }
+    for (const a of nodes) for (const b of nodes) if (a !== b) { const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 1, f = 9000 * sc ** 3 / d2; a.x += dx * f / Math.sqrt(d2) * .5; a.y += dy * f / Math.sqrt(d2) * .5; }
+    for (const e of edges) { const a = byId[e.source], b = byId[e.target], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, f = (d - (90 - Math.min(30, e.weight * 4)) * sc) * .02; a.x += dx / d * f; a.y += dy / d * f; b.x -= dx / d * f; b.y -= dy / d * f; }
     for (const n of nodes) { if (n === me) { n.x = cx; n.y = cy; continue; } n.x += (cx - n.x) * .01; n.y += (cy - n.y) * .01; n.x = Math.max(n.r + 4, Math.min(W - n.r - 4, n.x)); n.y = Math.max(n.r + 4, Math.min(H - n.r - 40, n.y)); }
   }
   const placed = []; // strongest first: a label that would sit on another one stays quiet
   for (const n of nodes) { if (!n.text) continue; const lx = Math.max(n.half, Math.min(W - n.half, n.x)), ly = n.y + n.r; if (placed.some((p) => Math.abs(p.y - ly) < 18 && Math.abs(p.x - lx) < p.half + n.half)) n.text = ''; else placed.push({ x: lx, y: ly, half: n.half }); }
   const ns = 'http://www.w3.org/2000/svg', mk = (t, a) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
-  svg.replaceChildren(...edges.map((e) => mk('line', { x1: byId[e.source].x, y1: byId[e.source].y, x2: byId[e.target].x, y2: byId[e.target].y, 'stroke-width': 1 + Math.min(4, e.weight / 2) })),
+  svg.replaceChildren(...edges.map((e) => mk('line', { x1: byId[e.source].x, y1: byId[e.source].y, x2: byId[e.target].x, y2: byId[e.target].y, 'stroke-width': (1 + Math.min(4, e.weight / 2)) * Math.max(.5, sc) })),
     ...nodes.map((n) => { const gg = mk('g', { class: ['me', 'person', 'group'].includes(n.type) ? n.type : 'other' });
       gg.append(mk('circle', { cx: n.x, cy: n.y, r: n.r }), Object.assign(mk('text', { x: Math.max(n.half, Math.min(W - n.half, n.x)), y: n.y + n.r + 13 }), { textContent: n.text }));
       gg.onclick = () => { hap('tick'); $$('g.sel', svg).forEach((x) => x.classList.remove('sel')); gg.classList.add('sel');
