@@ -25,9 +25,10 @@ const noDash = (x) => String(x).replace(/\s*—\s*/g, ', '); // the owner never 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Finishing tools (cfg.codexFinish): the model may pass its final reply as `done`. If the call succeeds (so the broker
 // allowed it), agentd shows that reply and ends the turn: the "tell the user it's done" model call (~2.5 s) is skipped.
-const FINISH = new Set(['set_alarm', 'set_timer', 'web_search', 'notifications_reply', 'act', 'build_app']);
+const FINISH = new Set(['set_alarm', 'set_timer', 'web_search', 'notifications_reply', 'act', 'build_app', // + one-shot actions (speed r3: "turn on the flashlight" in 1 call)
+  'phone_settings', 'media', 'play_music', 'navigate', 'open_url', 'add_event', 'schedule_task']);
 const DONE = { type: 'string', description: 'Only if this call completes the whole request and nothing is left to read or report: your final short reply to the user, e.g. "Alarm set for 7:00 AM." It is shown only if the call succeeds, and your turn ends there.' };
-const DONE_HINT = '- Finish in the same call: when an action call completes the request (set_alarm, set_timer, web_search, notifications_reply, or an act that ends with the result on screen), put your final reply in its `done` field. Then you are finished; don\'t send another message.';
+const DONE_HINT = '- Finish in the same call: when an action call completes the request (set_alarm, set_timer, web_search, notifications_reply, phone_settings, media, play_music, navigate, open_url, add_event, schedule_task, or an act that ends with the result on screen), put your final reply in its `done` field. Then you are finished; don\'t send another message.';
 const tier = () => cfg.codexTier && { serviceTier: cfg.codexTier };
 // bench/climb.js: prompt and tool-description variants, applied without a code change.
 const patch = cfg.promptPatch ? JSON.parse(Buffer.from(cfg.promptPatch, 'base64').toString()) : {};

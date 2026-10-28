@@ -132,3 +132,16 @@ The catalog on the phone (models_cache.json, 10-28): gpt-6.1-sol, gpt-6-astra, g
 | AGENTD_TOOLS=plugins | 46.1 s | 12/12 | 5.7 s (4.0–6.8) | 10.0–12.4k |
 
 All inside the noise (the same call ranges 1–18 s between runs); none beats terra by the 5 % KEEP bar on per-call time, and round 1 saw luna fail harder UI tasks. **Kept terra and `all`.** The one real difference was behavioural: gpt-5.6-luna and gpt-reserve typed `234*17` into Calculator's display in one step instead of tapping 9 keys, which is what the next experiment turns into a prompt line.
+
+## Prompt climb (`climb.js --climb --only typeKeys,visible,ctx --rounds 2 --prefix r3c`, 03:45–04:30, all 12/12)
+The same baseline scored 48.3, 51.9 and 34.6 s (sum of per-task medians) in its three comparisons, so the 5 % rule can't separate prompt lines tonight. Decisions use what doesn't depend on API noise: model calls per task and phone-side tool time.
+
+| Candidate | Sum (cand. vs base) | What changed, deterministically | Verdict |
+|---|---|---|---|
+| typeKeys: "type numbers/text into the field in one step instead of tapping keypad keys" | 47.9 vs 48.3 s | Calculator's `act` = type `234*17` + "=" ≈ **1.4 s** on the phone vs 9 key taps ≈ **5.5–6 s**; same answer, same 2 calls (4/4 runs) | **KEEP** (fb9abad) |
+| visible: "if the screen you have answers it, answer at once; don't open the item" | 44.5 vs 51.9 s | Pigeon 2 calls in 6/6 runs (baseline: 3 calls in ~1 of 5 runs, +2–4 s, it opened Alex's chat to re-check); notification summary 1 call in 6/6 | **KEEP** (d356423) |
+| ctx: "answer notification questions from <phone_context>" | 42.2 vs 34.6 s | nothing beyond visible (notifs already 1 call) | drop |
+
+## One-shot actions finish in the same call (`providers/codex.js` FINISH set, 04:35–04:50, `--label r3f-base|r3f-fin`, 2 interleaved rounds)
+`phone_settings, media, play_music, navigate, open_url, add_event, schedule_task` join set_alarm/set_timer/web_search/notifications_reply/act as tools that take an optional `done` reply. As before, agentd shows `done` and ends the turn only after `runTool` returns success, i.e. after the broker allowed and ran the call; nothing skips the broker or the approval card.
+- torch: **2 → 1 model call in 2/2 runs** (the "Flashlight is on." call is gone, ~1–3 s). pigeon and calc: same calls, 4/4 OK each. **KEEP**.
