@@ -41,6 +41,8 @@ cal = sh("content query --uri content://com.android.calendar/events --projection
 base = st.setdefault("cal_base", cal)
 if cal < base: alerts.append(f"CALENDAR SHRANK: {base} -> {cal} events")
 st["cal_last"] = cal
+net = subprocess.run(["adb", "shell", "ping -c1 -W3 chatgpt.com >/dev/null && echo up || echo down"], capture_output=True, text=True, timeout=30).stdout.strip()
+if net != "up": alerts.append("PHONE OFFLINE: chatgpt.com unreachable (Wi-Fi dropped? see NIGHT-PLAN Incidents for the fix)")
 from collections import Counter
 st.setdefault("seen", {})
 json.dump(st, open(STATE, "w"))

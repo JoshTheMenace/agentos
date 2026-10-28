@@ -25,4 +25,5 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 - All children have hard limits: real apps are read-only, outward actions only in Pigeon/Beacon, test calendar items only, deleted by exact id.
 
 ## Incidents
+- 02:15 phone offline: Android kept dropping home Wi-Fi "BathroomCamera4" for a low connection score (blocklisted 01:29, 02:05), so Codex DNS failed and the voice tests stalled. Fix: `settings put global captive_portal_mode 0` (undo: `settings delete global captive_portal_mode`) plus a Wi-Fi off/on, after which it reconnected and chatgpt.com was reachable. The watchdog now also checks connectivity.
 - 01:16 near miss (no harm): the speed benchmark's "bench check" task t1f31e7a8 tried `alarms.delete` on "10:15 · Before standup" (looks like a real alarm). The approval card timed out, so it was denied and nothing was deleted. Steered the speed agent: test alarms only, labeled, deleted by exact match, and no approval-gated tasks in the benchmark. The 06:17 deletes were its own test alarm (also denied by timeout). Pigeon notification replies at 01:25–01:28 were the notifications agent's own test feed (OK).
