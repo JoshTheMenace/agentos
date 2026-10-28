@@ -14,11 +14,11 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | S2 | Deep-mod engine research + design on our own apps | GPT-6.1 Sol | done (DEEP-MODS.md: cooperative signed spec, no injection or reboot) |
 | 4 | Wake word: Porcupine ready (needs key; Picovoice free tier ended, 7-day trial) + offline Vosk "Hey Agent" fallback | Claude | done (4df084d; switch off) |
 | 5 | Voice/GPT Live latency hill-climb | GPT-6.1 Sol | running |
-| 6 | Reviewer light polish | Claude | queued |
+| 6 | Reviewer light polish | GPT-6.1 Sol | running |
 | 7 | Bug hunt across demo flows (incl. Duolingo on Home, tap spots +77 px) | Claude Opus | running |
 | 8 | UI polish pass 2 | Claude Fable | queued |
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | running |
-| S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra (Sol was at capacity) | running |
+| S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra | done (3430c2e; navy/gold + promoted rows removed, vanilla pixel-identical) |
 
 ## Oversight
 - `scripts/night-watch.py` (read-only) runs every 40 min from the orchestrator. It flags real-app sends/posts/replies, calendar adds/edits/deletes or shrinkage (baseline 1780 events at 01:03), calls, firewall/vault/plugin/auto-reply changes. Alerts accumulate in `/tmp/night-watch/alerts.log`.
