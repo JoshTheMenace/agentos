@@ -99,6 +99,28 @@ What is phone-specific today:
 
 # Round 3 (2026-10-28 night, Moto G, real phone)
 
+## Summary: before / after (interleaved `climb.js --ab before,after --prefix r3ba`, 04:22–04:58, 3 clean rounds each; rows before 04:22 dropped, Wi-Fi outage)
+Before = agentd at a36a04c (round-2 defaults), after = HEAD with this round's four changes. Same phone, same 7 tasks, gpt-6.1-terra, Fast tier.
+
+| Task | Before: ok · median s · first action s · calls | After: ok · median s · first action s · calls |
+|---|---|---|
+| pigeon | 3/3 · 5.9 · 3.5 · [2, 2, 2] | 3/3 · 8.1 · 3.5 · [2, 2, 2] |
+| beacon | 3/3 · 7.2 · 3.4 · [2, 2, 2] | 3/3 · 9.5 · 6.0 · [2, 2, 2] |
+| torch | 3/3 · 4.2 · 2.6 · [2, 2, 2] | 3/3 · 6.7 · 5.8 · [1, 1, 1] |
+| calendar | 3/3 · 3.1 · 0.0 · [1, 1, 1] | 3/3 · 4.1 · 0.0 · [1, 1, 1] |
+| notifs | 3/3 · 4.9 · 0.0 · [1, 2, 2] | 3/3 · 4.2 · 0.0 · [1, 1, 1] |
+| calc | 3/3 · 11.8 · 2.6 · [2, 2, 2] | 3/3 · 7.7 · 2.8 · [2, 2, 2] |
+| cross | 2/3 · 15.0 · 3.1 · [0, 3, 3] | 3/3 · 7.8 · 3.1 · [3, 3, 3] |
+| **Sum of medians** | **52.2 s** | **48.1 s** |
+
+**Success 20/21 → 21/21; model calls 38 → 36.** Time per task is still dominated by how long one model call takes (the same call varied 1–18 s tonight), so the sum of medians (52.2 → 48.1 s, −8 %) is within noise. What changed for certain:
+- Calculator-style entry: one `type` step instead of key taps, so **the phone side of the act drops from 5.5–6 s to ~1.4 s** (calc median 11.8 → 7.7 s).
+- One-shot actions (flashlight, volume, media, navigate, open a link, add an event, schedule) end in **1 model call instead of 2**.
+- Read tasks no longer open the item to double-check (Pigeon never took 3 calls after the change; notification summary 1 call in 3/3, was 1–2).
+- Multi-part requests never end early on a finishing tool (cross 3/3; before: 2/3, one run stopped after the flashlight).
+None of this touches approvals: every action still goes through the broker, and `done` is shown only after the broker ran the call.
+**Deployment:** the live agentd was restarted at 03:40:48 from 7e01c9a, before these commits (fb9abad, d356423, 1ad2ca5, b83ea89); they go live with the 6:43 deploy.
+
 ## Bench (new task set, `node bench/bench.js --tasks r3`)
 Founder limits for tonight: read-only in real apps; changes only to the torch (turned back off) and our own Pigeon/Beacon; **no task may delete anything, send anything or raise an approval card**. So the round-1 tasks that wiped Clock (`pm clear`) or sent replies are gone, and Calculator is reset with the CLEAR key instead of `pm clear`.
 
@@ -145,4 +167,5 @@ The same baseline scored 48.3, 51.9 and 34.6 s (sum of per-task medians) in its 
 ## One-shot actions finish in the same call (`providers/codex.js` FINISH set, 04:03–04:08, `--label r3f-base|r3f-fin`, 2 interleaved rounds)
 `phone_settings, media, play_music, navigate, open_url, add_event, schedule_task` join set_alarm/set_timer/web_search/notifications_reply/act as tools that take an optional `done` reply. As before, agentd shows `done` and ends the turn only after `runTool` returns success, i.e. after the broker allowed and ran the call; nothing skips the broker or the approval card.
 - torch: **2 → 1 model call in 2/2 runs** (the "Flashlight is on." call is gone, ~1–3 s). pigeon and calc: same calls, 4/4 OK each. **KEEP**.
+- Wi-Fi dropped again 04:06–04:21 (RTT 239 ms right after). r3f/r3x/r3x2 fall in it: their **timings** are network-affected, but the decisions above rest on call counts and pass/fail, which the network doesn't change.
 - **Regression found and fixed (04:09–04:15, `r3x`, `r3x2`):** new task `cross` "Turn on the flashlight, then tell me Alex's last message in Pigeon." With the wider FINISH set the model put its final reply on the flashlight call in **1 of 3** runs, so the turn ended before Pigeon was read (the same risk already existed for set_alarm, e.g. "set an alarm and tell me ..."). Fix in code, not wording: agentd honours `done` only when the user's own request is one part (no then/and/also/after/plus, comma or semicolon); multi-part requests take the normal path. After: cross **3/3**, torch still **1 call 3/3**. `cross` is now in the r3 set.
