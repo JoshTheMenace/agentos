@@ -175,3 +175,34 @@ There is deliberately **no newly measured app-inbox UI comparison**: opening the
 Best immediate demo: ask **“Any LinkedIn messages worth looking at?”** → `linkedin_unread`, without opening LinkedIn. The default includes older cached unread threads. The existing owner session supplies real data; no new key or login required.
 
 For another app's notification demo, the owner must already be signed in and have notification previews enabled, with a recent notification delivered since the listener started. We did not change any login/notification setting or generate a message to the owner. X and WhatsApp need installation/sign-in first. Full fresh Gmail/Slack/Spotify reads need the OAuth setup above and a subsequent adapter implementation; supplying a key alone does not enable an unbuilt adapter. Existing Gmail compose and native media controls remain available through their normal broker gates.
+
+## Silent channels and the activity digest (2026-10-28)
+
+**Silent is delivered; Off is blocked.** Android posts a normal `StatusBarNotification` to an enabled notification listener for a Silent/LOW-importance channel. It can stay in the shade, without sound, vibration or a heads-up pop-up. Turning off the app's notifications, denying its notification permission, blocking its channel (`IMPORTANCE_NONE`), or blocking the channel group prevents delivery: there is no callback or text for AgentOS to recover. Muting push inside the source app can also stop it from posting anything. DND suppresses interruptions, not normal listener delivery. An in-app “3 new” count is independent and is not evidence of three delivered Android notifications.
+
+Our listener does not filter by importance: `Notifs.onNotificationPosted` parses all delivered channels. It deliberately excludes group-summary, ongoing/foreground-service records, Android/System UI, Termux, and AgentOS's own UI notifications. It retains up to 240 records, with `notifications.list` returning at most 40, newest first; removed records can remain. `notifications.conversations` and `notifications.changes` only capture records classified as messages. Non-message comments/reactions must therefore come from `notifications.list`, not the conversation tools. None of these surfaces can backfill blocked history or establish the app's unread count. Listener reconnection seeds still-active notifications, not those that already disappeared.
+
+### Founder setup (once, on this Android 13 Moto)
+
+1. Settings → Apps → See all apps → LinkedIn → Notifications. Turn **All LinkedIn notifications ON** (allow notifications if Android asks).
+2. For each desired category, enable its switch, then tap the **category name** and select **Silent** instead of Default/Alerting. Check vibration is off and “Pop on screen” is off if shown. A category's switch set to Off blocks it; setting only Sound to None on a high-importance category can still allow pop-ups.
+3. Keep desired push categories enabled inside LinkedIn's own notification settings. You can leave promotional categories Off. If Android shows no categories yet, LinkedIn may need to create them during normal owner use.
+4. Settings → Apps → Special app access → Notification access → AgentOS: ON. The test phone already has this access. Repeat the app/category steps for Instagram or Slack if desired (Slack may have categories per workspace).
+
+No credentials or API tokens are needed. This changes future delivery only. We did not change the founder's settings. On the test phone, LinkedIn, Instagram and Slack all reported app-level `importance=NONE`: they were blocked, not merely Silent.
+
+### What ships
+
+`agentd/activity.js` reads only listener-delivered, explicitly non-message activity from LinkedIn, Instagram and Slack, at most 12 previews from the last 12 hours. It checks sender and body through on-device Prompt Guard plus the existing injection filter, masks numeric codes, and labels every item `trusted:false` with source, who, what and notification time. Guard failures withhold the item; total guard work is capped at two seconds per digest, so a slow guard can produce a partial digest. Removed notification history stays passive and never creates a Home card. No disk copy or new background app polling is added.
+
+“What did I miss?” includes these in a passive **To look at** digest, in both spoken/text summaries and existing catch-up rows. A like, reaction or ordinary comment produces no Home card. An explicit “mentioned/tagged you” or a question in a reply/comment addressed to the owner can produce one of at most two Home cards. Tapping it requests another listener-only summary, never a reply or app opening. This conservative text heuristic is English-only and does not infer an obligation from a generic question in someone else's post.
+
+There is **no peek tool**, no activity-tab navigation, no private API, and no session-token access. Missing or blocked activity stays unavailable. Reading delivered notifications does not dismiss or mark them read. Existing notification retention, message replies and approval rules are unchanged.
+
+Sources: [Android notification importance](https://developer.android.com/reference/android/app/NotificationManager#IMPORTANCE_LOW), [notification channels](https://developer.android.com/develop/ui/views/notifications/channels), [listener callbacks and silent filtering](https://developer.android.com/reference/android/service/notification/NotificationListenerService).
+
+### Validation and latency
+
+Read-only check on 10-28 morning: three active Google News & stories notifications had effective Android importance LOW (2), and their exact keys were present in AgentOS's listener feed with BENIGN guard verdicts. This verifies real silent delivery, without posting or changing a real-app notification. LinkedIn/Instagram/Slack yielded no activity while blocked; their activity parsing is covered by synthetic tests, not claimed as a real delivered-event test. Listener RPC: 42.0/15.8/17.4 ms (17.4 ms median). The empty live activity digest added 0.3 ms. Three synthetic activity previews scored through the real on-device Prompt Guard took 1,273.5 ms cold and 51.3 ms cached; all three reached the digest and only the mention/direct question reached Home. These are data/guard times, excluding the catch-up model's response.
+
+`node agentd/activity-test.js` covers classification, missing/message/stale/future records, malicious sender/body, PG failure/unavailability, code masking, passive removed history, the Home gate, catch-up text/rows and a no-navigation RPC assertion. Existing `node agentd/proactive/test.js` and syntax checks passed. The simplification pass removed the proposed peek cache/parser entirely; guard failure, freshness, no-navigation and passive/actionable cases remain tested.
