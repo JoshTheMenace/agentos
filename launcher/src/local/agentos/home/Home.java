@@ -61,13 +61,15 @@ import org.json.JSONObject;
  */
 public class Home extends Activity {
   static final String TAG = "AgentOSHome", ORIGIN = "https://agentos.home", DEV_FLAG = "/data/local/tmp/agentos-home.dev";
-  WebView web; PermissionRequest pendingMic; String devOrigin;
+  WebView web; PermissionRequest pendingMic; String devOrigin; boolean wakeOnLoad;
   final Map<String, byte[]> icons = new HashMap<>();
   float density; int insTop, insBottom, insIme;
 
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
     density = getResources().getDisplayMetrics().density;
+    wakeOnLoad = Wake.WAKE.equals(getIntent().getAction()); // cold start by the wake word: the page opens voice once loaded
+    Wake.listener = () -> js("window.app&&app.wakeState&&app.wakeState(" + Wake.json(this) + ")");
     getWindow().setDecorFitsSystemWindows(false); // edge to edge: the page pads itself with insets()
     getWindow().setStatusBarColor(0); getWindow().setNavigationBarColor(0);
     getWindow().setNavigationBarContrastEnforced(false);
@@ -119,8 +121,14 @@ public class Home extends Activity {
   boolean allowed(Uri u) { String o = u.getScheme() + "://" + u.getHost() + (u.getPort() > 0 ? ":" + u.getPort() : ""); return ORIGIN.equals(o) || o.equals(devOrigin); }
   void js(String code) { runOnUiThread(() -> web.evaluateJavascript(code, null)); }
 
-  @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); js("window.app&&app.home&&app.home()"); } // HOME key while on home: reset
-  @Override protected void onResume() { super.onResume(); js("window.app&&app.resume&&app.resume()"); }
+  @Override protected void onNewIntent(Intent i) { // HOME key while on home: reset; wake word: voice mode
+    super.onNewIntent(i); js(Wake.WAKE.equals(i.getAction()) ? "window.app&&app.wake&&app.wake()" : "window.app&&app.home&&app.home()");
+  }
+  @Override protected void onResume() { // also (re)starts the wake word if it's on: we're in front, so the mic is allowed
+    super.onResume(); js("window.app&&app.resume&&app.resume()");
+    if (Wake.self == null && Wake.prefs(this).getBoolean("on", false)) Wake.set(this, true);
+  }
+  @Override protected void onDestroy() { Wake.listener = null; super.onDestroy(); }
   @Override public void onBackPressed() { js("window.app&&app.back&&app.back()"); } // never leave home
   // Attach (＋): Camera = the system camera writing into our private shot file; Photos = Android's photo picker (no storage
   // permission). The picture comes back to the page as one JPEG data: URL (long side <= 1280 px, EXIF rotation applied).
@@ -207,8 +215,15 @@ public class Home extends Activity {
   /** The JS side of the frame. Every method is a request; nothing here grants anything. Runs on a WebView worker thread. */
   class Bridge {
     @JavascriptInterface public String info() throws Exception {
+      boolean w = wakeOnLoad; wakeOnLoad = false;
       return new JSONObject().put("pkg", getPackageName()).put("dev", devOrigin != null).put("density", density)
-          .put("top", px(insTop)).put("bottom", px(insBottom)).put("ime", px(insIme)).toString();
+          .put("top", px(insTop)).put("bottom", px(insBottom)).put("ime", px(insIme)).put("wake", w).toString();
+    }
+    /** Wake word: "state" | "on" | "off" | "voice:1" | "voice:0" (voice mode holds/frees the mic). Returns Wake.json. */
+    @JavascriptInterface public String wake(String cmd) {
+      if ("on".equals(cmd) || "off".equals(cmd)) Wake.set(Home.this, "on".equals(cmd));
+      else if (cmd != null && cmd.startsWith("voice:")) Wake.voice(cmd.endsWith("1"));
+      return Wake.json(Home.this);
     }
     @JavascriptInterface public void pick(String kind) { runOnUiThread(() -> Home.this.pick(kind)); } // "camera" | "photos" -> app.picked(dataUrl|null, kind)
     @JavascriptInterface public String token(String which) { return file("agentd.token"); } // the only token this app holds

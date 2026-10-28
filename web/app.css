@@ -348,3 +348,7 @@ body{position:fixed;inset:0}
 .same .acts{display:flex;gap:6px}.same .acts .tag.on{background:var(--blue);color:#fff}.same .acts .tag.ghost{background:rgba(255,255,255,.07);color:var(--l3)}
 .rowi.fact>div{flex:1}.rowi.fact .r .tag{padding:5px 10px}.rowi.fact input{width:100%;font:inherit;font-size:14px;color:var(--l1);background:rgba(255,255,255,.1);border:0;border-radius:8px;padding:6px 9px;outline:none;margin-bottom:3px}
 .rowi.fact.old{opacity:.5}.rowi.gone{opacity:0;transition:opacity .35s}.sg.same .t{white-space:normal}
+/* wake word: home status glyph (teal, breathing = listening; grey = paused) and the command-center row */
+.wk{color:var(--teal);animation:breathe 2.4s ease-in-out infinite}.wk.p{color:var(--l3);animation:none}
+#wake .rowi{padding:2px 0}#wake .appic{width:34px;height:34px;border-radius:10px;background:rgba(100,210,255,.18);color:var(--teal)}
+#wake .toggle:disabled{opacity:.35}

@@ -26,6 +26,8 @@ adb -s "$S" shell "su -c 'mkdir -p $D && cp /data/data/com.termux/files/home/.ag
 adb -s "$S" shell pm grant $P android.permission.RECORD_AUDIO
 adb -s "$S" shell pm grant $P android.permission.CAMERA # voice vision (agentd VOICE_VISION=1)
 adb -s "$S" shell pm grant $P android.permission.READ_CALENDAR
+adb -s "$S" shell pm grant $P android.permission.POST_NOTIFICATIONS # wake word's ongoing notification
+adb -s "$S" shell appops set $P SYSTEM_ALERT_WINDOW allow          # wake word opens voice mode over other apps
 [ "${1:-}" = --set ] && adb -s "$S" shell cmd package set-home-activity $P/.Home
 adb -s "$S" shell am start -n $P/.Home
 echo "installed; uid $uid; home: $(adb -s "$S" shell cmd package resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME | grep packageName | head -1)"

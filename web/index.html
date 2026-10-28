@@ -44,7 +44,7 @@
   <section class="page" id="home">
     <div class="h-date" id="date"></div>
     <div class="h-time title" id="time"></div>
-    <div class="h-status"><span class="orb" id="sorb"></span><span id="status">Ready</span></div>
+    <div class="h-status"><span class="orb" id="sorb"></span><span id="status">Ready</span><svg class="wk" id="wk" width="13" height="13" style="display:none"><use href="#i-mic"/></svg></div>
     <div class="feed scroll">
       <div id="now"></div>
       <div class="k fk" id="forK">For you</div>
@@ -70,6 +70,7 @@
     <div class="mod rise shield"><div class="k"><svg width="13" height="13"><use href="#i-shield"/></svg>Protected today<span id="shieldNote"></span></div><div class="stats" id="stats"></div></div>
     <div class="mod rise" style="animation-delay:.04s"><div class="k">Tasks<span id="taskCount"></span></div><div id="tasks"></div></div>
     <div class="mod rise" style="animation-delay:.08s"><div class="k">Model</div><div class="seg" id="prov"><button data-p="codex">Codex</button><button data-p="claude">Claude</button><button data-p="local">Local</button></div><div class="provnote" id="provNote"></div></div>
+    <div class="mod rise" style="animation-delay:.12s" id="wake"></div>
     <div class="mod rise" style="animation-delay:.16s"><div class="k">Activity<span id="recentNote">today</span></div><ul class="log" id="recent"></ul></div>
     <div class="links rise" style="animation-delay:.2s">
       <button class="mod link" id="toPromises" hidden><svg width="18" height="18"><use href="#i-check"/></svg><b>Promises</b><span class="k" id="promNote"></span></button>

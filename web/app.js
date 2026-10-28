@@ -667,10 +667,25 @@ on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.st
 on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
 on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
+// ---------- wake word (launcher Wake.java): a toggle in the command center, a small mic on the home status line ----------
+const WHY = { voice: 'Paused · voice open', call: 'Paused · call', mic: 'Paused · mic in use', screen: 'Paused · screen off' };
+app.wakeState = (w) => {
+  const wk = $('#wk'), nokey = w.state === 'nokey', live = w.on && !nokey && w.state !== 'off';
+  wk.style.display = live ? '' : 'none'; wk.classList.toggle('p', w.state !== 'listening'); // (SVG ignores `hidden`)
+  const sub = nokey ? 'Needs a Picovoice key' : !w.on ? 'Off' : w.state === 'listening' ? 'Listening' : w.state === 'error' ? 'Couldn’t start' : WHY[w.why] || 'Starting';
+  const r = el('div', 'rowi', `<span class="appic"><svg width="16" height="16"><use href="#i-mic"/></svg></span><div>“${esc(w.phrase || 'Hey Agent')}”<span class="s">${sub}</span></div><div class="r"><button class="toggle${w.on && !nokey ? ' on' : ''}" aria-label="Wake word"${nokey ? ' disabled' : ''}></button></div>`);
+  $('button', r).onclick = () => { hap(); app.wakeState(JSON.parse(N.wake(w.on ? 'off' : 'on'))); };
+  $('#wake').replaceChildren(r);
+};
+app.wake = () => { hap('heavy'); if (!$('#voice').classList.contains('on')) voiceStart(); };
+app.wakeState(N.wake ? JSON.parse(N.wake('state')) : { state: 'nokey', phrase: 'Hey Agent' });
+if (info.wake) setTimeout(app.wake, 400); // cold start by the wake word
+
 // ---------- voice (WebRTC per agentd/voice.html; hands-free: the server hears when you stop, the orb only mutes) ----------
 let pc, mic, micTrack, cam, vad;
 const V = { state: (s) => ($('#vstate').textContent = s) };
 async function voiceStart() {
+  N.wake?.('voice:1'); // the wake word lets go of the mic while voice mode is open
   open('voice'); $('#voice').classList.remove('live'); $('#vu').textContent = $('#va').textContent = ''; $('#vsteps').replaceChildren(); $('#vtask').replaceChildren(); V.state('Connecting');
   if (!wsOk) return V.state('Agent offline');
   try {
@@ -685,7 +700,7 @@ async function voiceStart() {
     send({ type: 'voice.start', sdp: pc.localDescription.sdp });
   } catch (e) { V.state('Mic unavailable'); }
 }
-function voiceStop() { if (cam) camOff(); vad?.(); vad = null; attMenu.hidden = true; send({ type: 'voice.stop' }); pc?.close(); pc = null; mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; $('#wave').classList.remove('on'); }
+function voiceStop() { N.wake?.('voice:0'); if (cam) camOff(); vad?.(); vad = null; attMenu.hidden = true; send({ type: 'voice.stop' }); pc?.close(); pc = null; mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; $('#wave').classList.remove('on'); }
 on('voice.answer', async (m) => { $('#vatt').hidden = !m.vision; if (pc) await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); });
 on('voice.started', () => V.state('Listening'));
 on('voice.transcript', (m) => { $('#voice').classList.add('live'); const p = $(m.role === 'user' ? '#vu' : '#va'); p.innerHTML = esc(m.text) + (m.final ? '' : '<span class="cur"></span>'); if (m.role !== 'user') V.state('Speaking'); });
