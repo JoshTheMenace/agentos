@@ -401,11 +401,11 @@ final class Broker {
                 why = node.isPassword() ? "password field: hand this to the human" : secure ? "typing on a secure screen" : tier == 3 ? "type and submit" : "draft text";
                 break;
             case "scroll":
-                pkg = node != null ? pkg(node) : svc.screen.pkg; target = (node != null ? Guard.label(node) + " " : "screen ") + p.optString("dir", "down");
+                pkg = node != null ? pkg(node) : svc.screen.pkgNow(); target = (node != null ? Guard.label(node) + " " : "screen ") + p.optString("dir", "down");
                 tier = 1; why = "scroll";
                 break;
             case "press":
-                pkg = svc.screen.pkg; target = p.optString("key"); tier = 1; why = "system key";
+                pkg = svc.screen.pkgNow(); target = p.optString("key"); tier = 1; why = "system key";
                 break;
             case "open_app":
                 pkg = p.getString("pkg"); target = "launch app"; tier = 1; why = "open app in lease";
@@ -511,6 +511,7 @@ final class Broker {
         if (fw) Events.emit("firewall.changed", new JSONObject().put("tool", tool).put("pkg", pkg).put("target", target).put("ok", done));
         if (free) return finish(log, res, decision, done ? why : "failed", null);
         if (done && (tool.equals("open_app") || tool.equals("intent"))) awaitApp(pkg);
+        if (!p.optBoolean("screen", true)) return finish(log, res, decision, done ? why : "Android refused the action", null); // a reflex (agentd reflex.js): no one reads the next screen, so no settle or re-read
         settle(t0);
         return finish(log, res, decision, done ? why : "Android refused the action", read());
     }

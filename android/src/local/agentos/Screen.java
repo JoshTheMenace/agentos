@@ -62,6 +62,9 @@ final class Screen {
 
     boolean secure() { return !secureWhy.isEmpty(); }
 
+    /** The app in front now (refreshed if a window changed since the last read), not the one at the last read. */
+    synchronized String pkgNow() { refreshFocus(); return pkg; }
+
     /** Mods (on their own Screen): is the focused window FLAG_SECURE right now? Root, ~130 ms; fails closed. */
     synchronized boolean secureNow() { dirty = true; refreshFocus(); return flagSecure; }
 
