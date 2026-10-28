@@ -114,13 +114,13 @@ Founder limits for tonight: read-only in real apps; changes only to the torch (t
 Harness changes: the lock (same as `scripts/withphone`, pid inside) is held per task and released for 10 s between tasks so other agents interleave; `lockWait` per row marks runs that queued behind someone else. `bench/snap.sh` deploys the bench agentd from a clean HEAD snapshot (the worktree is shared, and copying it once crashed the bench on another agent's uncommitted import). `bench/ping.js` measures the model alone ("Say ok", no phone actions). `turn.done` now carries `prep` (agentd time before the model sees the request).
 
 ## What the night's numbers say
-- **Network-affected window, 01:29–02:15:** the phone kept dropping Wi-Fi (the hotspot, then home Wi-Fi). Model calls then took 5–30 s and app-server kept reconnecting. Nothing below is based on runs from that window (r3-smoke, r3-base and the first pings are kept only as raw rows). `bench/usb-net.js` gives the bench Codex the Mac's internet over USB (`adb reverse`); `deploy/codex-bench.sh` puts the bench Codex on its own proxy port 18081, so this never touches the live agentd's 18080.
-- **Network path, once Wi-Fi was back (03:00, 3 interleaved rounds × 4 pings, 17.1k-token prompt):** phone Wi-Fi + android-connect-proxy, median per round 2.65 / 3.11 / 2.46 s; Mac over USB 2.43 / 3.18 / 2.38 s. No real difference: the proxy and Wi-Fi aren't a lever while they're up.
+- **Network-affected window, 01:29–02:15:** the phone kept dropping Wi-Fi (the hotspot, then home Wi-Fi). Model calls then took 5–30 s and app-server kept reconnecting. Nothing below is based on runs from that window (r3-smoke and the first pings are kept only as raw rows; r3-base, 02:13–02:17, ran with Codex on the Mac's internet over USB; r3-base2, 02:22–02:35, is the first clean phone-network baseline, with a 3-minute pause for the voice track). `bench/usb-net.js` gives the bench Codex the Mac's internet over USB (`adb reverse`); `deploy/codex-bench.sh` puts the bench Codex on its own proxy port 18081, so this never touches the live agentd's 18080.
+- **Network path, once Wi-Fi was back (~02:45, 3 interleaved rounds × 4 pings, 17.1k-token prompt):** phone Wi-Fi + android-connect-proxy, median per round 2.65 / 3.11 / 2.46 s; Mac over USB 2.43 / 3.18 / 2.38 s. No real difference: the proxy and Wi-Fi aren't a lever while they're up.
 - **agentd overhead is small:** `prep` (context block: notifications, memory lines, guard) 30–400 ms, ~1 s on the first request after a restart. thread/start per request ~0.2 s, except the first after an app-server start (~4 s, the model connection's warm-up; the keyboard track's `warmSuggest()` warms that connection at start).
 - **Where a task's time goes now (r3ab-base, terra):** the first model call (to the first tool call) is 4.5–8.7 s (median 5.4 s) on a ~17k-token prompt; later calls are short. Phone side: cold `open_app` of Pigeon/Beacon 1.6–3.4 s, `phone_settings` ~0.9 s, each Calculator key tap ~0.73 s (7–9 taps = 5–7 s).
 - Prompt grew from ~13.4k (round 2) to ~17.1k tokens with tonight's new tools (81 tools ≈ 8.9k tokens of schemas).
 
-## Models and plugins mode (`climb.js --ab base,luna56,luna6,reserve,plugins --rounds 2 --prefix r3ab`, 03:10–03:40, all 12/12 each)
+## Models and plugins mode (`climb.js --ab base,luna56,luna6,reserve,plugins --rounds 2 --prefix r3ab`, 02:54–03:22, all 12/12 each)
 The catalog on the phone (models_cache.json, 10-28): gpt-6.1-sol, gpt-6-astra, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, gpt-5.6-sol/terra/luna, and hidden `gpt-reserve` ("Fast and affordable agentic coding model"). Every listed one offers the priority (Fast) tier; `low` is still the lowest effort.
 
 | Variant | Sum of per-task medians | Success | First call (median, p25–p75) | 1st-call tokens |
@@ -133,7 +133,7 @@ The catalog on the phone (models_cache.json, 10-28): gpt-6.1-sol, gpt-6-astra, g
 
 All inside the noise (the same call ranges 1–18 s between runs); none beats terra by the 5 % KEEP bar on per-call time, and round 1 saw luna fail harder UI tasks. **Kept terra and `all`.** The one real difference was behavioural: gpt-5.6-luna and gpt-reserve typed `234*17` into Calculator's display in one step instead of tapping 9 keys, which is what the next experiment turns into a prompt line.
 
-## Prompt climb (`climb.js --climb --only typeKeys,visible,ctx --rounds 2 --prefix r3c`, 03:45–04:30, all 12/12)
+## Prompt climb (`climb.js --climb --only typeKeys,visible,ctx --rounds 2 --prefix r3c`, 03:24–04:01, all 12/12)
 The same baseline scored 48.3, 51.9 and 34.6 s (sum of per-task medians) in its three comparisons, so the 5 % rule can't separate prompt lines tonight. Decisions use what doesn't depend on API noise: model calls per task and phone-side tool time.
 
 | Candidate | Sum (cand. vs base) | What changed, deterministically | Verdict |
@@ -142,6 +142,6 @@ The same baseline scored 48.3, 51.9 and 34.6 s (sum of per-task medians) in its 
 | visible: "if the screen you have answers it, answer at once; don't open the item" | 44.5 vs 51.9 s | Pigeon 2 calls in 6/6 runs (baseline: 3 calls in ~1 of 5 runs, +2–4 s, it opened Alex's chat to re-check); notification summary 1 call in 6/6 | **KEEP** (d356423) |
 | ctx: "answer notification questions from <phone_context>" | 42.2 vs 34.6 s | nothing beyond visible (notifs already 1 call) | drop |
 
-## One-shot actions finish in the same call (`providers/codex.js` FINISH set, 04:35–04:50, `--label r3f-base|r3f-fin`, 2 interleaved rounds)
+## One-shot actions finish in the same call (`providers/codex.js` FINISH set, 04:03–04:08, `--label r3f-base|r3f-fin`, 2 interleaved rounds)
 `phone_settings, media, play_music, navigate, open_url, add_event, schedule_task` join set_alarm/set_timer/web_search/notifications_reply/act as tools that take an optional `done` reply. As before, agentd shows `done` and ends the turn only after `runTool` returns success, i.e. after the broker allowed and ran the call; nothing skips the broker or the approval card.
 - torch: **2 → 1 model call in 2/2 runs** (the "Flashlight is on." call is gone, ~1–3 s). pigeon and calc: same calls, 4/4 OK each. **KEEP**.
