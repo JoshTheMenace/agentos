@@ -25,6 +25,14 @@ const SYSTEM = `You look things up on the user's Android phone with tools. Find 
 export const server = (action) => new Promise((ok, fail) =>
   execFile('sh', [SCRIPT, action], { timeout: 90_000 }, (e, out) => (e && action !== 'status' ? fail(new Error(out || e.message)) : ok(out.trim()))));
 
+let starting;
+async function ensureServer(signal) {
+  if (signal?.aborted) throw signal.reason;
+  if (await fetch(`${BASE}/health`, { signal: AbortSignal.timeout(700) }).then((r) => r.ok, () => false)) return;
+  await (starting ??= server('start').finally(() => { starting = null; })); // simultaneous asks share one launch
+  if (signal?.aborted) throw signal.reason;
+}
+
 async function chat(body, signal) {
   const res = await fetch(`${BASE}/v1/chat/completions`, { method: 'POST', signal, headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ ...body, chat_template_kwargs: { enable_thinking: false } }) });
@@ -218,10 +226,10 @@ export class Local {
   // Read the router prompt once now, so the first ask doesn't (~7 s on the phone). llama-server keeps it cached after that.
   // Runs at agentd start if the model is already up or switched on (~/.agentos/local-model.on: then it is started too).
   warm() { return plan('open clock').catch(() => {}); }
-  constructor() { if (existsSync(join(process.env.AGENTOS_HOME || join(homedir(), '.agentos'), 'local-model.on'))) server('start').then(() => this.warm(), () => {}); else this.warm(); }
+  constructor() { if (existsSync(join(process.env.AGENTOS_HOME || join(homedir(), '.agentos'), 'local-model.on'))) ensureServer().then(() => this.warm(), () => {}); else this.warm(); }
 
   async run(session, text, ctx) {
-    if (!(await fetch(`${BASE}/health`).then((r) => r.ok, () => false))) await server('start');
+    await ensureServer(ctx.signal);
     const usage = { input_tokens: 0, output_tokens: 0 };
     const known = await recall(text, ctx, usage); // "what did Sam want for his birthday?": memory answers, no screens
     if (known) return ctx.emit({ type: 'text.delta', text: known }), { status: 'completed', usage };

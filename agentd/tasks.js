@@ -32,7 +32,7 @@ const listeners = new Set();
 export const onUpdate = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 
 const DONE = new Set(['done', 'failed', 'stopped']);
-export const view = (t) => ({ id: t.id, goal: t.goal, state: t.state, step: t.step, steps: t.steps.length, waiting: t.waiting || null,
+export const view = (t) => ({ id: t.id, goal: t.goal, provider: t.provider, state: t.state, step: t.step, steps: t.steps.length, waiting: t.waiting || null,
   result: t.result ?? null, error: t.error ?? null, lease_id: t.turn?.lease?.task_id ?? null, origin: t.origin, remote: t.remote, created: t.created, timing: t.timing });
 export const list = () => [...all.values()].map(view);
 export const get = (id) => all.get(id);
@@ -102,6 +102,7 @@ async function run(t) {
 
 // Worker events -> steps. They also go to every UI, like a typed turn's events do.
 function onWorker(t, m) {
+  if (m.type === 'provider.selected') { t.provider = m.provider; update(t, 'provider'); }
   if (m.type === 'tool.request') {
     const ms = Date.now() - t.heard;
     t.timing.first_tool_ms ??= ms;
@@ -111,7 +112,7 @@ function onWorker(t, m) {
     update(t, 'step');
   }
   if (m.type === 'tool.progress') { t.step = m.text; update(t, 'step'); } // a long tool (build_app) reporting where it is
-  events.publish({ ...m, task: t.id }); // tool.request/result, guard.alert, ... (FORWARD decides who sees what)
+  events.publish({ ...m, task: t.id, provider: t.provider }); // tool.request/result, guard.alert, ... (FORWARD decides who sees what)
 }
 
 const app = (pkg) => String(pkg || '').split('.').pop().replace(/^\w/, (c) => c.toUpperCase());

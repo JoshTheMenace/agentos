@@ -1,3 +1,9 @@
+# Automatic offline provider
+
+Fable: show a quiet "On device" label when `turn.started`, `provider.selected`, streamed events or `turn.done` has `provider: "local"`. Background `task.update` includes `task.provider` (also in `task.list`), so the ask sheet/island can keep the label through completion. Clear it on the next `provider: "codex"` turn. The user's selected model stays Codex; automatic fallback does not change their toggle.
+
+Voice workers use the same fallback after delegation. GPT Live audio/transcription still needs internet; this does not add offline speech recognition.
+
 # From the bug hunt (10-28 night; details in pitch/rehearsal/BUGHUNT-NIGHT.md)
 
 - **Memory graph is a hairball.** 194 nodes with overlapping labels (shot: pitch/rehearsal/bughunt/memory-graph.png). It also shows tonight's test fixtures as people/groups ("AgentOS test notification feed 17931…", "Pigeon fixture 0/1", "Test Dana", "Test Founder", "AgentOS test mark read …") and sites like `127.0.0.1:8099` and `localhost:8765`. Suggest: draw only the top ~25 people by weight, label only the biggest nodes, and hide test/localhost nodes in the view. Deleting them from memory is the founder's call.
