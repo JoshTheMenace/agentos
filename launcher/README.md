@@ -134,3 +134,13 @@ card with a mic, a text field, a two-line transcript and ×. The app underneath 
   `shots/assistant-bar/`: `listening.png`, `working.png` (island + bar), `done.png`, `open-type-done.mp4` + frames.
   `drive.mjs` evaluates JS inside the bar's WebView (DevTools) for review scripts; `measure.mjs "<ask>"` prints the event
   timeline of one bar ask from the Mac.
+- **Look (v2, 10-28 noon; founder: v1 looked "basic"):** a glass capsule with depth and no blur: body gradient at 98.5–99.5 %
+  alpha (95 % let a white page's text bleed through by ~12 grey levels), a specular rim (masked gradient), a top sheen, a soft
+  inner aurora (one composited layer, three tints, slow drift) while the voice is live, and a Siri-like edge ring (a rotating
+  conic gradient masked to 1.5 px, brightening with the assistant's voice level; green at the finish). The mic is a glossy orb
+  that scales with your level; seven bars in the field rise with you (white) or the assistant (teal→purple). Transcript words
+  reveal one by one (streamed chunks grow the open word), the status pulses while working, and "Done · N s" lands with a
+  pop of the orb, white bold text and a green ring for 1.4 s. Spring open/close, drag to dismiss, staggered row entrance.
+  GPU rules kept: transform/opacity only, no filters (a drop-shadow filter was tried and dropped), levels through CSS variables
+  every 60 ms. Shots: `before-*` (v1), `v2-idle/listening/working/done.png`, `before-after.png`, motion sheets
+  `after-open-type-done-frames.png`, `after-voice-open-swipe-frames.png`.

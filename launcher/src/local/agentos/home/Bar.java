@@ -79,7 +79,7 @@ public class Bar extends Service {
     String a = i == null ? null : i.getAction();
     if (OPEN.equals(a)) show(i.getBooleanExtra("listen", false));
     else if (CLOSE.equals(a)) hide();
-    else if (HOME.equals(a)) { homeFront = i.getBooleanExtra("front", true); if (homeFront && open) { js("bar.close(true)"); hide(); } showHandle(); }
+    else if (HOME.equals(a)) { homeFront = i.getBooleanExtra("front", true); if (homeFront && open) { js("window.bar&&bar.close(true)"); hide(); } showHandle(); }
     return START_STICKY;
   }
   @Override public void onDestroy() { hide(); if (handle != null) try { wm.removeView(handle); } catch (Exception ignored) {} self = null; super.onDestroy(); }
@@ -126,7 +126,7 @@ public class Bar extends Service {
       focusable = false;
       try { wm.addView(web, lp); } catch (Exception e) { Log.w(TAG, "add: " + e); open = false; showHandle(); return; }
     }
-    if (ready) js("bar.open(" + listen + ")"); else pendingListen = listen ? 1 : 0;
+    if (ready) js("window.bar&&bar.open(" + listen + ")"); else pendingListen = listen ? 1 : 0;
     foreground();
   }
   /** The app the user is in, from the broker over the owner line (notifications.list {n:0} -> foreground {pkg, app}); the page
@@ -143,7 +143,7 @@ public class Bar extends Service {
         try (java.io.InputStream in = h.getInputStream()) { while ((n = in.read(buf)) > 0) bo.write(buf, 0, n); }
         JSONObject r = new JSONObject(bo.toString("UTF-8"));
         JSONObject fg = r.optJSONObject("foreground");
-        if (fg != null && !fg.optString("pkg").isEmpty()) js("bar.app(" + new JSONObject().put("pkg", fg.optString("pkg")).put("label", fg.optString("app")) + ")");
+        if (fg != null && !fg.optString("pkg").isEmpty()) js("window.bar&&bar.app(" + new JSONObject().put("pkg", fg.optString("pkg")).put("label", fg.optString("app")) + ")");
       } catch (Exception e) { Log.w(TAG, "foreground: " + e); }
     }, "bar-fg").start();
   }
@@ -172,7 +172,7 @@ public class Bar extends Service {
       // An override, not a ViewTreeObserver listener: those are lost each time the view is removed and re-added to the window.
       @Override public void onWindowFocusChanged(boolean has) {
         super.onWindowFocusChanged(has);
-        if (has && focusable) { if (!isFocused()) requestFocus(); js("bar.refocus()"); ui.postDelayed(() -> getSystemService(InputMethodManager.class).showSoftInput(this, 0), 80); }
+        if (has && focusable) { if (!isFocused()) requestFocus(); js("window.bar&&bar.refocus()"); ui.postDelayed(() -> getSystemService(InputMethodManager.class).showSoftInput(this, 0), 80); }
       }
     };
     web.setBackgroundColor(0); web.setFocusable(true); web.setFocusableInTouchMode(true); // requestFocus() must work in touch mode (focus(true))
@@ -194,7 +194,7 @@ public class Bar extends Service {
       }
       @Override public boolean onConsoleMessage(ConsoleMessage m) { Log.i(TAG, "js: " + m.message() + " (" + m.lineNumber() + ")"); return true; }
     });
-    web.setOnTouchListener((v, e) -> { if (e.getAction() == MotionEvent.ACTION_OUTSIDE && focusable) { focus(false); js("bar.blur()"); } return false; });
+    web.setOnTouchListener((v, e) -> { if (e.getAction() == MotionEvent.ACTION_OUTSIDE && focusable) { focus(false); js("window.bar&&bar.blur()"); } return false; });
     web.loadUrl(Home.ORIGIN + "/bar.html");
   }
 
@@ -202,7 +202,7 @@ public class Bar extends Service {
   class Bridge {
     @JavascriptInterface public String info() throws Exception { return new JSONObject().put("pkg", getPackageName()).put("density", density).toString(); }
     @JavascriptInterface public String token(String which) { return Home.readFile(Bar.this, "agentd.token"); }
-    @JavascriptInterface public void ready() { ready = true; if (pendingListen >= 0) { js("bar.open(" + (pendingListen == 1) + ")"); pendingListen = -1; } }
+    @JavascriptInterface public void ready() { ready = true; if (pendingListen >= 0) { js("window.bar&&bar.open(" + (pendingListen == 1) + ")"); pendingListen = -1; } }
     /** The card's height in CSS px: the window is cut to it so the app underneath stays touchable. */
     @JavascriptInterface public void size(float h) { ui.post(() -> { if (!open || lp == null) return; int p = px(h); if (p != lp.height) { lp.height = p; try { wm.updateViewLayout(web, lp); } catch (Exception ignored) {} } }); }
     @JavascriptInterface public void focus(boolean on) { ui.post(() -> Bar.this.focus(on)); }
