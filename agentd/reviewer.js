@@ -4,6 +4,7 @@
 // bad, or say "get the owner's fingerprint". It never unlocks a door the broker says needs a key.
 import { cfg } from './config.js';
 import { rpc } from './tools.js';
+import { flagged as liveFlags } from './events.js';
 
 export const LEVELS = ['auto', 'tap', 'fingerprint', 'block'];
 export const POLICY = `You review ONE planned action of a phone agent before the phone runs it. You have no tools. Answer with JSON only.
@@ -75,6 +76,7 @@ export async function onApproval(codex, a, { turn, flagged, drafted }, emit) {
   const ordinary = !!a.allowed_channels?.includes('reviewer'), fpOnly = !a.allowed_channels?.includes('tap');
   const v = await grade(codex, { user: turn ? turn.asks || [turn.goal] : [], transcript: turn?.log || [],
     action: { tool: a.tool, app: a.pkg, args: { target: a.target, text: a.text || undefined } }, floor: ordinary ? 'auto' : fpOnly ? 'fingerprint' : 'tap' });
+  flagged ||= liveFlags.has(a.task_id) || !!turn?.alerted?.size; // guards can flag the task while grading is pending
   const held = fpOnly ? 'fingerprint-only approval' : !ordinary ? `needs a person: ${a.held_because || 'broker'}` : turn?.remote ? `request from ${turn.remote}, not the owner` : drafted ? 'a proactive card: the assistant wrote this text, not you' : flagged ? 'guard flag in this task' : a.fingerprint_because ? `broker: ${a.fingerprint_because}` : v.tainted ? 'tainted content' : null;
   let action = v.decision === 'auto' && held ? `left to the user (${held})` : 'left to the user';
   const call = async (method, params, did) => ((await rpc(method, { approval_id: a.approval_id, channel: 'reviewer', ...params }, 10_000)

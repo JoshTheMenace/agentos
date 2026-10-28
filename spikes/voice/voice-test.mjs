@@ -1,9 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 const state = globalThis.voiceTest = { tasks: [], listeners: new Set() };
 const modules = {
   './config.js': `export const cfg = {voiceVision:false, reviewModel:'off'}; export const log = () => {};`,
+  './catchup.js': `export const asked=()=>false; export const warm=()=>{};`,
   './tasks.js': `const s=globalThis.voiceTest; export const onUpdate=f=>(s.listeners.add(f),()=>s.listeners.delete(f));
     export const list=()=>s.tasks; export const start=goal=>{const t={id:'k'+s.tasks.length,goal,state:'running'};s.tasks.push(t);return t};
     export const describe=()=>''; export const pick=()=>null; export const stop=async()=>{}; export const owns=()=>false;`,
@@ -94,4 +97,22 @@ test('legacy clients still receive one sideband handoff', async () => {
   f.starts[0].on({ method: 'thread/realtime/itemAdded', params: { item: { type: 'handoff_request', handoff_id: 'handoff_1', input_transcript: 'Read the battery' } } });
   await f.voice.handle({ type: 'voice.delegate', item_id: 'item1', handoff_id: 'handoff_1', text: 'Read the battery' });
   assert.equal(state.tasks.length, 1); f.voice.dispose();
+});
+test('server dispatch recovers a missed handoff and dedupes the late delegation', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = fixture(); state.tasks = []; await f.start('dispatch');
+  // Execute the production socket callback without starting agentd, a model or a phone connection.
+  const server = readFileSync(new URL('../../agentd/server.js', import.meta.url), 'utf8');
+  let dispatch;
+  runInNewContext(server.slice(server.indexOf("  ws.on('message'"), server.indexOf("  ws.on('close'")), {
+    ws: { on: (_, fn) => { dispatch = fn; } }, voice: f.voice, send: (m) => f.sent.push(m),
+  });
+  try {
+    await dispatch(JSON.stringify({ type: 'voice.heard', turn_id: 'turn1', text: 'Read the phone battery' }));
+    t.mock.timers.tick(600);
+    assert.equal(state.tasks.length, 1);
+    await dispatch(JSON.stringify({ type: 'voice.delegate', item_id: 'late', turn_id: 'turn1', text: 'Read the phone battery' }));
+    assert.equal(state.tasks.length, 1);
+    assert.equal(f.sent.some((m) => m.code === 'unknown_type'), false);
+  } finally { f.voice.dispose(); }
 });

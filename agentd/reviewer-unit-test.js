@@ -50,6 +50,18 @@ for (const [name, a, ctx] of [
   ['already escalated', { escalated: true }, {}],
 ]) check(`${name} never confirmed`, (await run(a, ctx)).methods, []);
 check('tainted never confirmed', (await run({}, {}, { ...clean, tainted: true })).methods, []);
+const { flagged: liveFlags } = await import('./events.js');
+for (const source of ['broker', 'turn']) {
+  calls.length = 0;
+  const turn = { goal: 'Reply to Mom: yes' };
+  let resolve;
+  const reviewing = onApproval({ quick: () => new Promise((r) => { resolve = r; }) }, approval, { turn, flagged: false }, () => {});
+  if (source === 'broker') liveFlags.add(approval.task_id); else turn.alerted = new Set(['injection']);
+  resolve(clean);
+  await reviewing;
+  check(`${source} flagged during review never confirmed`, calls, []);
+  liveFlags.delete(approval.task_id);
+}
 check('block denied', (await run({}, {}, { ...clean, outcome: 'block' })).methods, ['approval.deny']);
 check('money escalated', (await run({}, {}, { ...clean, outcome: 'fingerprint' })).methods, ['approval.escalate']);
 check('fingerprint not re-escalated', (await run({ allowed_channels: ['fingerprint'] }, {}, { ...clean, outcome: 'fingerprint' })).methods, []);
