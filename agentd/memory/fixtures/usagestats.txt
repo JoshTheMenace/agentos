@@ -1,0 +1,13 @@
+user=0 
+  Last 24 hour events (timeRange="10/26/2026, 5:00 PM – 10/27/2026, 5:00 PM" )
+    time="2026-10-27 16:57:01" type=ACTIVITY_RESUMED package=com.spotify.music class=x flags=0x0 
+  In-memory daily stats
+  timeRange="10/27/2026, 1:24 – 5:00 PM" 
+    packages: 
+      package=com.spotify.music totalTimeUsed="06:41" lastTimeUsed="2026-10-27 15:56:19" totalTimeVisible="06:49" lastTimeVisible="2026-10-27 15:56:19" lastTimeComponentUsed="2026-10-27 15:56:09" totalTimeFS="00:39" lastTimeFS="2026-10-27 15:56:19" appLaunchCount=38 
+      package=com.android.chrome totalTimeUsed="1:02:05" lastTimeUsed="2026-10-27 15:50:00" totalTimeVisible="1:02:05" lastTimeVisible="2026-10-27 15:50:00" lastTimeComponentUsed="2026-10-27 15:50:00" totalTimeFS="00:00" lastTimeFS="2026-10-27 15:50:00" appLaunchCount=5 
+      package=com.example.bank totalTimeUsed="09:00" lastTimeUsed="2026-10-27 15:50:00" totalTimeVisible="09:00" lastTimeVisible="2026-10-27 15:50:00" lastTimeComponentUsed="2026-10-27 15:50:00" totalTimeFS="00:00" lastTimeFS="2026-10-27 15:50:00" appLaunchCount=1 
+      package=com.google.android.deskclock totalTimeUsed="00:20" lastTimeUsed="2026-10-27 15:50:00" totalTimeVisible="00:20" lastTimeVisible="2026-10-27 15:50:00" lastTimeComponentUsed="2026-10-27 15:50:00" totalTimeFS="00:00" lastTimeFS="2026-10-27 15:50:00" appLaunchCount=1 
+  In-memory weekly stats
+  timeRange="10/25/2026, 1:24 PM – 10/27/2026, 5:00 PM" 
+      package=com.spotify.music totalTimeUsed="10:11" lastTimeUsed="2026-10-27 15:56:19" totalTimeVisible="10:33" lastTimeVisible="2026-10-27 15:56:19" lastTimeComponentUsed="2026-10-27 15:56:09" totalTimeFS="00:39" lastTimeFS="2026-10-27 15:56:19" appLaunchCount=47 

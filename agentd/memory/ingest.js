@@ -42,11 +42,11 @@ function contacts(db) {
   return { rows };
 }
 
-function calendar(db, { limit = 1000, days_ahead = 90 } = {}) { // newest `limit` events starting before now + days_ahead
+function calendar(db, { limit = 1000, days_ahead = 90, since } = {}) { // newest `limit` events starting in (since, now + days_ahead)
   const mine = new Set(contentQuery('content://com.android.calendar/calendars', ['_id', 'ownerAccount'], null, 'calendar_calendars')
     .map((c) => c.ownerAccount?.toLowerCase()));
   const events = contentQuery('content://com.android.calendar/events', ['_id', 'title', 'dtstart', 'dtend', 'eventLocation', 'deleted'],
-    `dtstart DESC LIMIT ${limit}`, 'calendar_events', `dtstart < ${Date.now() + days_ahead * 864e5}`).filter((e) => e.deleted !== '1' && e.dtstart);
+    `dtstart DESC LIMIT ${limit}`, 'calendar_events', `dtstart < ${Date.now() + days_ahead * 864e5}${since ? ` AND dtstart > ${since}` : ''}`).filter((e) => e.deleted !== '1' && e.dtstart);
   const who = {};
   for (const a of contentQuery('content://com.android.calendar/attendees', ['event_id', 'attendeeName', 'attendeeEmail'], null, 'calendar_attendees')) {
     const email = a.attendeeEmail?.toLowerCase();
@@ -64,8 +64,8 @@ function calendar(db, { limit = 1000, days_ahead = 90 } = {}) { // newest `limit
 }
 
 const CALL = { 1: 'Incoming call', 2: 'Outgoing call', 3: 'Missed call', 4: 'Voicemail', 5: 'Rejected call', 6: 'Blocked call' };
-function calllog(db, { limit = 500 } = {}) {
-  const rows = contentQuery('content://call_log/calls', ['_id', 'number', 'name', 'type', 'date', 'duration'], `date DESC LIMIT ${limit}`, 'calllog');
+function calllog(db, { limit = 500, since } = {}) {
+  const rows = contentQuery('content://call_log/calls', ['_id', 'number', 'name', 'type', 'date', 'duration'], `date DESC LIMIT ${limit}`, 'calllog', since && `date > ${since}`);
   let added = 0;
   for (const r of rows) {
     const id = person(db, 'calllog', r.name, [{ kind: 'phone', value: r.number }]);
@@ -76,8 +76,8 @@ function calllog(db, { limit = 500 } = {}) {
   return { rows: rows.length, added };
 }
 
-function sms(db, { limit = 200 } = {}) {
-  const rows = contentQuery('content://sms', ['_id', 'address', 'date', 'type', 'body'], `date DESC LIMIT ${Math.min(limit, 1000)}`, 'sms');
+function sms(db, { limit = 200, since } = {}) {
+  const rows = contentQuery('content://sms', ['_id', 'address', 'date', 'type', 'body'], `date DESC LIMIT ${Math.min(limit, 1000)}`, 'sms', since && `date > ${since}`);
   let added = 0;
   for (const r of rows) {
     const id = person(db, 'sms', null, [{ kind: 'phone', value: r.address }]);

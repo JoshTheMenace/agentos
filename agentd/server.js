@@ -8,6 +8,7 @@ import { agentdToken, cfg, log, provisionClients } from './config.js';
 import { classify } from './guard.js';
 import { endTurn, rpc, tasks } from './tools.js';
 import * as memory from './memory/index.js';
+import * as connectors from './memory/connectors/index.js';
 import * as events from './events.js';
 import * as reviewer from './reviewer.js';
 import * as context from './context.js';
@@ -29,6 +30,7 @@ taskman.init(codex); // background workers for voice (and typed task.start); see
 events.watch(); // broker approvals/guard/task events -> every connected UI
 schedule.init({ start: taskman.start, onUpdate: taskman.onUpdate, rpc, onEvent: events.onEvent, publish: events.publish, flagged: events.flagged }); // scheduled tasks
 context.start(providers[cfg.provider], codex); // notification feed -> context block, memory, reply rules
+const memsync = connectors.start({ log }); // memory connectors: default grants, then whatever is due once a minute (see memory/SOURCES.md)
 if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approval card; see reviewer.js for what it may do
   const turn = tasks.get(a.task_id);
   reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size }, events.publish);
@@ -133,6 +135,7 @@ wss.on('connection', (ws) => {
       case 'task.cancel': return taskman.stop(String(msg.id || ''));
       case 'schedule.list': return send({ type: 'schedule.list', items: schedule.list() });
       case 'schedule.cancel': return schedule.cancel(String(msg.id || '')); // the owner's x on the home screen
+      case 'memory.sync': return send({ type: 'memory.sync', results: memsync.now(msg.source && String(msg.source)) }); // on-demand connector run (UI "Sync now")
       default:
         return send({ type: 'error', code: 'unknown_type', message: String(msg.type) });
     }

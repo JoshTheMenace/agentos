@@ -1,0 +1,2 @@
+Row: 0 _id=101, datetaken=1761500000000, date_added=1761500000, bucket_display_name=Camera
+Row: 1 _id=102, datetaken=NULL, date_added=1761503600, bucket_display_name=Screenshots

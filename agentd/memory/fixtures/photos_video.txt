@@ -1,0 +1,1 @@
+Row: 0 _id=201, datetaken=1761507200000, date_added=1761507200, bucket_display_name=Camera

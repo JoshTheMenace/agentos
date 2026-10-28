@@ -16,6 +16,11 @@ export const SOURCES = {
   notifications: 'Currently posted notifications',
   whatsapp: 'WhatsApp chat export (.txt) you chose to import',
   pigeon: 'Our own Pigeon messaging app',
+  photos: 'Photo and video timestamps and album names (MediaStore; never image content)',
+  usage: 'Which apps you use and for how long, per day (UsageStats)',
+  chrome: 'Chrome browsing history (page titles and addresses without query strings)',
+  media: 'What is playing (media sessions: track, artist, app)',
+  alarms: 'The next alarm clock',
 };
 export const SCOPES = ['cloud', 'local']; // cloud: redacted results may go to cloud models. local: only local models see it.
 const USER = 'user'; // memory_remember notes: the user said it, no grant needed
@@ -147,6 +152,7 @@ export function redact(db, text) {
   if (!text) return text ?? null;
   return String(text)
     .replace(/\b(code|otp|passcode|verification|pin)(\D{0,20})\d{4,8}\b/gi, '$1$2[OTP]')
+    .replace(/\b(password|passwd|passcode|pwd|pass)(\s*(?:is|:|=)\s*)\S+/gi, '$1$2[PASSWORD]')
     .replace(/\b(?:\d[ -]?){13,19}\b/g, (m) => (luhn(m.replace(/\D/g, '')) ? '[CARD]' : m))
     .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN]')
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, (m) => pseudo(db, 'E', m.toLowerCase()))

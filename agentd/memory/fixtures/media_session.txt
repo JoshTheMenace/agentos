@@ -1,0 +1,21 @@
+MEDIA SESSION SERVICE (dumpsys media_session)
+
+2 sessions listeners.
+Global priority session is null
+User Records:
+Record for full_user=0
+  Sessions Stack - have 2 sessions:
+  SpotifyMediaSession com.spotify.music/SpotifyMediaSession (userId=0)
+    ownerPid=1, ownerUid=10403, userId=0
+    package=com.spotify.music
+    active=true
+    state=PlaybackState {state=3(PLAYING), position=1000, buffered position=0, speed=1.0, updated=1, actions=0, custom actions=[], active item id=-1, error=null}
+    metadata: size=12, description=Shelter, Porter Robinson, Shelter
+    queueTitle=null, size=0
+  Paused com.example.player/x (userId=0)
+    package=com.example.player
+    active=true
+    state=PlaybackState {state=2(PAUSED), position=1000}
+    metadata: size=3, description=Old Song, Someone, null
+Audio playback (lastly played comes first)
+  uid=10403 packages=com.spotify.music 
