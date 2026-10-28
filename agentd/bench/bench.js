@@ -37,7 +37,7 @@ const PIGEON = (extra = '') => { su(`am force-stop local.agentos.pigeon; am star
 export const TASKS = {
   chrome: { text: 'Search Chrome for the weather in Salt Lake City.', setup: CHROME_FRESH,
     check: async () => { for (let i = 0; i < 6; i++, await sleep(1000)) { const t = await screenText(); if (/weather in salt lake city/i.test(t) && /AI Mode|Images|News/.test(t)) return true; } return false; } }, // results tabs = submitted (the page may still be loading when a 1-call turn ends)
-  calc: { text: 'Use the Calculator app to work out 234 times 17.', setup: () => su('am force-stop com.google.android.calculator'),
+  calc: { text: 'Use the Calculator app to work out 234 times 17.', setup: () => adb('am start -n com.google.android.calculator/com.android.calculator2.Calculator >/dev/null; sleep 1.5; input keyevent 28; input keyevent HOME'), // CLEAR key empties the display (no app data wiped)
     check: async (r) => /3,?978/.test(r.answer) && /3,?978/.test(await screenText()) },
   // Plugin tasks (plugins.js), read-only so nothing on the phone changes.
   battery: { text: 'How much battery do I have?', check: async (r) => /\d+\s?%/.test(r.answer) },
@@ -57,7 +57,7 @@ export const R3 = 'pigeon,beacon,torch,calendar,notifs,calc'; // round-3 set (--
 
 // Held per task only, and released for YIELD_MS between tasks so other agents' withphone (2 s polls) get their turn.
 // lockWait > 0 means someone else used the phone just before this run (noted in RESULTS.md as "overlapped").
-const YIELD_MS = 5000;
+const YIELD_MS = 10_000;
 async function lock() { // same lock as scripts/withphone (pid inside, so a dead owner's lock can be reclaimed)
   for (let i = 0; i < 450; i++) { try { mkdirSync(LOCK); writeFileSync(`${LOCK}/pid`, String(process.pid)); return i * 2000; } catch { await sleep(2000); } }
   throw new Error('device lock busy for 15 min');

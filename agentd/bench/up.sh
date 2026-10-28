@@ -13,7 +13,7 @@ PT=$(adb -s "$S" shell su -c 'cat /data/data/local.agentos/files/token' | tr -d 
 VARS=""; for v in CODEX_MODEL CODEX_EFFORT AGENTD_SCREEN REVIEW_MODEL AGENTD_DEBUG CODEX_SERVICE_TIER CODEX_FINISH AGENTD_PROMPT_PATCH AGENTD_TOOLS VOICE_VISION VISION_MODEL; do eval "x=\${$v-}"; [ -n "$x" ] && VARS="$VARS $v=$x"; done
 deploy/tx.sh "pkill -f 'node server.js --bench' ; sleep 1
 D=~/agentos/bench-agentd; [ -n \"$NOCOPY\" ] || { rm -rf \$D; mkdir -p \$D; cd \$D; tar xzf /data/local/tmp/bench-agentd.tgz; ln -s ~/agentos/agentd/node_modules node_modules; }; cd \$D
-export PHONE_TOKEN=$PT AGENTD_PORT=8788 AGENTOS_HOME=\$HOME/.agentos-bench AGENTD_CLIENT_PKGS= CODEX_BIN=\$D/deploy/codex-root.sh $VARS
+export PHONE_TOKEN=$PT AGENTD_PORT=8788 AGENTOS_HOME=\$HOME/.agentos-bench AGENTD_CLIENT_PKGS= CODEX_BIN=\$D/deploy/${BENCH_CODEX:-codex-root.sh} $VARS
 setsid nohup node server.js --bench > \$HOME/bench-agentd.log 2>&1 < /dev/null &
 sleep 6; tail -3 \$HOME/bench-agentd.log; echo vars:$VARS"
 adb -s "$S" forward tcp:18788 tcp:8788 >/dev/null

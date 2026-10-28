@@ -21,6 +21,8 @@ export const VARIANTS = {
   finish: { CODEX_FINISH: '1' },
   all: { AGENTD_TOOLS: 'all' },          // tool plugins (plugins.js): every enabled tool upfront
   plugins: { AGENTD_TOOLS: 'plugins' },  // core + pre-selected plugins, the rest via load_plugin
+  // Round 3 (10-28): other models in the phone's catalog (bench/RESULTS.md).
+  reserve: { CODEX_MODEL: 'gpt-reserve' }, luna6: { CODEX_MODEL: 'gpt-6-luna' }, luna56: { CODEX_MODEL: 'gpt-5.6-luna' },
 };
 const CANDIDATES = {
   // Tell it where the final reply goes (the `done` field) instead of a separate message.
@@ -31,6 +33,8 @@ const CANDIDATES = {
   oneAct: { append: '- Plan for the fewest calls: after open_app, put every remaining step you can already see into ONE act call (tap, type, tap Search/Send, tap the result). Never split steps into separate calls when one act can do them.' },
   // Shorter final replies (fewer output tokens on the last call).
   terse: { append: '- Final replies: one short sentence, no lists, no follow-up offers.' },
+  // Round 3: answer from what the screen already shows (a chat list's preview line) instead of opening the item.
+  visible: { append: '- If the screen you already have answers the question (a list row\'s preview, a label, a number), answer from it at once; don\'t open the item to check.' },
   // Few-shot: a worked example of the 2-call shape.
   fewShot: { append: '- Example. User: "Use Calculator to work out 12 times 3." → open_app com.google.android.calculator → act [tap 1, tap 2, tap ×, tap 3, tap =] → reply "12 × 3 = 36." Example. User: "Text Sam I\'m here" in a chat app → open_app → act [tap the chat, type the message into the box, tap Send] with done "Sent." when the call can finish.' },
 };
@@ -66,7 +70,7 @@ async function compare(prefix, variants, rounds, tasks) {
   return Object.fromEntries(variants.map(([n]) => [n, score(`${prefix}-${n}`)]));
 }
 
-const tasks = arg('tasks', 'alarm,timer,chrome,calc,reply'), rounds = Number(arg('rounds', 2)), prefix = arg('prefix', 'r2');
+const tasks = arg('tasks', 'r3'), rounds = Number(arg('rounds', 2)), prefix = arg('prefix', 'r2');
 if (process.argv.includes('--ab')) {
   const res = await compare(prefix, arg('ab').split(',').map((n) => [n, VARIANTS[n]]), rounds, tasks);
   console.log('\n', JSON.stringify(res, null, 1));
