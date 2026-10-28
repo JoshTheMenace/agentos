@@ -13,12 +13,13 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | S1 | Live notifications + reply actions + official APIs | GPT-6.1 Sol | done (6928905, 660377b; reads ~20 ms, reply turn 32 s → handed to speed track) |
 | S2 | Deep-mod engine research + design on our own apps | GPT-6.1 Sol | done (DEEP-MODS.md: cooperative signed spec, no injection or reboot) |
 | 4 | Wake word: Porcupine ready (needs key; Picovoice free tier ended, 7-day trial) + offline Vosk "Hey Agent" fallback | Claude | done (4df084d; switch off) |
-| 5 | Voice/GPT Live latency hill-climb | GPT-6.1 Sol | running |
+| 5 | Voice/GPT Live latency hill-climb | GPT-6.1 Sol | done (a16552e…5e00624: warm session ready ~9 ms, task start ~1.7 s, no duplicate/missed handoffs). NOT deployed; goes in #11 |
 | 6 | Reviewer light polish | GPT-6.1 Sol | done (a333832; 2.27 → 1.86 s, 27/28; NOT yet deployed to phone) |
 | 7 | Bug hunt across demo flows (incl. Duolingo on Home, tap spots +77 px) | Claude Opus | running |
 | 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | running |
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
 | 10 | Auto on-device fallback when offline for ask/voice (DEMO-WOW #5) | GPT-6.1 Sol | running |
+| 12 | Keyboard replies that know your calendar (DEMO-WOW #8) | GPT-6 Astra | running |
 | 11 | Morning integration deploy (~8 AM): push all agentd changes incl. reviewer, one restart, smoke test every demo beat, update STATUS.md | Claude | queued (after others finish) |
 | S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra | done (3430c2e; navy/gold + promoted rows removed, vanilla pixel-identical) |
 
