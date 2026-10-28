@@ -56,7 +56,7 @@ const MOD_TOOLS = {
 MOD_TOOLS.mod_inspect = MOD_TOOLS.app_mod_targets;
 MOD_TOOLS.mod_list = MOD_TOOLS.app_mod_list;
 MOD_TOOLS.mod_remove = MOD_TOOLS.app_mod_remove;
-const modSpec = { type: 'object', description: 'Strict declarative spec. Mask: {id,package,label,action:{type:"mask",match:{text:"Promoted"},scope:"item",color:"#101820"}}. Match exactly one of text (exact, case-insensitive), id (short view id), class. scope node or item (containing scroll item). No code/regex. Button specs: see mod_apply examples.' };
+const modSpec = { type: 'object', description: 'Strict declarative spec. Mask: {id,package,label,action:{type:"mask",match:{text:"Promoted"},scope:"item"}}. Match exactly one of text (exact, case-insensitive), id (short view id), class. scope node or item (containing scroll item). Omit color: the mask takes the app's own background and shows a small "Ad hidden" chip. No code/regex. Button specs: see mod_apply examples.' };
 MOD_TOOLS.mod_preview = { method: 'app.mod.preview', tier: 'read', schema: obj({ spec: modSpec }, ['spec']),
   description: 'Dry-run a mod in the foreground app: highlight matched rectangles for 3 seconds. No app actions. Required before apply; receipt binds this exact spec for 5 minutes. Zero matches cannot apply.' };
 MOD_TOOLS.mod_apply = { method: 'app.mod.apply', tier: 'act', schema: obj({ spec: modSpec }, ['spec']),

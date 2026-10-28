@@ -1,1 +1,1 @@
-{"id":"linkedin-promoted","package":"com.linkedin.android","label":"Hide promoted","action":{"type":"mask","match":{"text":"Promoted"},"scope":"item","color":"#101820"}}
+{"id":"linkedin-promoted","package":"com.linkedin.android","label":"Hide promoted","action":{"type":"mask","match":{"text":"Promoted"},"scope":"item"}}

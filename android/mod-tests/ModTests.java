@@ -52,7 +52,7 @@ public class ModTests extends Instrumentation {
         return done.get(3, java.util.concurrent.TimeUnit.SECONDS);
     }
     private JSONObject spec(String id) throws Exception {
-        return new JSONObject("{\"id\":\"" + id + "\",\"package\":\"com.agentos.modfixture\",\"label\":\"Mask test\",\"action\":{\"type\":\"mask\",\"match\":{\"text\":\"Promoted\"},\"scope\":\"item\"}}");
+        return new JSONObject("{\"id\":\"" + id + "\",\"package\":\"com.agentos.modfixture\",\"label\":\"Mask test\",\"action\":{\"type\":\"mask\",\"match\":{\"text\":\"Promoted\"},\"scope\":\"item\",\"color\":\"#102030\"}}");
     }
     @Override public void onCreate(Bundle b) { super.onCreate(b); start(); }
     @Override public void onStart() {
@@ -79,8 +79,8 @@ public class ModTests extends Instrumentation {
                 {
                     SystemClock.sleep(350);
                     JSONArray rct = preview.getJSONArray("matches").getJSONArray(0);
-                    int pixel = shot(svc, "mods-fixture-mask.png", (rct.getInt(0) + rct.getInt(2)) / 2, (rct.getInt(1) + rct.getInt(3)) / 2);
-                    check((pixel & 0xFFFFFF) == 0x101820, "mask not visible: " + Integer.toHexString(pixel));
+                    int pixel = shot(svc, "mods-fixture-mask.png", rct.getInt(0) + 8, (rct.getInt(1) + rct.getInt(3)) / 2); // near the edge: the centre holds the "Ad hidden" chip
+                    check((pixel & 0xFFFFFF) == 0x102030, "mask not visible: " + Integer.toHexString(pixel));
                     visible.put(SystemClock.uptimeMillis() - t);
                 }
                 check(((JSONObject) call(mods, "remove", "mod-test", "isolated renderer test")).getBoolean("ok"), "remove failed");

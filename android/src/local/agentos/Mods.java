@@ -61,7 +61,8 @@ final class Mods {
         JSONObject spec; String id, pkg, by; long created;
         TextView btn; WindowManager.LayoutParams lp; Style style; boolean shown;
         LinearLayout chips; WindowManager.LayoutParams clp; final List<TextView> chipViews = new ArrayList<>(); double value = Double.NaN;
-        volatile String disabled = ""; final List<View> masks = new ArrayList<>();
+        volatile String disabled = ""; final List<View> masks = new ArrayList<>(); long peekUntil; boolean peeking; // peek: the chip alone, item visible
+        final List<AccessibilityNodeInfo[]> track = new ArrayList<>(); // matched nodes, re-read mid-scroll (ModMask.bounds)
         long t0; CompletableFuture<Long> onScreen, secure; int sampleFails; // secure: FLAG_SECURE check started when the chips open
     }
 
@@ -76,12 +77,12 @@ final class Mods {
     private final float dp;
     private boolean sampling, approving;
     private final Map<String, Long> previews = new java.util.concurrent.ConcurrentHashMap<>();
-    private int checkedWindow = -1, windowEpoch; private boolean checkingWindow, windowSafe;
+    private int checkedWindow = -1, windowEpoch; private boolean checkingWindow, windowSafe, recheck; // recheck: same window, content changed
     private final List<View> highlights = new ArrayList<>();
     private final Runnable clearPreview = this::clearPreview;
     private volatile boolean watching, closed;
     private Process watcher;
-    private String fgPkg = ""; private long fgSince; // sample colors only after the app's launch animation has settled
+    private String fgPkg = ""; private long fgSince, scrollUntil; // fgSince: sample colors only after the app's launch animation has settled; scrollUntil: a fling is still moving, re-place masks every frame
 
     Mods(AgentA11y svc, Audit audit) {
         this.svc = svc; this.audit = audit;
@@ -124,10 +125,10 @@ final class Mods {
                         ? e.getWindowId() != root.getWindowId() : !pkg.equals("local.agentos"))) return;
             } catch (RuntimeException error) { hideAll(); return; }
         }
-        checkedWindow = -1; windowEpoch++; // secure flags can change without a new window id
+        recheck = true; windowEpoch++; // secure flags can change without a new window id: re-ask root, keep the last verdict meanwhile
+        if (e.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_SCROLLED) scrollUntil = SystemClock.uptimeMillis() + 700; // events trail a fling: follow it frame by frame
         clearPreview();
-        for (Mod m : mods.values()) try { if (ModMask.is(m.spec)) hide(m); } catch (RuntimeException error) { fail(m, "event exception"); }
-        svc.main.removeCallbacks(refreshR); svc.main.postDelayed(refreshR, 16);
+        if (!svc.main.hasCallbacks(refreshR)) svc.main.postDelayed(refreshR, 16); // coalesce, never postpone: a drag's event stream must not starve the re-placement
     }
     void onConfig() { fgSince = SystemClock.uptimeMillis(); svc.main.postDelayed(refreshR, 50); }
     void hideAll() { for (Mod m : mods.values()) try { hide(m); } catch (RuntimeException ignored) {} }
@@ -503,9 +504,10 @@ final class Mods {
     private boolean safeWindow(AccessibilityNodeInfo root) {
         if (svc.getSystemService(android.app.KeyguardManager.class).isKeyguardLocked()) return false;
         int id = root.getWindowId(), epoch = windowEpoch;
-        if (checkedWindow == id) return windowSafe;
+        boolean known = checkedWindow == id;
+        if (known && !recheck) return windowSafe;
         if (!checkingWindow) {
-            checkingWindow = true;
+            checkingWindow = true; recheck = false;
             CompletableFuture.supplyAsync(() -> !probe.secureNow()).whenComplete((safe, error) -> svc.main.post(() -> {
                 checkingWindow = false;
                 try {
@@ -515,7 +517,7 @@ final class Mods {
                 if (!closed) refresh();
             }));
         }
-        return false;
+        return known && windowSafe; // a new window is never masked before its first check; a changed one stays masked only while it was safe
     }
 
     private void refresh() {
@@ -529,31 +531,28 @@ final class Mods {
             prefs().edit().putString("rendering", m.id).commit();
             if (ModMask.is(m.spec)) {
                 if (!safeWindow(root)) { hide(m); continue; }
-                ModMask.clear(wm, m.masks);
-                for (Rect r : ModMask.bounds(root, m.spec)) {
-                    View v = new View(svc); ModMask.paint(v, m.spec, false);
-                    WindowManager.LayoutParams lp = params();
-                    float[] down = new float[2];
-                    android.view.GestureDetector gestures = new android.view.GestureDetector(svc, new android.view.GestureDetector.SimpleOnGestureListener() {
-                        @Override public void onLongPress(android.view.MotionEvent e) { if (!m.shown || !m.disabled.isEmpty() || approving) return; new Thread(() -> { try { remove(m.id, "long-press"); } catch (Exception ignored) {} }).start(); }
-                    });
-                    v.setOnTouchListener((view, event) -> {
-                        gestures.onTouchEvent(event);
-                        if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) { down[0] = event.getRawX(); down[1] = event.getRawY(); }
-                        if (event.getAction() == android.view.MotionEvent.ACTION_UP && Math.abs(event.getRawY() - down[1]) > px(48)) {
-                            try {
-                                AccessibilityNodeInfo now = svc.getRootInActiveWindow();
-                                if (now != null && m.pkg.contentEquals(now.getPackageName())) ModMask.scroll(now, (int) down[0], (int) down[1], event.getRawY() < down[1], new int[]{600}, 0);
-                            }
-                            catch (RuntimeException error) { fail(m, "scroll exception"); }
-                        }
-                        return true; // consume taps; only an owner's swipe may scroll the underlying collection
-                    });
-                    move(lp, r.left, r.top, r.width(), r.height()); wm.addView(v, lp); m.masks.add(v);
+                List<Rect> rects = ModMask.bounds(root, m.spec, scrollUntil > SystemClock.uptimeMillis(), m.track);
+                Integer fill = rects.isEmpty() ? null : fill(m, rects.get(0));
+                if (fill == null) { hide(m); continue; } // nothing to cover, or the app's background is still being sampled
+                boolean peek = m.peekUntil > SystemClock.uptimeMillis();
+                if (m.masks.size() != rects.size() || m.peeking != peek) { ModMask.clear(wm, m.masks); m.peeking = peek; }
+                for (int i = 0; i < rects.size(); i++) {
+                    Rect r = rects.get(i);
+                    boolean fresh = i >= m.masks.size(); // membership, not isAttachedToWindow(): a view added this frame is not attached yet
+                    View v = fresh ? mask(m, peek) : m.masks.get(i);
+                    WindowManager.LayoutParams lp = (WindowManager.LayoutParams) v.getTag();
+                    ((GradientDrawable) v.getBackground()).setColor(peek ? 0 : fill);
+                    int w = r.width(), hh = r.height(), x = r.left, y = r.top;
+                    if (peek) { v.measure(0, 0); w = v.getMeasuredWidth(); hh = v.getMeasuredHeight(); x = r.centerX() - w / 2; y = r.centerY() - hh / 2; }
+                    boolean changed = move(lp, x, y, w, hh);
+                    if (fresh) { wm.addView(v, lp); m.masks.add(v); }
+                    else if (changed) wm.updateViewLayout(v, lp);
                     v.postOnAnimation(() -> {
                         if (v.isAttachedToWindow() && m.shown && m.onScreen != null) { m.onScreen.complete(SystemClock.uptimeMillis() - m.t0); m.onScreen = null; }
                     });
                 }
+                if (peek) { svc.main.removeCallbacks(refreshR); svc.main.postDelayed(refreshR, m.peekUntil - SystemClock.uptimeMillis() + 16); }
+                else if (scrollUntil > SystemClock.uptimeMillis()) { svc.main.removeCallbacks(refreshR); svc.main.postDelayed(refreshR, 16); }
                 m.shown = !m.masks.isEmpty();
             } else {
                 if (keys == null) keys = buttons(root, new ArrayList<>());
@@ -563,6 +562,75 @@ final class Mods {
             }
         } catch (RuntimeException e) { fail(m, "render exception: " + e.getClass().getSimpleName()); }
         finally { prefs().edit().remove("rendering").commit(); }
+    }
+
+    /** One mask window: the app's own background with a small centred A2 chip ("Ad hidden" + AgentOS dot). Tap the chip to peek
+     *  (the item shows for 6 s under a chip-sized window), long-press to remove, swipe to scroll the list underneath. */
+    private View mask(Mod m, boolean peek) {
+        android.widget.FrameLayout v = new android.widget.FrameLayout(svc);
+        GradientDrawable d = new GradientDrawable(); v.setBackground(d);
+        TextView chip = new TextView(svc); chip.setSingleLine(); chip.setGravity(Gravity.CENTER_VERTICAL);
+        String what = m.spec.optJSONObject("action").optJSONObject("match").optString("text").toLowerCase();
+        chip.setText(peek ? "Tap to hide" : Arrays.asList("promoted", "sponsored", "ad", "suggested").contains(what) ? "Ad hidden" : m.spec.optString("label"));
+        chip.setTextColor(0xFFFFFFFF); chip.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL)); chip.setTextSize(11.5f);
+        chip.setPadding(px(10), px(5), px(12), px(5)); chip.setCompoundDrawablePadding(px(6));
+        GradientDrawable pill = new GradientDrawable(); pill.setColor(0x99484852); pill.setCornerRadius(px(999)); pill.setStroke(1, 0x14FFFFFF); // A2 "mod" glass
+        chip.setBackground(pill);
+        GradientDrawable dot = new GradientDrawable(); dot.setShape(GradientDrawable.OVAL); dot.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        dot.setGradientCenter(0.35f, 0.3f); dot.setGradientRadius(px(5)); dot.setColors(new int[]{0xFFF2F2F7, 0xFF0A84FF}); dot.setSize(px(7), px(7));
+        chip.setCompoundDrawablesWithIntrinsicBounds(dot, null, null, null);
+        chip.setContentDescription((peek ? "hide again" : "peek at the hidden item") + " (AgentOS mod)");
+        chip.setOnClickListener(c -> { if (m.disabled.isEmpty() && !approving) { m.peekUntil = peek ? 0 : SystemClock.uptimeMillis() + 6000; refresh(); } });
+        chip.setOnLongClickListener(c -> { new Thread(() -> { try { remove(m.id, "long-press"); } catch (Exception ignored) {} }).start(); return true; });
+        android.widget.FrameLayout.LayoutParams cl = new android.widget.FrameLayout.LayoutParams(-2, -2); cl.gravity = Gravity.CENTER;
+        v.addView(chip, cl);
+        WindowManager.LayoutParams lp = params(); v.setTag(lp);
+        float[] down = new float[2];
+        android.view.GestureDetector gestures = new android.view.GestureDetector(svc, new android.view.GestureDetector.SimpleOnGestureListener() {
+            @Override public void onLongPress(android.view.MotionEvent e) { if (!m.shown || !m.disabled.isEmpty() || approving) return; new Thread(() -> { try { remove(m.id, "long-press"); } catch (Exception ignored) {} }).start(); }
+        });
+        v.setOnTouchListener((view, event) -> {
+            gestures.onTouchEvent(event);
+            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) { down[0] = event.getRawX(); down[1] = event.getRawY(); }
+            if (event.getAction() == android.view.MotionEvent.ACTION_UP && Math.abs(event.getRawY() - down[1]) > px(48)) {
+                try {
+                    AccessibilityNodeInfo now = svc.getRootInActiveWindow();
+                    if (now != null && m.pkg.contentEquals(now.getPackageName()) && ModMask.scroll(now, (int) down[0], (int) down[1], event.getRawY() < down[1], new int[]{600}, 0)) {
+                        scrollUntil = SystemClock.uptimeMillis() + 700; svc.main.removeCallbacks(refreshR); svc.main.post(refreshR); // the page animates: follow it
+                    }
+                }
+                catch (RuntimeException error) { fail(m, "scroll exception"); }
+            }
+            return true; // consume taps; only an owner's swipe may scroll the underlying collection
+        });
+        return v;
+    }
+
+    /** The mask colour: the spec's explicit color, else the app's background sampled once per theme/orientation around the item (cached). Null while sampling. */
+    private Integer fill(Mod m, Rect r) {
+        if (ModMask.explicit(m.spec)) return ModMask.fill(m.spec, 0);
+        String k = key(m, "mask"); Style s = styles.get(k);
+        if (s != null) return s.bg;
+        if (m.sampleFails >= 3) return 0xFFFFFFFF;
+        long settle = fgSince + 400 - SystemClock.uptimeMillis();
+        if (settle > 0) { svc.main.postDelayed(refreshR, settle); return null; }
+        if (svc.island.carded()) { svc.main.postDelayed(refreshR, 200); return null; }
+        if (sampling) return null;
+        sampling = true; hide(m); // the shot must show the app, not us
+        svc.main.postDelayed(() -> svc.takeScreenshot(Display.DEFAULT_DISPLAY, svc.getMainExecutor(), new AccessibilityService.TakeScreenshotCallback() {
+            @Override public void onSuccess(AccessibilityService.ScreenshotResult res) {
+                AccessibilityNodeInfo root = svc.getRootInActiveWindow();
+                if (root == null || !m.pkg.contentEquals(root.getPackageName()) || svc.island.carded()) { res.getHardwareBuffer().close(); sampling = false; svc.main.postDelayed(refreshR, 300); return; }
+                Bitmap hw = Bitmap.wrapHardwareBuffer(res.getHardwareBuffer(), res.getColorSpace());
+                Bitmap bm = hw.copy(Bitmap.Config.ARGB_8888, false); hw.recycle(); res.getHardwareBuffer().close();
+                Style st = new Style(); st.bg = ModMask.background(bm, r); bm.recycle();
+                styles.put(k, st); saveStyles(); sampling = false;
+                Log.i(TAG, "mask background " + k + String.format(" #%06X", st.bg & 0xFFFFFF));
+                refresh();
+            }
+            @Override public void onFailure(int code) { Log.w(TAG, "screenshot failed " + code); sampling = false; m.sampleFails++; svc.main.postDelayed(refreshR, 350); }
+        }), 40);
+        return null;
     }
 
     /** First placement (the spec itself, then each "alt") whose anchor is on screen and that covers none of the app's own buttons. */
