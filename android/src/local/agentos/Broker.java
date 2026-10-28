@@ -161,7 +161,7 @@ final class Broker {
                 Thread.sleep(Math.max(0, Math.min(5000, p.optLong("ms", 1000))));
                 return ok(true).put("decision", "auto").put("screen", read());
             case "task.start": return start(p, uid);
-            case "task.stop": return stop(p.optString("task_id", ""), "task.stop");
+            case "task.stop": return stop(p.optString("task_id", ""), "task.stop", p.optLong("done_ms", 0));
             case "task.pause": return pause(true, "task.pause");
             case "task.resume": return pause(false, "task.resume");
             case "audit.tail": return audit.tail(Math.max(1, Math.min(500, p.optInt("n", 20)))).put("pubkey", Approvals.publicKeyB64(svc));
@@ -312,7 +312,10 @@ final class Broker {
     }
 
     /** Stop: revoke the lease and deny any open approval. Also used by the volume-key kill switch. */
-    synchronized JSONObject stop(String taskId, String why) throws JSONException {
+    synchronized JSONObject stop(String taskId, String why) throws JSONException { return stop(taskId, why, 0); }
+
+    /** doneMs > 0: the task finished well in that many ms; the island shows "Done · 6.8 s" for 3 s (plain "Done" past 30 s). */
+    synchronized JSONObject stop(String taskId, String why, long doneMs) throws JSONException {
         CompletableFuture<Boolean> ask = leaseAsk;
         if (ask != null && taskId.isEmpty()) ask.complete(false); // the kill switch also answers an open lease card with no
         Lease l = lease;
@@ -326,7 +329,8 @@ final class Broker {
         svc.main.post(svc.autoPause::stop);
         audit.log(entry("task.stop", l).put("reason", why).put("steps", l.h.steps));
         Events.emit("task.state", task(l).put("state", "stopped").put("reason", why));
-        svc.main.post(svc.island::hide);
+        if (doneMs > 0) svc.main.post(() -> svc.island.set("done", doneMs < 30_000 ? String.format(java.util.Locale.US, "Done · %.1f s", doneMs / 1000.0) : "Done", -1));
+        else svc.main.post(svc.island::hide);
         return ok(true).put("task_id", l.id).put("reason", why);
     }
 
@@ -649,6 +653,7 @@ final class Broker {
             List<String> channels, String fp, long timeoutMs) throws Exception {
         ApprovalCard.Model m = new ApprovalCard.Model();
         m.title = tool.equals("type") ? "type into \"" + target + "\"" : tool.equals("tap") ? "tap \"" + target + "\""
+                : tool.equals("firewall.set") ? target + " for " + labels(Collections.singleton(pkg)) // "Block httpbin.org for Beacon?"
                 : tool.startsWith("notifications.") || tool.startsWith("trackers.") || tool.startsWith("app.") || tool.equals("intent") || Api.SPECS.containsKey(tool) ? target : tool + " " + target;
         m.app = pkg; m.target = target; m.text = text; m.tier = tier; m.reason = why;
         m.task = l == null ? "(no task)" : l.id + " · " + l.goal;

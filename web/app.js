@@ -72,6 +72,7 @@ const toolName = (n) => TOOLN[n] || String(n || '').replace(/[._]/g, ' ').replac
 const stepText = (s) => TOOLN[s] || s;
 const ago = (ms) => { const s = Math.max(0, Math.round((Date.now() - ms) / 1000)); return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`; };
 const one = (s) => String(s).replace(/\b1 (day|hour|minute|min|week)s\b/g, '1 $1'); // "1 days ago" -> "1 day ago"
+const dur = (ms) => ms > 0 && ms < 30000 ? ` · ${(ms / 1000).toFixed(1)} s` : ''; // the stopwatch (DEMO-WOW #4): a measured finish; past 30 s nothing
 const short = (s, n = 48) => (s = String(s || '')).length > n ? s.slice(0, n - 1) + '…' : s;
 
 // ---------- clock ----------
@@ -90,7 +91,12 @@ const auditLine = (e) => { // one human line per audit entry: what happened, in 
   const code = /code|canary/i.test(e.reason || ''), names = (e.target || '').replace(/^\w+ trackers: /, '').replace(/ \(.*$/, '');
   switch (e.tool) {
     case 'task.start': return [d === 'denied' ? `Access not granted · ${short(e.goal, 36)}` : 'Started · ' + short(e.goal, 40), bad ? 'c' : 'a'];
-    case 'task.stop': return [`Finished · ${e.steps ?? 0} step${e.steps === 1 ? '' : 's'}`, ''];
+    case 'task.stop': return [e.steps ? `Finished · ${e.steps} step${e.steps === 1 ? '' : 's'}` : 'Finished', ''];
+    case 'app.deepmod.preview': return [`Previewed a deep mod${inApp}`, c];
+    case 'app.deepmod.apply': case 'app.deepmod.integrate': return [bad ? `Deep mod refused${inApp} · ${short(e.reason, 30)}` : `Applied a deep mod${inApp}`, c];
+    case 'app.deepmod.apply.review': return [`Reviewed a deep mod${inApp}`, c];
+    case 'app.deepmod.remove': case 'app.deepmod.rollback': return [`Removed a deep mod${inApp}`, ''];
+    case 'app.deepmod.disable': return [`Deep mods off · ${/disconnected/.test(e.reason || '') ? 'app closed' : short(e.reason || '', 30)}`, ''];
     case 'task.pause': return [/human/.test(e.reason || '') ? 'Paused · you touched the screen' : 'Paused', ''];
     case 'task.resume': return ['Resumed', ''];
     case 'tap': return [bad ? (d === 'blocked' && !e.task ? `Stopped a tap outside a task${inApp}` : `Tap ${tgt} not approved${inApp}`) : `Tapped ${tgt}${inApp}`, c];
@@ -168,17 +174,18 @@ function renderStatus() {
 const WORKING = new Set(['queued', 'running', 'waiting']);
 function workerCard(w) {
   const on = WORKING.has(w.state), cls = w.state === 'waiting' ? 'approval' : on ? 'working' : w.state === 'done' ? 'done' : 'alert';
-  const meta = on ? `${ago(w.created)}${w.steps ? ` · ${w.steps} step${w.steps > 1 ? 's' : ''}` : ''}` : '';
+  const meta = [w.provider === 'local' ? 'On device' : '', on ? `${ago(w.created)}${w.steps ? ` · ${w.steps} step${w.steps > 1 ? 's' : ''}` : ''}` : w.state === 'done' ? dur(w.timing?.total_ms).slice(3) : ''].filter(Boolean).join(' · ');
   const c = el('button', `glass now ${cls}${on ? '' : ' done'}${w.gone ? ' gone' : ''}`, `<div class="hd">${on ? `<span class="orb ${cls}"></span>` : `<span class="ok ${cls}"><svg width="12" height="12"><use href="#i-${w.state === 'done' ? 'check' : 'x'}"/></svg></span>`}<div><div class="t">${esc(short(w.goal, 40))}</div><div class="s">${esc(short(on ? stepText(w.step) : w.result || w.error || stepText(w.step), 80))}</div></div>${meta ? `<span class="meta">${meta}</span>` : ''}${on ? `<button class="ib red" data-a="cancel"><svg width="14" height="14"><use href="#i-stop"/></svg></button>` : ''}</div><div class="bar2"><i></i></div>`);
   c.onclick = (e) => { hap(); if (e.target.closest('[data-a]')) { send({ type: 'task.cancel', id: w.id }); return; } open('sheet'); };
   return c;
 }
 on('task.update', (m) => {
   const w = m.task; if (!w?.id) return;
+  if (w.provider) device(w);
   for (const k of S.tasks.keys()) if (k.startsWith('opt')) S.tasks.delete(k); // the optimistic placeholder
   const prev = S.tasks.get(w.id); S.tasks.set(w.id, w);
   if (m.why === 'created') { body.append(el('div', 'msg me', esc(w.goal))); aiMsg = null; askAt = w.created; sheetEmpty(); } // the sheet becomes the task's transcript ("how's it going")
-  if (!WORKING.has(w.state)) { if (prev && WORKING.has(prev.state)) { hap(w.state === 'done' ? 'heavy' : 'click'); body.append(el('div', 'msg ' + (w.state === 'done' ? 'ai' : 'err'), esc(w.result || w.error || stepText(w.step)))); scrollDown(); } setTimeout(() => { if (S.tasks.get(w.id) === w) { w.gone = true; renderNow(); setTimeout(() => { S.tasks.delete(w.id); renderNow(); renderCenter(); }, 400); } }, 45000); }
+  if (!WORKING.has(w.state)) { if (prev && WORKING.has(prev.state)) { hap(w.state === 'done' ? 'heavy' : 'click'); body.append(el('div', 'msg ' + (w.state === 'done' ? 'ai' : 'err'), esc(w.result || w.error || stepText(w.step)))); scrollDown(); S.turn = false; S.step = null; steps = {}; setSheet({ done: 'Done', failed: 'Didn’t finish' }[w.state] || 'Stopped', w.state === 'done' ? 'done' : 'alert', w.timing?.total_ms); } setTimeout(() => { if (S.tasks.get(w.id) === w) { w.gone = true; renderNow(); setTimeout(() => { S.tasks.delete(w.id); renderNow(); renderCenter(); }, 400); } }, 45000); }
   renderStatus(); renderNow(); renderCenter(); renderVoiceTask();
 });
 setInterval(() => { if ([...S.tasks.values()].some((w) => WORKING.has(w.state))) { renderNow(); renderVoiceTask(); } }, 1000); // elapsed time
@@ -367,7 +374,7 @@ function renderCenter() {
   const t = S.active;
   for (const w of S.tasks.values()) if (WORKING.has(w.state)) rows.push(el('div', 'rowi', `<span class="orb ${w.state === 'waiting' ? 'approval' : 'working'}"></span><div>${esc(short(w.goal, 34))}<span class="s">${esc(w.step)}</span></div>`));
   if (t && ![...S.tasks.values()].some((w) => w.lease_id === t.task_id)) rows.push(taskRow(t));
-  if (S.turn && !t) rows.push(el('div', 'rowi', `<span class="orb working"></span><div>Thinking<span class="s">${esc(S.provider)}</span></div>`));
+  if (S.turn && !t) rows.push(el('div', 'rowi', `<span class="orb working"></span><div>Thinking<span class="s">${{ codex: 'Codex', claude: 'Claude', local: 'On device' }[S.provider] || esc(S.provider)}</span></div>`));
   const running = rows.length; $('#kill').classList.toggle('off', !running && !S.turn);
   for (const x of S.sched) { // upcoming scheduled tasks (agentd schedule.js); x cancels, no card
     const r = el('div', 'rowi sched', `<span class="appic"><svg width="15" height="15"><use href="#i-cal"/></svg></span><div>${esc(short(x.prompt, 34))}<span class="s">${esc(whenLabel(x.at) || x.next)}${x.repeat !== 'none' ? ' · ' + esc(x.repeat) : ''}</span></div><div class="r"><button class="ib"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`);
@@ -572,7 +579,7 @@ function renderPlugins() {
   if (!ps) return box.replaceChildren(el('div', 'empty', 'Offline'));
   const list = el('div', 'mod', '<div class="k">Direct tools<span>off = the agent uses the app on screen instead</span></div>');
   box.replaceChildren(el('div', 'mod', '<div class="k">Always on</div><div class="provnote">Screen control, alarms and timers, web search, notifications, memory questions</div>'), list);
-  list.append(...ps.map((x) => { const r = el('div', 'rowi', `<span class="appic" style="background:var(--${x.on ? 'blue' : 'purple'})">${esc(x.name[0])}</span><div>${esc(x.name)}<span class="s">${esc(x.summary)}</span></div><div class="r"><button class="toggle${x.on ? ' on' : ''}" aria-label="${x.on ? 'On' : 'Off'}"></button></div>`);
+  list.append(...ps.map((x) => { const r = el('div', 'rowi', `<span class="appic" style="background:var(--${x.on ? 'blue' : 'purple'})">${esc(x.name[0])}</span><div>${esc(x.name)}<span class="s">${esc(String(x.summary || '').split(/;|\s\(/)[0].replace(/[.,\s]+$/, ''))}</span></div><div class="r"><button class="toggle${x.on ? ' on' : ''}" aria-label="${x.on ? 'On' : 'Off'}"></button></div>`);
     const t = $('button', r); t.onclick = async () => { hap(); t.classList.toggle('on'); t.style.opacity = .5;
       const res = await phone('plugins.set', { id: x.id, on: !x.on }); if (!res?.ok) hap('heavy'); send({ type: 'plugins.list' }); }; return r; }));
 }
@@ -610,7 +617,15 @@ on('tracker.blocked', (m) => { S.audit = [...S.audit.slice(-199), { ...m, tool: 
 const body = $('#shbody'); let aiMsg = null, steps = {};
 const scrollDown = () => (body.scrollTop = body.scrollHeight);
 let askAt = 0, dots = null;
-function setSheet(state, cls) { $('#shstate').textContent = state + (cls === 'done' && askAt ? ` · ${ago(askAt)}` : ''); $('#shorb').className = 'orb ' + (cls || ''); $('#shstop').hidden = !S.turn; if (cls !== 'working') { dots?.remove(); dots = null; } }
+// The stopwatch (DEMO-WOW #4): the header counts up quietly while working ("Thinking · 4 s") and ends on the measured time
+// from agentd ("Done · 6.8 s"; past 30 s just "Done"). The island shows the same number.
+let shState = 'Ask', shCls = '', shMs = 0;
+function setSheet(state, cls, ms) { shState = state; shCls = cls || ''; shMs = ms || 0; shRender(); $('#shorb').className = 'orb ' + shCls; $('#shstop').hidden = !S.turn; if (cls !== 'working') { dots?.remove(); dots = null; } }
+function shRender() { const s = shCls === 'working' && askAt ? Math.floor((Date.now() - askAt) / 1000) : 0; $('#shstate').textContent = shState + (shMs ? dur(shMs) : s >= 1 ? ` · ${s} s` : ''); $('#shdev').hidden = !S.onDevice; }
+// agentd's router may answer on the phone's own model when there is no network: events then carry provider "local" (the user's toggle is untouched).
+const device = (m) => { if (typeof m.provider === 'string') { S.onDevice = m.provider === 'local'; shRender(); } };
+for (const t of ['turn.started', 'provider.selected', 'turn.done', 'text.delta', 'tool.request']) on(t, device);
+setInterval(() => shCls === 'working' && shRender(), 1000);
 const think = () => { if (!dots) body.append(dots = el('div', 'dots', '<i></i><i></i><i></i>')); body.append(dots); scrollDown(); }; // dots stay last
 function sheetEmpty() {
   if (body.children.length) return $('#shtry')?.remove();
@@ -644,13 +659,11 @@ app.picked = (url, kind) => {
 $('#askForm').onsubmit = (e) => { e.preventDefault(); const t = $('#askIn').value.trim(); $('#askIn').value = ''; hap('tick'); sendUser(t); };
 $('#shstop').onclick = () => { hap(); send({ type: 'stop' }); };
 on('text.delta', (m) => { dots?.remove(); dots = null; if (!aiMsg) body.append(aiMsg = el('div', 'msg ai')); aiMsg.textContent += m.text; if (S.home) S.home.text = aiMsg.textContent; scrollDown(); });
-on('catchup', (m) => { dots?.remove(); dots = null; aiMsg = null; const ICO = { chat: 'msg', cal: 'cal', spark: 'spark', shield: 'shield' }, list = el('div', 'catch'); // "What did I miss?" rows land before the spoken answer
-  list.append(...(m.cards || []).slice(0, 8).map((c) => { const r = el(c.goal ? 'button' : 'div', 'crow', `${ICO[c.icon] ? `<svg width="14" height="14"><use href="#i-${ICO[c.icon]}"/></svg>` : '<i></i>'}<b>${esc(c.title)}</b>${c.detail ? `<span class="s">${esc(c.detail)}</span>` : ''}`); if (c.goal) r.onclick = () => { hap('tick'); sendUser(c.goal); }; return r; }));
-  body.append(list); scrollDown(); });
 on('tool.request', (m) => {
   const a = m.args || {}, what = m.name === 'open_app' ? appName(a.pkg) : m.name === 'task.start' ? (a.apps || []).map(appName).join(', ') : a.text ? `“${short(a.text, 30)}”` : a.id != null ? `#${a.id}` : a.key || a.pkg || '';
-  const s = el('div', 'step', `<span class="orb working"></span><span>${esc(toolName(m.name))} ${esc(what)}</span>`);
-  body.append(s); steps[m.name] = s; aiMsg = null; S.turn = true; S.step = `${toolName(m.name)} ${what}`.trim(); setSheet('Working', 'working'); think(); renderNow();
+  const line = m.name === 'open_app' && what ? `Opening ${what}` : `${toolName(m.name)} ${what}`.trim(); // "Opening Pigeon", not "Opening an app Pigeon"
+  const s = el('div', 'step', `<span class="orb working"></span><span>${esc(line)}</span>`);
+  body.append(s); steps[m.name] = s; aiMsg = null; S.turn = true; S.step = line; setSheet('Working', 'working'); think(); renderNow();
 });
 on('tool.result', (m) => {
   const s = steps[m.name]; if (!s) return;
@@ -670,7 +683,7 @@ on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" 
 on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; }
   if (m.retryable && m.code !== 'turn_failed') return setSheet('Reconnecting…', 'working'); // codex/agentd retries: one calm state, not a line per attempt
   body.append(el('div', 'msg err', esc(/proxy|websocket|network|connect|dns|stream|exited|timed? ?out/i.test(m.message) ? 'Couldn’t reach the AI. Check the connection and try again.' : short(m.message, 160)))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
-on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
+on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done', m.ms); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
 on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- wake word (launcher Wake.java): a toggle in the command center, a small mic on the home status line ----------
@@ -785,18 +798,22 @@ async function loadMemory() {
 }
 function drawGraph(g) {
   const svg = $('#gsvg'), W = svg.clientWidth || innerWidth - 44, H = 320, cx = W / 2, cy = H / 2;
-  const nodes = g.nodes.map((n) => ({ ...n.data, x: cx + (Math.random() - .5) * 120, y: cy + (Math.random() - .5) * 120, r: n.data.type === 'me' ? 22 : 11 + Math.min(14, n.data.weight || 0) * .6 }));
+  // Draw the strongest ~28 links only (a hairball says nothing); test fixtures and local hosts never belong in the picture.
+  const noise = (n) => /\btest\b|fixture|localhost|127\.0\.0\.1|^\d+\.\d+\.\d+\.\d+|agentos test/i.test(n.label || '');
+  const kept = g.nodes.map((n) => n.data).filter((n) => n.type === 'me' || !noise(n)).sort((a, b) => (b.type === 'me') - (a.type === 'me') || (b.weight || 0) - (a.weight || 0)).slice(0, 28);
+  const nodes = kept.map((n, i) => ({ ...n, x: cx + (Math.random() - .5) * 120, y: cy + (Math.random() - .5) * 120, r: n.type === 'me' ? 22 : 9 + Math.min(14, n.weight || 0) * .6 }));
+  for (const [i, n] of nodes.entries()) { n.text = i < (['me', 'person', 'group'].includes(n.type) ? 14 : 6) && !/^unknown$/i.test(n.label || '') ? short((n.label || '').replace(/^Unknown /, ''), 14) : ''; n.half = 6 + n.text.length * 3.4; } // label, kept inside the box
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n])), me = byId[g.me]; if (me) { me.x = cx; me.y = cy; }
   const edges = g.edges.map((e) => e.data).filter((e) => byId[e.source] && byId[e.target]);
   for (let k = 0; k < 260; k++) { // tiny force layout: repel, spring along edges, drift to center
-    for (const a of nodes) for (const b of nodes) if (a !== b) { const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 1, f = 5200 / d2; a.x += dx * f / Math.sqrt(d2) * .5; a.y += dy * f / Math.sqrt(d2) * .5; }
+    for (const a of nodes) for (const b of nodes) if (a !== b) { const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 1, f = 9000 / d2; a.x += dx * f / Math.sqrt(d2) * .5; a.y += dy * f / Math.sqrt(d2) * .5; }
     for (const e of edges) { const a = byId[e.source], b = byId[e.target], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, f = (d - (90 - Math.min(30, e.weight * 4))) * .02; a.x += dx / d * f; a.y += dy / d * f; b.x -= dx / d * f; b.y -= dy / d * f; }
-    for (const n of nodes) { if (n === me) { n.x = cx; n.y = cy; continue; } n.x += (cx - n.x) * .01; n.y += (cy - n.y) * .01; n.x = Math.max(n.r + 4, Math.min(W - n.r - 4, n.x)); n.y = Math.max(n.r + 4, Math.min(H - n.r - 18, n.y)); }
+    for (const n of nodes) { if (n === me) { n.x = cx; n.y = cy; continue; } n.x += (cx - n.x) * .01; n.y += (cy - n.y) * .01; n.x = Math.max(n.r + 4, Math.min(W - n.r - 4, n.x)); n.y = Math.max(n.r + 4, Math.min(H - n.r - 40, n.y)); }
   }
   const ns = 'http://www.w3.org/2000/svg', mk = (t, a) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
   svg.replaceChildren(...edges.map((e) => mk('line', { x1: byId[e.source].x, y1: byId[e.source].y, x2: byId[e.target].x, y2: byId[e.target].y, 'stroke-width': 1 + Math.min(4, e.weight / 2) })),
     ...nodes.map((n) => { const gg = mk('g', { class: ['me', 'person', 'group'].includes(n.type) ? n.type : 'other' });
-      gg.append(mk('circle', { cx: n.x, cy: n.y, r: n.r }), Object.assign(mk('text', { x: n.x, y: n.y + n.r + 13 }), { textContent: short(n.label.replace(/^Unknown /, ''), 14) }));
+      gg.append(mk('circle', { cx: n.x, cy: n.y, r: n.r }), Object.assign(mk('text', { x: Math.max(n.half, Math.min(W - n.half, n.x)), y: n.y + n.r + 13 }), { textContent: n.text }));
       gg.onclick = () => { hap('tick'); $$('g.sel', svg).forEach((x) => x.classList.remove('sel')); gg.classList.add('sel');
         const es = edges.filter((e) => e.source === n.id || e.target === n.id), last = es.map((e) => e.last_seen).sort().pop();
         $('#gdet').innerHTML = n.type === 'me' ? `<b>You</b> · ${es.length} people` : `<b>${esc(n.label)}</b> · ${es.reduce((s, e) => s + e.weight, 0)} ${esc(es[0]?.type || 'links')} via ${esc([...new Set(es.map((e) => e.via))].join(', '))}${last ? ' · ' + new Date(last).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}`; };

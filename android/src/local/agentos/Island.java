@@ -80,7 +80,7 @@ final class Island extends FrameLayout {
         lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         lp.setFitInsetsTypes(0);
         lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
-        place(wm.getCurrentWindowMetrics().getWindowInsets());
+        place();
         fill.setColor(Color.BLACK);
         hair.setStyle(Paint.Style.STROKE); hair.setStrokeWidth(dp(1)); hair.setColor(HAIR);
         sw = pillW = dp(PILL_W); sh = dp(PILL_H); sr = sh / 2;
@@ -243,6 +243,7 @@ final class Island extends FrameLayout {
         shown = true;
         removeCallbacks(autoHide);
         animate().cancel();
+        place();
         if (getParent() == null) { setAlpha(0); setScaleX(.6f); setScaleY(.6f); setPivotY(0); wm.addView(this, lp); }
         animate().alpha(1).scaleX(1).scaleY(1).setDuration(420).setInterpolator(SPRING).start();
     }
@@ -271,15 +272,17 @@ final class Island extends FrameLayout {
         if (b != null) b.mods.holdForApproval(on);
     }
 
-    /** Top edge = TOP_DP below whatever is taller, the camera cutout or the status bar (rotation and phone agnostic). */
-    private void place(WindowInsets in) {
-        int y = in.getInsets(WindowInsets.Type.statusBars() | WindowInsets.Type.displayCutout()).top + dp(TOP_DP);
+    /** Top edge = TOP_DP below whatever is taller, the camera cutout or the status bar (rotation and phone agnostic).
+     *  Always from the display's own insets: the ones dispatched to this window are relative to its frame, so once the
+     *  pill sits below the bar they read 0 and it would jump up into the status bar. */
+    private void place() {
+        int y = wm.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.statusBars() | WindowInsets.Type.displayCutout()).top + dp(TOP_DP);
         if (y == lp.y) return;
         lp.y = y;
         if (shown) wm.updateViewLayout(this, lp);
     }
 
-    @Override public WindowInsets onApplyWindowInsets(WindowInsets in) { place(in); return super.onApplyWindowInsets(in); }
+    @Override public WindowInsets onApplyWindowInsets(WindowInsets in) { place(); return super.onApplyWindowInsets(in); }
 
     private void window(int w, int h) {
         lp.width = w; lp.height = h;

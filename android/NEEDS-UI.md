@@ -22,3 +22,8 @@ None of these block the backend. Thanks for wiring `HumanTouch`, `Approvals.chan
 
 ## From the designer (10-28, 1 AM)
 - **Island moved below the camera cutout** (founder). `Island` now places the window from the window insets (status bar ∪ display cutout) + 8 dp, no fixed offset; on the demo phone that is 77 px lower than before. **Item 3 coordinates move by +77 px:** Allow `580 267`, Approve `575 402` (`AGENTOS_ALLOW_XY` / `AGENTOS_APPROVE_XY`); the defaults in `tools-client.py` are yours to update. (Done 10-28 in the bug hunt: the defaults are now `580 267` / `575 402`.)
+
+## From the designer (10-28, 2:45 AM)
+- **Stopwatch on every finish (DEMO-WOW #4).** agentd's `endTurn(turn, doneMs)` sends `task.stop {task_id, done_ms}` when the turn completed (0 when it failed or was stopped). `Broker.stop(taskId, why, doneMs)` then shows the green pill "Done · 6.8 s" for 3 s instead of hiding (plain "Done" past 30 s). The same number reaches the launcher as `turn.done.ms` / `task.timing.total_ms`.
+- **Island placement fix.** `Island.place()` now always reads the display's insets (`getCurrentWindowMetrics().getWindowInsets()`): the insets dispatched to the window are relative to its own frame, so once the pill sat below the status bar they read 0 and the pill sometimes jumped up into the status bar (seen 10-28 2:21 AM).
+- **Firewall card title**: `Broker.approve` titles `firewall.set` as "<mode> <domains|all traffic> for <App>" → "Block httpbin.org for Beacon?" (ISSUES #8).

@@ -146,13 +146,14 @@ wss.on('connection', (ws, req) => {
     const prep = Date.now() - t0; // agentd time before the model sees the request (context block); the bench reads it
     try { r = quick ? await catchup.run({ codex: p.id === 'local' ? null : codex, emit: ctx.emit, signal: abort.signal }) : images.length && p.id === 'local' ? { status: 'failed', error: 'Photos need an internet connection.' } : await p.run(session, (c ? `${c.text}\n\n${turn.goal}` : turn.goal) + note, ctx); }
     catch (e) { r = { status: abort.signal.aborted ? 'interrupted' : 'failed', error: e.message }; }
-    await endTurn(turn);
+    const ms = Date.now() - t0;
+    await endTurn(turn, r.status === 'completed' ? ms : 0);
     const rest = unp?.flush();
     if (rest) { said += rest; emit({ type: 'text.delta', text: rest }); }
     if (unp && ctx.provider !== 'local' && r.text) r.text = memory.unpseudo(r.text);
     active = null;
     if (r.error) send({ type: 'error', code: 'turn_failed', message: r.error, retryable: true });
-    send({ type: 'turn.done', provider: ctx.provider, status: r.status, usage: r.usage ?? null, ms: Date.now() - t0, prep });
+    send({ type: 'turn.done', provider: ctx.provider, status: r.status, usage: r.usage ?? null, ms, prep });
     return r.text || said || (r.error ? `Sorry, that failed: ${r.error}` : '');
   }
 

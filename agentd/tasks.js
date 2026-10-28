@@ -77,7 +77,7 @@ function pump() {
 
 function finish(t, state, { result, error } = {}) {
   Object.assign(t, { state, result, error, waiting: null, step: state === 'done' ? 'Done' : state === 'failed' ? 'Failed' : 'Stopped' });
-  t.timing.total_ms = Date.now() - t.heard;
+  t.timing.total_ms ??= Date.now() - t.heard;
   update(t, state);
 }
 
@@ -93,7 +93,9 @@ async function run(t) {
   try { r = await codex.run(t.session, `${t.remote ? REMOTE(t.remote) : t.origin === 'schedule' ? SCHEDULED : BRIEF}\n${a && `Installed apps (label=package; no need for list_apps): ${a}\n`}${c}\nRequest: ${t.goal}`, ctx); }
   catch (e) { r = { status: 'failed', error: e.message }; }
   t.ending = true; // our own task.stop below is not the user stopping it
-  await endTurn(t.turn);
+  const ok = r.status === 'completed' && !t.abort.signal.aborted;
+  t.timing.total_ms = Date.now() - t.heard; // the stopwatch: one number for the island, the sheet and the Home card
+  await endTurn(t.turn, ok ? t.timing.total_ms : 0);
   t.timing.usage = r.usage ? { in: r.usage.inputTokens, cached: r.usage.cachedInputTokens, out: r.usage.outputTokens } : undefined;
   if (t.abort.signal.aborted || r.status === 'interrupted') return finish(t, 'stopped', { error: t.stopWhy || 'interrupted' });
   if (r.status !== 'completed') return finish(t, 'failed', { error: r.error || r.status, result: r.text });

@@ -396,7 +396,7 @@ export function appList() {
   return apps;
 }
 
-export async function endTurn(turn) {
+export async function endTurn(turn, doneMs = 0) { // doneMs > 0: the turn finished; the island shows "Done · 6.8 s" (DEMO-WOW #4)
   if (turn.lease) tasks.delete(turn.lease.task_id);
-  if (turn.lease?.task_id) await rpc('task.stop', { task_id: turn.lease.task_id }, 5000).catch(() => {});
+  if (turn.lease?.task_id) await rpc('task.stop', { task_id: turn.lease.task_id, done_ms: doneMs }, 5000).catch(() => {});
 }

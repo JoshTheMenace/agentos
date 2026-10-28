@@ -51,7 +51,7 @@ same at start (`local.agentos.home` is in the default `AGENTD_CLIENT_PKGS`). The
 - **Task card**: optimistic card the instant a suggestion/ask starts, pretty tool names (`TOOLN` in app.js; new agentd tools fall back to "Snake case → Words"), elapsed time + step count, orange glow while acting, check/x + bar fill on finish, heavy haptic, 45 s linger (survives a trip through another app via `task.list`). Tapping it opens the sheet, which is the task's transcript.
 - **Scheduled cards**: blue calendar tile, "Tomorrow 11:00 AM · scheduled" (from `at`).
 - **Moments**: approved `notifications.reply/autoreply`, `vault.fill`, `trackers.block`, `schedule.created`, `app.mod.add` audit lines show a 45 s "done" card on Home.
-- **Ask sheet**: typing dots while thinking, 17 px answers, "Done · 6s". **Voice**: "Try saying" examples until the first transcript; the live task card sits above the orb.
+- **Ask sheet**: typing dots while thinking, 17 px answers. **Stopwatch (10-28, DEMO-WOW #4):** the header counts up while working ("Thinking · 4 s") and ends on agentd's measured time ("Done · 6.8 s"; `turn.done.ms` for a typed turn, `task.timing.total_ms` for a background task; past 30 s just "Done"). The island shows the same number (`task.stop {done_ms}` → green "Done · 6.8 s" for 3 s) and a finished Home card carries it at the right. A quiet teal "On device" tag appears in the header when events carry `provider: "local"`. **Voice**: "Try saying" examples until the first transcript; the live task card sits above the orb.
 - Shots: `shots/climb-a/` (before/after pairs; `.tools/task.mjs` starts a task from the Mac over `adb forward tcp:18787 tcp:8787`).
 
 ## Micro-apps (`MicroApp.java`, `web/apps/`, agentd `apps.js`)
