@@ -118,6 +118,7 @@ Before = agentd at a36a04c (round-2 defaults), after = HEAD with this round's fo
 - One-shot actions (flashlight, volume, media, navigate, open a link, add an event, schedule) end in **1 model call instead of 2**.
 - Read tasks no longer open the item to double-check (Pigeon never took 3 calls after the change; notification summary 1 call in 3/3, was 1–2).
 - Multi-part requests never end early on a finishing tool (cross 3/3; before: 2/3, one run stopped after the flashlight).
+The first call writes the same tokens before and after (median 32 output+reasoning) on a 3 % longer prompt (17.1k → 17.65k, cached), so the higher first-action times after (beacon, torch) are API noise, not the new lines.
 None of this touches approvals: every action still goes through the broker, and `done` is shown only after the broker ran the call.
 **Deployment:** the live agentd was restarted at 03:40:48 from 7e01c9a, before these commits (fb9abad, d356423, 1ad2ca5, b83ea89); they go live with the 6:43 deploy.
 
