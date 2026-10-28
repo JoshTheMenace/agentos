@@ -311,10 +311,10 @@ $('#toMemory').onclick = () => { hap(); go(2); };
 $('#cmd').onclick = (e) => { if (e.target.closest('.mic')) return; hap(); open('sheet'); setTimeout(() => $('#askIn').focus(), 350); };
 $('#micBtn').onclick = () => { hap('heavy'); voiceStart(); };
 // Try chips: each opens the ask sheet with the prompt typed and the cursor at the end (except the model switch, which flips at once).
-const TRY = [['cal', 'At 7 PM, …', 'At 7 PM, '], ['shield', 'Any trackers in Chrome?', 'Any trackers in Chrome? Block them'], ['msg', 'Reply I’m 10 min late', 'Reply that I’m 10 minutes late'], ['key', 'Sign me in', 'Sign me in to '], ['cloud', 'On-device model', null]];
+const TRY = [['cal', 'At 7 PM, …', 'At 7 PM, '], ['shield', 'Any trackers in Chrome?', 'Any trackers in Chrome? Block them'], ['msg', 'Reply I’m 10 min late', 'Reply that I’m 10 minutes late'], ['key', 'Sign me in', 'Sign me in to '], ['cloud', 'Local model', null]];
 function renderTry() {
   $('#try').replaceChildren(...TRY.map(([ic, label, text], i) => {
-    const local = text === null && S.provider === 'local', b = el('button', 'chip' + (local ? ' lit' : ''), `<svg><use href="#i-${local ? 'check' : ic}"/></svg>${esc(local ? 'On-device · no cloud' : label)}`);
+    const local = text === null && S.provider === 'local', b = el('button', 'chip' + (local ? ' lit' : ''), `<svg><use href="#i-${local ? 'check' : ic}"/></svg>${esc(local ? 'Local model · on' : label)}`);
     b.style.animationDelay = .25 + i * .05 + 's';
     b.onclick = () => { hap('tick'); if (text === null) { S.provider = localStorage.provider = S.provider === 'local' ? 'codex' : 'local'; renderCenter(); renderTry(); return; } open('sheet'); const inp = $('#askIn'); inp.value = text; setTimeout(() => { inp.focus(); inp.setSelectionRange(text.length, text.length); }, 350); };
     return b;
