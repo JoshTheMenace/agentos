@@ -67,7 +67,7 @@
   <!-- 2 COMMAND CENTER -->
   <section class="page scroll" id="center">
     <h2 class="title"><span class="orb" id="corb"></span>Command center<button class="kill" id="kill"><i><svg width="11" height="11"><use href="#i-power"/></svg></i>Stop all</button></h2>
-    <div class="mod rise shield"><div class="k"><svg width="13" height="13"><use href="#i-shield"/></svg>Protected today<span id="shieldNote"></span></div><div class="stats" id="stats"></div></div>
+    <div class="mod rise shield"><div class="k"><svg width="13" height="13"><use href="#i-shield"/></svg>Protected today<span id="shieldNote"></span></div><div class="stats" id="stats"></div><div id="watch"></div></div>
     <div class="mod rise" style="animation-delay:.04s"><div class="k">Tasks<span id="taskCount"></span></div><div id="tasks"></div></div>
     <div class="mod rise" style="animation-delay:.08s"><div class="k">Model</div><div class="seg" id="prov"><button data-p="codex">Codex</button><button data-p="claude">Claude</button><button data-p="local">Local</button></div><div class="provnote" id="provNote"></div></div>
     <div class="mod rise" style="animation-delay:.12s" id="wake"></div>
@@ -178,13 +178,13 @@
   <div class="vtask" id="vtask"></div>
   <div class="sorb" id="sorbBtn"><i class="halo2"></i><i class="halo"></i><i class="core"></i></div>
   <div class="wave" id="wave"></div>
-  <div class="vfoot"><button class="kbtn" id="vkbd"><svg width="20" height="20"><use href="#i-kbd"/></svg></button><span id="vhint">Tap the orb to mute</span><button class="kbtn" id="vatt" hidden aria-label="Attach"><svg width="20" height="20"><use href="#i-plus"/></svg></button><button class="kbtn red" id="vend"><svg width="18" height="18"><use href="#i-power"/></svg></button></div>
+  <div class="vfoot"><button class="kbtn" id="vkbd"><svg width="20" height="20"><use href="#i-kbd"/></svg></button><span id="vhint">Tap to mute or interrupt</span><button class="kbtn" id="vatt" hidden aria-label="Attach"><svg width="20" height="20"><use href="#i-plus"/></svg></button><button class="kbtn red" id="vend"><svg width="18" height="18"><use href="#i-power"/></svg></button></div>
   <audio id="spk" autoplay></audio>
 </section>
 
 <!-- ATTACH: Camera / Photos (Home.pick), Live camera in voice -->
 <div class="attmenu glass ink" id="attMenu" hidden><button data-k="camera"><svg width="18" height="18"><use href="#i-eye"/></svg>Camera</button><button data-k="photos"><svg width="18" height="18"><use href="#i-mod"/></svg>Photos</button><button data-k="live" id="attLive"><svg width="18" height="18"><use href="#i-spark"/></svg><span>Live camera</span></button></div>
 
-<script src="app.js"></script>
+<script src="voice-audio.js"></script><script src="app.js"></script>
 </body>
 </html>

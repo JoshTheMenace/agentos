@@ -8,7 +8,7 @@
 | What did I miss? | Ask bar or voice: "What did I miss?" | Cards (unanswered messages, next events) + one-line answer in ~2 s |
 | Voice | Tap the mic, **wait for "Listening"**, then "What's my battery?" | "On it", then "Done, in N seconds…" (~6 s task; first start can take ~7 s) |
 | Calendar-aware keyboard | In a chat that asks "Are you free Thursday at 3?", tap the text field | Chips in ~1 s, e.g. "Thursday 3 PM to 5 PM looks free." Typing a word: new chips in ~2–3 s |
-| Tracker counter | Open a real app with trackers (Weather), then Home › "N apps sent data to trackers" | Blockers lists each domain with its company; counts tick live |
+| Tracker counter | Open a real app with trackers (Weather), then Command center › Protected today › "N apps sent data to trackers" | Blockers lists each domain with its company; counts tick live |
 | Offline fallback | Airplane mode (keep the local model warm), ask something simple | Answers with "On device" in ~2–5 s |
 | Queued asks | Send a second ask while one runs | It waits, then runs (no error) |
 | Scheduled task | "In 2 minutes, set an alarm for 6:15", lock the phone | Fires on time, unlocks, sets it, re-locks |
@@ -17,7 +17,7 @@
 
 ## Before stage
 1. Join the venue Wi-Fi, then `scripts/preflight.sh --fix wifi,warm,ime,home` (low-latency Wi-Fi, warm local model, AgentOS keyboard + home). **Never run `cmd wifi set-connected-score`**: it crashed Android at 07:03 (DEPLOY-FINAL issue 1).
-2. Just before going on: `scripts/preflight.sh --fix dnd,reset` (Do Not Disturb + demo reset; Home now says "12 actions blocked today").
+2. Just before going on: `scripts/preflight.sh --fix dnd,reset` (Do Not Disturb + demo reset; Command center › Protected today says "12 actions stopped" until then).
 3. Close apps the bench opened (YouTube, Facebook, Instagram) from Recents.
 4. Open voice once and wait for "Listening" right before the voice beat.
 5. Re-run `scripts/preflight.sh`. Expected reds only: Wake word (off), Test alarms (needs a lease; Clock is clean), Chrome tabs (check by hand).
@@ -79,7 +79,7 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
   - `com.motorola.actions` (Moto Actions, uid 10215): its "Fast Flashlight" heads-up (channel `FDN` "Feature discovery", importance 4) popped on every torch toggle. Fixed 10-27 PM: `su 1000 -c "pm revoke com.motorola.actions android.permission.POST_NOTIFICATIONS"` + `su 1000 -c "pm set-permission-flags com.motorola.actions android.permission.POST_NOTIFICATIONS user-set user-fixed"` (so updates/reboots don't re-grant it). Verified: flashlight on/off through agentd (`device.set {torch}`) → 0 Moto Actions notifications, no pop-up. Chop-chop flashlight etc. still work (only its notifications are off). Undo: `su 1000 -c "pm clear-permission-flags com.motorola.actions android.permission.POST_NOTIFICATIONS user-set user-fixed"` then `su 1000 -c "pm grant com.motorola.actions android.permission.POST_NOTIFICATIONS"`.
   - Cancelled once (not blocked): all Calendar, Google app (stories) and systemui "fully charged" notifications; they can come back, and Calendar reminders can pop up before an event. Left: Termux, plus the system "Developer options"/USB-debugging ongoing items (they stay while adb is on).
   - No iptables, no firewall, no Magisk policy or reboot involved.
-- **Demo reset (10-27 PM):** before going on stage, `python3 android/tools-client.py demo-reset`, or on the phone: command center › hold the "Protected today" title until it says "Tap to start fresh", then tap it. Protected today, Activity and Home's "N actions blocked today" then count from that moment (agentd's suggestion needs one agentd restart to pick up `home-suggest.js`; the file is already on the phone). It is one `demo.reset` audit line (owner/adb only; agentd and models are refused); nothing is deleted and the chain stays whole. "Ads blocked" (iptables counters) and the trackers count are not reset.
+- **Demo reset (10-27 PM):** before going on stage, `python3 android/tools-client.py demo-reset`, or on the phone: command center › hold the "Protected today" title until it says "Tap to start fresh", then tap it. Protected today and Activity then count from that moment. (10-28 AM: Home's For you shows only things to act on; the blocked/tracker tallies moved to Command center › Protected today, with taps to Activity/Blockers.) It is one `demo.reset` audit line (owner/adb only; agentd and models are refused); nothing is deleted and the chain stays whole. "Ads blocked" (iptables counters) and the trackers count are not reset.
 - Prompt Guard: Maps' navigation safety banner no longer flags (`navigate` tasks were tainted for 10 min). See android/guard-tests/README.md.
 - Magisk "granted Superuser" toasts: off for all granted uids (`magisk --sqlite "UPDATE policies SET notification=0"`; re-run if a new uid is granted).
 

@@ -228,8 +228,6 @@ function renderSugg() {
   const asked = S.asked && Date.now() - S.asked.at < 30 * 60000 ? S.asked.names.map((n) => n.toLowerCase().split(/\W/)[0]) : [];
   const first = (n) => String(n || '').toLowerCase().split(/\W/)[0];
   for (const c of (S.pending || []).filter((c) => !later.has(c.a.id + ':' + c.b.id) && asked.includes(first(c.a.name))).slice(0, 2)) items.unshift({ id: `same:${c.a.id}:${c.b.id}`, title: sameQ(c), detail: 'I asked which one · tap to answer', icon: 'spark', view: 'know' });
-  $('#forK').textContent = items.length ? 'For you' : '';
-  $('.feed').classList.toggle('none', !items.length);
   if (!items.length) return swap($('#sugg'), el('div', 'calm', `<svg width="14" height="14"><use href="#i-check"/></svg>All caught up`));
   swap($('#sugg'), ...items.slice(0, 4).map((it, i) => {
     const b = el('button', 'glass sg' + (it.view === 'know' ? ' same' : '')); b.style.animationDelay = i * .05 + 's';
@@ -250,7 +248,7 @@ function startSuggestion(it, b) {
   S.sugg = S.sugg.filter((x) => x !== it);
   setTimeout(() => { b.classList.add('gone'); setTimeout(renderSugg, 400); }, 500);
 }
-on('suggestions', (m) => { if (m.id) return; S.sugg = (m.items || []).filter((x) => x && typeof x === 'object'); renderSugg(); }); // keyboard replies carry an id; the home feed doesn't
+on('suggestions', (m) => { if (m.id) return; S.sugg = (m.items || []).filter((x) => x && typeof x === 'object' && !/^(blocked|trackers)$/.test(x.id)); renderSugg(); }); // keyboard replies carry an id; the home feed doesn't. For you = things to act on; the blocked/tracker tallies live in the command center
 function renderCalendar() {
   const j = N.calendarNext(); const c = S.cal = j && JSON.parse(j);
   const cal = S.apps.find((a) => /calendar/i.test(a.pkg));
@@ -400,8 +398,10 @@ function renderCenter() {
   // Protected today: the security story in three calm numbers, from the real audit + tracker data (no pop-ups, just a tally).
   const ads = S.adsBlocked || 0, stopped = day.filter((e) => e.tool !== 'guard.flag' && /blocked|denied|refused/.test(e.decision || '')).length;
   const appr = day.filter((e) => e.decision === 'approved'), auto = appr.filter((e) => /reviewer|policy/.test(e.approver || e.channel || '')).length;
-  const stat = (n, l, c) => `<div class="stat ${c}"><b>${n}</b><span>${l}</span></div>`;
-  $('#stats').innerHTML = stat(nb, nb === 1 ? 'tracker blocked' : 'trackers blocked', 'g') + stat(ads, 'ads blocked', 'g') + stat(stopped, stopped === 1 ? 'action stopped' : 'actions stopped', 'g') + stat(appr.length, appr.length === 1 ? 'approval' : 'approvals' + (auto ? ` · ${auto} auto` : ''), 'b');
+  const stat = (n, l, c, v) => `<button class="stat ${c}" data-v="${v}"><b>${n}</b><span>${l}</span></button>`; // a tile is the tap: Blockers or the Activity list
+  $('#stats').innerHTML = stat(nb, nb === 1 ? 'tracker blocked' : 'trackers blocked', 'g', 'blockers') + stat(ads, 'ads blocked', 'g', 'blockers') + stat(stopped, stopped === 1 ? 'action stopped' : 'actions stopped', 'g', 'activity') + stat(appr.length, appr.length === 1 ? 'approval' : 'approvals' + (auto ? ` · ${auto} auto` : ''), 'b', 'activity');
+  const open_ = (S.trackers || []).filter((a) => a.trackers.some((t) => !t.blocked)); // apps still sending to unblocked trackers: one row, tap = Blockers
+  $('#watch').replaceChildren(...open_.length ? [el('button', 'rowi watch', `<span class="appic"><svg width="16" height="16"><use href="#i-eye"/></svg></span><div>${open_.length} app${open_.length > 1 ? 's' : ''} sent data to trackers<span class="s">${esc(open_.map((a) => a.label || a.pkg).slice(0, 3).join(', '))}</span></div><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg>`)] : []);
   $('#shieldNote').textContent = Date.now() - S.armed < 4000 ? 'Tap to start fresh' : nb + ads + stopped + appr.length ? '' : 'all quiet';
 }
 async function loadTrackers() { let r = await phone('trackers.list', {}); if (!r?.apps) r = await rpc('trackers.list', {}); if (r?.apps) { S.trackers = r.apps.filter((a) => !/^com\.duolingo/.test(a.pkg)); S.adsBlocked = r.blocked_requests; } renderCenter(); } // owner line first: works without agentd; founder: no Duolingo on stage
@@ -419,6 +419,7 @@ function taskRow(t) {
   k.onpointerdown = () => { held = false; t = setTimeout(() => { held = true; S.armed = Date.now(); hap('heavy'); renderCenter(); setTimeout(renderCenter, 4000); }, 700); };
   k.onpointerup = k.onpointercancel = k.onpointerleave = () => clearTimeout(t);
   k.onclick = async () => { if (held) { held = false; return; } if (Date.now() - S.armed > 4000) return; S.armed = 0; hap(); const r = await phone('audit.demo_reset'); if (r?.since) S.since = r.since; renderCenter(); }; }
+$('.shield').onclick = (e) => { const v = e.target.closest('[data-v]')?.dataset.v || (e.target.closest('.watch') && 'blockers'); if (!v) return; hap(); v === 'blockers' ? openBlockers() : $('#recent').closest('.mod').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 $('#prov').onclick = (e) => { const p = e.target.dataset.p; if (!p) return; hap('tick'); S.provider = localStorage.provider = p; renderCenter(); renderTry(); };
 $('#kill').onclick = async () => { hap('heavy'); S.queue.length = 0; send({ type: 'stop' }); await rpc('task.stop', {}); S.turn = false; S.pending = null; refresh(); };
 
@@ -721,8 +722,8 @@ app.wake = () => { hap('heavy'); if (!$('#voice').classList.contains('on')) voic
 app.wakeState(N.wake ? JSON.parse(N.wake('state')) : { state: 'nokey', phrase: 'Hey Agent' });
 if (info.wake) setTimeout(app.wake, 400); // cold start by the wake word
 
-// ---------- voice (WebRTC per agentd/voice.html; hands-free: the server hears when you stop, the orb only mutes) ----------
-let pc, mic, micTrack, cam, vad, voiceIdle, voiceEpoch = 0;
+// ---------- voice (WebRTC; hands-free listening, speaker echo gated, orb mutes or interrupts) ----------
+let pc, mic, micTrack, cam, vad, voiceAudio, voiceLive = false, voiceIdle, voiceEpoch = 0;
 const V = { state: (s) => ($('#vstate').textContent = s) };
 async function voiceStart() {
   if (micTrack?.readyState === 'live') return;
@@ -731,24 +732,40 @@ async function voiceStart() {
   open('voice'); $('#voice').classList.remove('live'); $('#vu').textContent = $('#va').textContent = ''; $('#vsteps').replaceChildren(); $('#vtask').replaceChildren(); V.state('Connecting');
   if (!wsOk) { N.wake?.('voice:0'); return V.state('Agent offline'); }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: voiceConstraints });
     if (epoch !== voiceEpoch) return stream.getTracks().forEach((t) => t.stop());
     mic = stream; $('#spk').muted = false;
-    micTrack = mic.getAudioTracks()[0]; vad = speech(mic);
-    if (pc?.connectionState === 'connected') { await pc.getSenders()[0].replaceTrack(micTrack); if (epoch === voiceEpoch) V.state('Listening'); return; }
+    micTrack = mic.getAudioTracks()[0];
+    if (pc?.connectionState === 'connected' && voiceAudio) { voiceAudio.track = micTrack; voiceAudio.active = true; voiceAudio.muted = false; voiceAudio.apply(); }
+    else voiceAudio = new VoiceAudio(micTrack, $('#spk'), (state) => { if (micTrack) { V.state(state); sorb.classList.toggle('muted', !micTrack.enabled); } });
+    if (pc?.connectionState !== 'connected') $('#spk').srcObject = null;
+    vad = speech(mic);
+    if (pc?.connectionState === 'connected') { await pc.getSenders()[0].replaceTrack(micTrack); if (epoch === voiceEpoch) voiceAudio.apply(); return; }
     pc?.close(); pc = new RTCPeerConnection(); pc.addTrack(micTrack, mic);
     const dc = pc.createDataChannel('oai-events'); // must exist before createOffer
     dc.onopen = () => { if (epoch === voiceEpoch) V.state('Listening'); };
-    dc.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === 'delegation.created') send({ type: 'voice.delegate', item_id: m.item.id, handoff_id: m.item.handoff_id, turn_id: m.item.user_bidi_turn_id, text: m.item.content.map((c) => c.text).join('') }); if (m.type === 'turn.done' && m.turn?.role === 'user') send({ type: 'voice.heard', turn_id: m.turn.id, text: m.turn.transcript }); };
+    dc.onmessage = (e) => voiceMessage(JSON.parse(e.data));
     pc.ontrack = (e) => { $('#spk').srcObject = e.streams[0]; };
     await pc.setLocalDescription(await pc.createOffer());
     await new Promise((ok) => { setTimeout(ok, 500); pc.onicegatheringstatechange = () => pc.iceGatheringState === 'complete' && ok(); });
     if (epoch === voiceEpoch) send({ type: 'voice.start', client_handoffs: true, sdp: pc.localDescription.sdp });
   } catch (e) { if (epoch === voiceEpoch) { voiceStop(); V.state('Mic unavailable'); } }
 }
-function voiceDrop() { clearTimeout(voiceIdle); if (pc) { send({ type: 'voice.stop' }); pc.close(); pc = null; } }
+function voiceMessage(m) {
+  voiceAudio?.event(m);
+  if (/^(turn\.(created|done)|input_audio_buffer\.|output_audio_buffer\.|response\.|conversation\.item\.truncated|error)/.test(m.type) && !/delta/.test(m.type)) send({ type: 'voice.audio', event: m.type, role: m.turn?.role, mic: !!micTrack?.enabled });
+  if (m.type === 'delegation.created') send({ type: 'voice.delegate', item_id: m.item.id, handoff_id: m.item.handoff_id, turn_id: m.item.user_bidi_turn_id, text: m.item.content.map((c) => c.text).join('') });
+  if (m.type === 'turn.done' && m.turn?.role === 'user') send({ type: 'voice.heard', turn_id: m.turn.id, text: m.turn.transcript });
+  if (!micTrack) return;
+  if (m.type === 'turn.created' && m.turn?.role === 'user') { voiceLive = true; $('#va').textContent = ''; }
+  if (m.type === 'output_transcript.added') { voiceLive = true; $('#va').textContent += m.item.text; }
+  if (m.type === 'turn.done' && m.turn?.role === 'user') $('#vu').textContent = m.turn.transcript;
+  if (voiceLive) { $('#voice').classList.add('live'); const tx = $('.tx'); tx.scrollTop = tx.scrollHeight; }
+}
+function voiceDrop() { clearTimeout(voiceIdle); voiceAudio = null; voiceLive = false; if (pc) { send({ type: 'voice.stop' }); pc.close(); pc = null; } }
 function voiceStop() {
   ++voiceEpoch; if (cam) camOff(); vad?.(); vad = null; attMenu.hidden = true;
+  if (voiceAudio) { voiceAudio.active = false; voiceAudio.apply(); }
   mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; N.wake?.('voice:0'); $('#spk').muted = true; $('#wave').classList.remove('on');
   // Release the microphone for the wake word; keep only the connection warm for a quick return.
   clearTimeout(voiceIdle);
@@ -757,26 +774,28 @@ function voiceStop() {
 }
 on('voice.answer', async (m) => { $('#vatt').hidden = !m.vision; if (pc) await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); });
 on('ws.close', () => { voiceStop(); voiceDrop(); });
-on('voice.transcript', (m) => { $('#voice').classList.add('live'); const p = $(m.role === 'user' ? '#vu' : '#va'); p.innerHTML = esc(m.text) + (m.final ? '' : '<span class="cur"></span>'); if (m.role !== 'user') V.state('Speaking'); });
+on('voice.transcript', (m) => { if (voiceLive || !micTrack) return; $('#voice').classList.add('live'); const p = $(m.role === 'user' ? '#vu' : '#va'); p.innerHTML = esc(m.text) + (m.final ? '' : '<span class="cur"></span>'); if (m.role !== 'user') V.state('Speaking'); });
 on('voice.delegation', (m) => { V.state('Working'); $('#vsteps').replaceChildren(); renderVoiceTask(); });
 function renderVoiceTask() {
   if (!$('#voice').classList.contains('on')) return;
   const w = [...S.tasks.values()].filter((w) => w.id !== 'opt').sort((a, b) => WORKING.has(b.state) - WORKING.has(a.state) || b.created - a.created)[0];
   swap($('#vtask'), ...(w && Date.now() - w.created < 120000 ? [workerCard(w)] : []));
 }
-on('voice.result', (m) => { V.state('Speaking'); $('#va').textContent = m.text; });
+on('voice.result', (m) => { if (!voiceLive) { V.state('Speaking'); $('#va').textContent = m.text; } });
 on('voice.seen', (m) => { if (m.text && $('#voice').classList.contains('on')) $('#vsteps').append(el('li', '', `<span class="orb done sm"></span>${m.source === 'screen' ? 'Looked at your screen' : 'Looked'}`)); });
 on('voice.closed', () => { voiceStop(); voiceDrop(); V.state('Ended'); }); on('voice.error', (m) => { voiceStop(); voiceDrop(); V.state(short(m.message, 40)); });
 on('tool.request', (m) => { if ($('#voice').classList.contains('on')) { $('#vsteps').append(el('li', '', `<span class="orb working sm"></span>${esc(toolName(m.name))}`)); } });
 on('tool.result', (m) => { const li = $('#vsteps li:last-child'); if (li) $('.orb', li).className = 'orb sm ' + (/denied|blocked/.test(m.decision || '') ? 'alert' : 'done'); });
 const sorb = $('#sorbBtn');
-sorb.onclick = () => { if (!micTrack) return; hap('tick'); micTrack.enabled = !micTrack.enabled; sorb.classList.toggle('muted', !micTrack.enabled); V.state(micTrack.enabled ? 'Listening' : 'Muted'); };
+sorb.onclick = () => { if (!micTrack) return; hap('tick'); voiceAudio.toggle(); };
 // Local speech detector (same as voice.html's meter): lights the orb while you talk and, with the live camera on, sends the
 // frame at the start of each utterance (at most one per 3 s) so "what's this?" while pointing just works.
 function speech(stream) {
   const ac = new AudioContext(), an = ac.createAnalyser(), buf = new Float32Array(1024); ac.createMediaStreamSource(stream).connect(an);
-  let on = false, last = 0, shot = 0;
+  let on = false, last = 0, shot = 0, remote;
   const i = setInterval(() => {
+    if (!remote && $('#spk').srcObject) { remote = ac.createAnalyser(); ac.createMediaStreamSource($('#spk').srcObject).connect(remote); }
+    if (remote) { remote.getFloatTimeDomainData(buf); voiceAudio?.sample(Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length)); }
     an.getFloatTimeDomainData(buf); const t = Date.now(), loud = micTrack?.enabled && Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length) > 0.02;
     if (loud) { last = t; if (!on) { on = true; sorb.classList.add('hot'); $('#wave').classList.add('on'); $('#voice').classList.add('live'); if (cam && t - shot > 3000) { shot = t; snap(); } } }
     else if (on && t - last > 600) { on = false; sorb.classList.remove('hot'); $('#wave').classList.remove('on'); }
@@ -856,7 +875,7 @@ on('memory.consent', async (m) => { if (!m.ok) hap('heavy'); graphAt = 0; await 
 loadApps(); renderCalendar(); renderTry(); live(); go(0);
 // Browser-only styling aid (`index.html#demo` on the Mac, never on the phone): sample feed + a running task.
 if (location.hash.startsWith('#demo')) { // styling aid: only reachable through install.sh dev <url>#demo
-  emit({ type: 'suggestions', items: [{ id: 1, title: 'Reply to Sam: running late?', detail: 'Messages · 12 min ago', app: 'local.agentos.pigeon', goal: 'x' }, { id: 2, title: 'Leave for 3 PM meeting in 12 min', detail: '18 min drive · Maps', icon: 'car', goal: 'x' }, { id: 3, title: '2 apps sent data to trackers today', detail: '1Weather, Chrome', icon: 'eye', goal: 'x' }] });
+  emit({ type: 'suggestions', items: [{ id: 1, title: 'Reply to Sam: running late?', detail: 'Messages · 12 min ago', app: 'local.agentos.pigeon', goal: 'x' }, { id: 2, title: 'Leave for 3 PM meeting in 12 min', detail: '18 min drive · Maps', icon: 'car', goal: 'x' }, { id: 3, title: 'You promised Priya the Q3 numbers', detail: 'Due today · Messages', icon: 'spark', goal: 'x' }] });
   if (location.hash === '#demo') S.active = { task_id: 't1', goal: 'Reply to Mom that I am 10 minutes late', apps: ['local.agentos.pigeon'], expires: Date.now() + 5e5, steps: 3, max_steps: 40 }; S.step = 'Tap "Send"'; S.tasks.set('k1', { id: 'k1', goal: 'Reply to Mom that I am 10 minutes late', state: 'running', step: 'Tapping Send in Pigeon', created: 1 }); live();
   if (location.hash === '#demo-blockers') { open('blockers'); S.trackers = [{ pkg: 'com.handmark.expressweather', label: '1Weather', trackers: [{ domain: 'app-measurement.com', company: 'Google', blocked: true, hits: 14 }, { domain: 'ads.mopub.com', company: 'MoPub', blocked: false, hits: 6 }] }, { pkg: 'com.android.chrome', label: 'Chrome', trackers: [{ domain: 'doubleclick.net', company: 'Google', blocked: true, hits: 3 }] }]; renderBlockers(); }
   if (location.hash === '#demo-center') go(1);
