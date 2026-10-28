@@ -130,11 +130,18 @@ final class Broker {
         Trackers.start(svc);
         Wake.listen(svc);
         Api.init(svc);
+        Plugins.init(svc);
         self = this;
     }
 
     /** uid: the calling app's uid for task.start and approval.confirm (-1 if unknown or not looked up). */
     JSONObject call(String m, JSONObject p, int uid) throws Exception {
+        String plugin = Plugins.off(m, p); // a switched-off plugin's methods: refused for agents; the owner's own screens and adb still work
+        if (plugin != null && uid != 2000 && !callerIn(uid, "owner_callers")) {
+            String why = "plugin " + plugin + " is turned off by the owner";
+            audit.log(entry(m, lease).put("caller", who(uid)).put("decision", "refused").put("reason", why));
+            return ok(false).put("decision", "refused").put("reason", why);
+        }
         if (Api.SPECS.containsKey(m)) synchronized (actLock) { return act(m, p, uid); } // Android's own APIs (Api.java): the same gate as a tap
         switch (m) {
             case "screen.read": return read();
@@ -176,6 +183,10 @@ final class Broker {
             case "vault.remove": // adb or the launcher's own uid (owner line); never agentd or a model tool
                 if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", "vault.remove only from the Passwords screen or adb, not from " + who(uid));
                 return vault.remove(p.getString("id"), uid == 2000 ? "operator over adb" : "owner (Passwords screen)");
+            case "plugins.list": return Plugins.list(); // anyone may read the switches (agentd hides off plugins from the model)
+            case "plugins.set": // the owner's Plugins screen (launcher uid) or adb; never agentd or a model tool
+                if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", "plugins.set only from the Plugins screen or adb, not from " + who(uid));
+                return Plugins.set(p.getString("id"), p.optBoolean("on"), uid == 2000 ? "operator over adb" : "owner (Plugins screen)", audit);
             case "approval.deny": return deny(p);
             case "schedule.alarm": return schedule(p, uid);
             case "approval.escalate": return escalate(p, uid);

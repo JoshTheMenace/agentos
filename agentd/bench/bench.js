@@ -42,6 +42,9 @@ export const TASKS = {
     check: async (r) => /3,?978/.test(r.answer) && /3,?978/.test(await screenText()) },
   reply: { text: 'Reply to Mom in Pigeon that I\'m running 10 minutes late.', setup: () => { su('am force-stop local.agentos.pigeon; am start -n local.agentos.pigeon/.Main --es scenario clean'); adb('sleep 1; input keyevent HOME'); },
     check: async (r) => r.events.some((e) => e.type === 'tool.result' && e.ok && e.decision === 'approved') },
+  // Plugin tasks (plugins.js), read-only so nothing on the phone changes.
+  battery: { text: 'How much battery do I have?', check: async (r) => /\d+\s?%/.test(r.answer) },
+  trackers: { text: 'Which trackers does Chrome talk to?', check: async (r) => r.events.some((e) => e.type === 'tool.result' && e.name === 'trackers.scan' && e.ok) },
   multi: { text: 'Look up today\'s sunset time in Salt Lake City in Chrome, then set an alarm in Clock for that time.',
     setup: () => { CHROME_FRESH(); CLEAR_CLOCK(); },
     check: async () => /\d:\d\d\s*PM/i.test(await clock('SHOW_ALARMS')) },
@@ -85,7 +88,7 @@ async function runTask(name) {
       tools: r.events.filter((e) => e.type === 'tool.request').map((e) => `${e.name}${e.args?.id != null ? '#' + e.args.id : ''}`),
       toolMs: r.events.filter((e) => e.type === 'tool.result' && e.name !== 'act').map((e) => e.ms || 0),
       approvalMs: r.events.filter((e) => e.type === 'tool.result' && /approved|denied/.test(e.decision || '')).reduce((a, e) => a + (e.ms || 0), 0),
-      inTok: calls.map((c) => c.in), callAt: calls.map((c) => c.at), outTok: calls.map((c) => c.out + (c.reasoning || 0)), answer: r.answer.slice(0, 200), checkError: r.checkError };
+      inTok: calls.map((c) => c.in), cached: calls.map((c) => c.cached), plugins: r.usage?.plugins, loads: r.events.filter((e) => e.type === 'tool.request' && e.name === 'load_plugin').length, callAt: calls.map((c) => c.at), outTok: calls.map((c) => c.out + (c.reasoning || 0)), answer: r.answer.slice(0, 200), checkError: r.checkError };
   } finally { leaseOn(); try { adb('input keyevent HOME'); } catch {} rmdirSync(LOCK); }
 }
 

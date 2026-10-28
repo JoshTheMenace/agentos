@@ -57,6 +57,7 @@ let rid = 0; const pend = {};
 const rpc = (method, params = {}) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; if (!send({ type: 'rpc', id, method, params })) app.rpcDone(id, { ok: false, error: 'offline' }); });
 // The owner line: this app's own uid straight to the broker (Blockers taps, Passwords). The broker knows it's the owner by uid, so no card.
 const phone = (method, params = {}) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; N.phone ? N.phone(id, method, JSON.stringify(params)) : app.rpcDone(id, { ok: false, error: 'no owner line' }); });
+const own = async (method, params) => { const r = await phone(method, params); return r?.error === 'no owner line' ? rpc(method, params) : r; }; // owner line first (works while a plugin is off), else agentd
 const nget = (path) => new Promise((ok) => { const id = String(++rid); pend[id] = ok; N.get(id, path); }); // agentd GET via the shell (cross-origin)
 app.rpcDone = (id, r) => { pend[id]?.(r); delete pend[id]; };
 on('rpc.result', (m) => app.rpcDone(m.id, m.result));
@@ -83,7 +84,7 @@ clock(); setInterval(clock, 1000);
 const auditLine = (e) => { // one human line per audit entry: what happened, in which app, and (as the colour) whether it was fine, approved or stopped
   const raw = /^[A-Z]\w*(Layout|View|Group|Bar|Pane|Container)$/.test(e.target || '') || /^(android|com|androidx)\./.test(e.target || ''); // class name, not a label
   const app_ = appName(e.pkg), tgt = e.target && !raw ? `"${short(e.target, 24)}"` : '', inApp = app_ ? ` in ${app_}` : '';
-  const d = e.decision || '', bad = /denied|blocked/.test(d), c = bad ? 'c' : d === 'approved' ? 'g' : 'a';
+  const d = e.decision || '', bad = /denied|blocked|refused/.test(d), c = bad ? 'c' : d === 'approved' ? 'g' : 'a';
   const code = /code|canary/i.test(e.reason || ''), names = (e.target || '').replace(/^\w+ trackers: /, '').replace(/ \(.*$/, '');
   switch (e.tool) {
     case 'task.start': return [d === 'denied' ? `Access not granted · ${short(e.goal, 36)}` : 'Started · ' + short(e.goal, 40), bad ? 'c' : 'a'];
@@ -302,6 +303,8 @@ $('#toBlockers').onclick = $('#toBlockers2').onclick = () => { hap(); openBlocke
 $('#blockersBack').onclick = () => close('blockers');
 $('#toMods').onclick = () => { hap(); openMods(); };
 $('#modsBack').onclick = () => close('mods');
+$('#toPlugins').onclick = () => { hap(); open('plugins'); renderPlugins(); send({ type: 'plugins.list' }); };
+$('#pluginsBack').onclick = () => close('plugins');
 $('#toVault').onclick = () => { hap(); openVault(); };
 $('#vaultBack').onclick = () => close('vault');
 $('#vaultAdd').onclick = () => { hap('heavy'); N.vaultAdd(''); };
@@ -341,7 +344,7 @@ function renderCenter() {
   const today = Math.max(new Date().setHours(0, 0, 0, 0), (S.since || 0) + 1); // after a demo reset, only what came since
   const day = S.audit.filter((e) => e.ts >= today), recent = day.slice(-60).reverse();
   $('#recentNote').textContent = day.length ? `${day.length >= 500 ? '500+' : day.length} today` : 'quiet today';
-  $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Caught' : e.decision === 'blocked' ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (/^(reviewer|policy)$/.test(e.approver || e.channel) ? 'Auto' : 'Approved') : '';
+  $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Caught' : /blocked|refused/.test(e.decision || '') ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (/^(reviewer|policy)$/.test(e.approver || e.channel) ? 'Auto' : 'Approved') : '';
     return el('li', c === 'c' ? 'flag' : '', `<time>${fmtT(e.ts)}</time><i class="${c}"></i><span>${esc(txt)}</span>${tg ? `<em class="tg ${c === 'g' ? 'g' : ''}">${tg}</em>` : ''}`); }));
   if (!recent.length) $('#recent').replaceChildren(el('li', '', `<span class="empty">Nothing yet</span>`));
   $('#modNote').textContent = S.mods?.length ? `${S.mods.length} added` : 'none yet';
@@ -350,7 +353,7 @@ function renderCenter() {
   const nb = (S.trackers || []).reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0);
   $('#blockNote').textContent = S.trackers ? `${nb} blocked` : '';
   // Protected today: the security story in three calm numbers, from the real audit + tracker data (no pop-ups, just a tally).
-  const ads = S.adsBlocked || 0, stopped = day.filter((e) => e.tool !== 'guard.flag' && /blocked|denied/.test(e.decision || '')).length;
+  const ads = S.adsBlocked || 0, stopped = day.filter((e) => e.tool !== 'guard.flag' && /blocked|denied|refused/.test(e.decision || '')).length;
   const appr = day.filter((e) => e.decision === 'approved'), auto = appr.filter((e) => /reviewer|policy/.test(e.approver || e.channel || '')).length;
   const stat = (n, l, c) => `<div class="stat ${c}"><b>${n}</b><span>${l}</span></div>`;
   $('#stats').innerHTML = stat(nb, nb === 1 ? 'tracker blocked' : 'trackers blocked', 'g') + stat(ads, 'ads blocked', 'g') + stat(stopped, stopped === 1 ? 'action stopped' : 'actions stopped', 'g') + stat(appr.length, appr.length === 1 ? 'approval' : 'approvals' + (auto ? ` · ${auto} auto` : ''), 'b');
@@ -385,13 +388,13 @@ function renderGrants() {
     $('button', r).onclick = async () => { hap(); send({ type: 'stop' }); await rpc('task.stop', { task_id: t.task_id }); refresh(); }; return r; }));
 }
 async function renderFirewall() {
-  const r = await rpc('firewall.list', {}); const rules = r?.rules || [];
+  const r = await own('firewall.list', {}); const rules = r?.rules || [];
   const pkgs = [...new Set(['local.agentos.pigeon', 'local.agentos.beacon', 'com.termux', ...rules.map((x) => x.pkg)])].filter((p) => S.names[p] || rules.some((x) => x.pkg === p));
   $('#fw').replaceChildren(...pkgs.map((pkg) => {
     const mine = rules.filter((x) => x.pkg === pkg && /REJECT|DROP/i.test(x.action || 'REJECT'));
     const blocked = mine.some((x) => !x.dest || !/^name:/.test(x.dest)), nt = new Set(mine.map((x) => x.dest).filter((d) => /^name:/.test(d))).size; // tracker rules are per domain; a full block has no dest
     const b = el('button', 'ft ' + (blocked ? 'off' : 'on'), `<span class="c">${ICOHTML(pkg)}</span><div class="l">${esc(appName(pkg))}<span>${blocked ? 'Blocked' : nt ? `${nt} tracker${nt === 1 ? '' : 's'} blocked` : 'Allowed'}</span></div>`);
-    b.onclick = async () => { hap(); b.className = 'ft wait'; $('.l span', b).textContent = 'Waiting…'; const res = await rpc('firewall.set', { pkg, mode: blocked ? 'allow' : 'block' }); if (res.decision !== 'approved') hap('heavy'); renderFirewall(); refresh(); };
+    b.onclick = async () => { hap(); b.className = 'ft wait'; $('.l span', b).textContent = 'Waiting…'; const res = await own('firewall.set', { pkg, mode: blocked ? 'allow' : 'block' }); if (res.decision !== 'approved') hap('heavy'); renderFirewall(); refresh(); };
     return b;
   }));
   if (!pkgs.length) $('#fw').replaceChildren(el('div', 'empty', 'No apps'));
@@ -432,15 +435,31 @@ function renderVault() {
 on('vault.changed', () => { if ($('#vault').classList.contains('on')) loadVault(); });
 // ---------- mods: buttons agents added to apps ({mods:[{id, package, app, label, shown, created, by}]}) ----------
 async function openMods() { open('mods'); renderMods(); await loadMods(); }
-async function loadMods() { const r = await rpc('app.mod.list', {}); if (r?.mods) S.mods = r.mods; renderMods(); renderCenter(); }
+async function loadMods() { const r = await own('app.mod.list', {}); if (r?.mods) S.mods = r.mods; renderMods(); renderCenter(); }
 function renderMods() {
   const box = $('#mlist'), mods = S.mods || [];
   $('#modsNote').textContent = mods.length ? `${mods.length} added` : '';
   if (!mods.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring blue"><svg width="30" height="30"><use href="#i-mod"/></svg></span>Ask to add a button to any app<small>“Add a tip button to Calculator”</small>`));
   box.replaceChildren(...mods.map((m) => { const r = el('div', 'rowi mod', `<span class="appic">${ICOHTML(m.package)}</span><div>${esc(m.label)}<span class="s">${esc(m.app || appName(m.package))}${m.shown ? '' : ' · hidden'}</span></div><div class="r"><button class="tag">Remove</button></div>`);
-    $('button', r).onclick = async () => { hap(); r.style.opacity = .4; await rpc('app.mod.remove', { id: m.id, by: 'settings' }); loadMods(); }; return r; }));
+    $('button', r).onclick = async () => { hap(); r.style.opacity = .4; await own('app.mod.remove', { id: m.id, by: 'settings' }); loadMods(); }; return r; }));
 }
 on('mod.changed', () => loadMods());
+// ---------- plugins: the owner's switches for groups of the agent's API tools (agentd/plugins.js) ----------
+// The list comes from agentd (names, summaries); a switch goes over the owner line to the broker (plugins.set), which takes it
+// only from this app's uid. agentd and models can't flip one. Off = the agent loses those API tools; it can still use the app on screen.
+function renderPlugins() {
+  const box = $('#plist'), ps = S.plugins;
+  const off = ps ? ps.filter((x) => !x.on).length : 0;
+  $('#pluginsNote').textContent = $('#plugNote').textContent = ps ? (off ? `${off} off` : 'All on') : '';
+  if (!ps) return box.replaceChildren(el('div', 'empty', 'Offline'));
+  const list = el('div', 'mod', '<div class="k">Direct tools<span>off = the agent uses the app on screen instead</span></div>');
+  box.replaceChildren(el('div', 'mod', '<div class="k">Always on</div><div class="provnote">Screen control, alarms and timers, web search, notifications, memory questions</div>'), list);
+  list.append(...ps.map((x) => { const r = el('div', 'rowi', `<span class="appic" style="background:var(--${x.on ? 'blue' : 'purple'})">${esc(x.name[0])}</span><div>${esc(x.name)}<span class="s">${esc(x.summary)}</span></div><div class="r"><button class="toggle${x.on ? ' on' : ''}" aria-label="${x.on ? 'On' : 'Off'}"></button></div>`);
+    const t = $('button', r); t.onclick = async () => { hap(); t.classList.toggle('on'); t.style.opacity = .5;
+      const res = await phone('plugins.set', { id: x.id, on: !x.on }); if (!res?.ok) hap('heavy'); send({ type: 'plugins.list' }); }; return r; }));
+}
+on('plugins.list', (m) => { S.plugins = m.plugins; renderPlugins(); });
+on('plugins.changed', () => send({ type: 'plugins.list' }));
 on('tracker.blocked', (m) => { S.audit = [...S.audit.slice(-199), { ...m, tool: 'tracker.blocked', ts: m.ts || Date.now() }]; renderCenter(); if ($('#blockers').classList.contains('on')) openBlockers(); });
 
 // ---------- ask sheet ----------
@@ -488,7 +507,7 @@ on('approval.resolved', (m) => {
 on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" height="14"><use href="#i-shield"/></svg><span>Suspicious message in ${esc(appName(m.source_pkg))}</span>`)); scrollDown(); });
 on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; } body.append(el('div', 'msg err', esc(m.message))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
 on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
-on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
+on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- voice (WebRTC per agentd/voice.html; hold the orb to talk) ----------
 let pc, mic, micTrack;

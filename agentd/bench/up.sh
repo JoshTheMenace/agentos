@@ -10,7 +10,7 @@ COPYFILE_DISABLE=1 tar --no-xattrs --exclude node_modules --exclude runs --exclu
 adb -s "$S" push /tmp/bench-agentd.tgz /data/local/tmp/bench-agentd.tgz >/dev/null
 adb -s "$S" shell su -c 'chmod 644 /data/local/tmp/bench-agentd.tgz'
 PT=$(adb -s "$S" shell su -c 'cat /data/data/local.agentos/files/token' | tr -d '\r\n')
-VARS=""; for v in CODEX_MODEL CODEX_EFFORT AGENTD_SCREEN REVIEW_MODEL AGENTD_DEBUG CODEX_SERVICE_TIER CODEX_FINISH AGENTD_PROMPT_PATCH; do eval "x=\${$v-}"; [ -n "$x" ] && VARS="$VARS $v=$x"; done
+VARS=""; for v in CODEX_MODEL CODEX_EFFORT AGENTD_SCREEN REVIEW_MODEL AGENTD_DEBUG CODEX_SERVICE_TIER CODEX_FINISH AGENTD_PROMPT_PATCH AGENTD_TOOLS; do eval "x=\${$v-}"; [ -n "$x" ] && VARS="$VARS $v=$x"; done
 deploy/tx.sh "pkill -f 'node server.js --bench' ; sleep 1
 D=~/agentos/bench-agentd; [ -n \"$NOCOPY\" ] || { rm -rf \$D; mkdir -p \$D; cd \$D; tar xzf /data/local/tmp/bench-agentd.tgz; ln -s ~/agentos/agentd/node_modules node_modules; }; cd \$D
 export PHONE_TOKEN=$PT AGENTD_PORT=8788 AGENTOS_HOME=\$HOME/.agentos-bench AGENTD_CLIENT_PKGS= CODEX_BIN=\$D/deploy/codex-root.sh $VARS

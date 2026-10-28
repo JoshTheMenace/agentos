@@ -9,6 +9,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TOOLS, runTool, rpc } from '../tools.js';
+import { disabled } from '../plugins.js';
 import { classify } from '../guard.js';
 import * as memory from '../memory/index.js';
 
@@ -95,10 +96,14 @@ const SHOTS = [['open discord', { tool: 'open_app', app: 'Discord' }], ['wake me
 const HINTS = [['setting', /\b(flashlight|torch|do not disturb|dnd|wi-?fi|bluetooth)\b/], ['media', /\b(pause|resume|skip|next song|previous song)\b/],
   ['status', /\bbattery\b/], ['alarms', /\b(what|which|list|my) alarms?\b/], ['navigate', /\b(navigate|directions)\b/], ['add_event', /\b(calendar|schedule|appointment)\b/], ['set_timer', /\b(timer|countdown)\b/], ['set_alarm', /\b(alarm|wake me|get up)\b/],
   ['play_music', /\b(play|put on|listen to)\b/], ['web_search', /\b(search|google|look up)\b/]];
-export async function plan(text, signal) {
-  const t = text.toLowerCase(), hint = HINTS.find(([, re]) => re.test(t))?.[0];
+// Forms that use a plugin's tools (plugins.js). A switched-off plugin's forms and hints are dropped from the grammar, so the
+// router can't produce them (the prompt stays the same, so llama-server's cache holds). No tool search for a 0.8B model.
+const FORM_PLUGIN = { add_event: 'calendar', play_music: 'media', media: 'media', setting: 'device', status: 'device', alarms: 'clock', navigate: 'web' };
+export async function plan(text, signal, off = new Set()) {
+  const t = text.toLowerCase(), ok = (f) => !off.has(FORM_PLUGIN[f]), hint = HINTS.find(([f, re]) => ok(f) && re.test(t))?.[0];
+  const all = off.size ? { oneOf: PLAN.oneOf.filter((f) => ok(f.properties.tool.const)) } : PLAN;
   const r = await chat({ messages: [{ role: 'system', content: ROUTER }, ...SHOTS, { role: 'user', content: text }], temperature: 0, max_tokens: 60,
-    response_format: { type: 'json_schema', json_schema: { name: 'action', schema: hint ? PLAN.oneOf.find((f) => f.properties.tool.const === hint) : PLAN } } }, signal);
+    response_format: { type: 'json_schema', json_schema: { name: 'action', schema: hint ? PLAN.oneOf.find((f) => f.properties.tool.const === hint) : all } } }, signal);
   const p = JSON.parse(r.choices[0].message.content);
   if ('hour' in p) { // small models get am/pm wrong; the user's words decide
     const m = t.match(/(\d{1,2})(?::\d\d)?\s*(a\.?m|p\.?m)\b/);
@@ -220,7 +225,7 @@ export class Local {
     const usage = { input_tokens: 0, output_tokens: 0 };
     const known = await recall(text, ctx, usage); // "what did Sam want for his birthday?": memory answers, no screens
     if (known) return ctx.emit({ type: 'text.delta', text: known }), { status: 'completed', usage };
-    const p = await plan(text, ctx.signal);
+    const p = await plan(text, ctx.signal, await disabled(rpc));
     ctx.emit({ type: 'local.plan', plan: p });
     const said = await perform(p, ctx);
     if (said) return ctx.emit({ type: 'text.delta', text: said }), { status: 'completed', usage };

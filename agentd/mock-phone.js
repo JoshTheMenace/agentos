@@ -21,6 +21,12 @@ const screen = () => ({
 });
 
 const ok = (extra = {}) => ({ ok: true, decision: 'auto', ...extra });
+const calls = [], plugins = { off: new Set((process.env.MOCK_PLUGINS_OFF || '').split(',').filter(Boolean)) };
+const PLUGIN = { 'calendar.add': 'calendar', 'calendar.find': 'calendar', 'calendar.update': 'calendar', 'calendar.delete': 'calendar', 'contacts.find': 'messages',
+  'sms.send': 'messages', 'sms.list': 'messages', 'calls.list': 'messages', 'call.place': 'messages', 'intent:email': 'messages', 'alarms.list': 'clock', 'alarms.delete': 'clock',
+  'device.set': 'device', 'device.status': 'device', 'media.control': 'media', 'intent:play': 'media', 'intent:navigate': 'web', 'intent:url': 'web',
+  'trackers.scan': 'privacy', 'trackers.list': 'privacy', 'trackers.block': 'privacy', 'trackers.unblock': 'privacy', 'firewall.list': 'privacy', 'firewall.set': 'privacy', 'firewall.clear': 'privacy',
+  'vault.list': 'vault', 'vault.fill': 'vault', 'app.mod.apply': 'mods', 'app.mod.targets': 'mods', 'app.mod.list': 'mods', 'app.mod.remove': 'mods' };
 // Stub of the broker's approval API, same shapes as android/ Broker.java + Events.java: GET /events (hello first),
 // approval.list/confirm/deny; confirm only by "voice" (utterance) or "reviewer" (rationale).
 // Test switches: MOCK_FP=1 fingerprint-only cards · MOCK_DRAFT_CARD=1 typing a draft also needs a (tap-tier) card ·
@@ -75,6 +81,26 @@ const methods = {
   'firewall.list': () => ({ rules: [] }),
   'firewall.set': () => ({ ok: false, decision: 'denied', reason: 'mock: user rejected the approval' }),
   'audit.tail': () => ({ entries: [] }),
+  // API actions (android Api.java), canned answers for the Mac-side bench (bench/plugins-eval.js).
+  'calendar.add': ({ title, start }) => ok({ event: { id: 9001, title, start } }), 'calendar.find': () => ok({ items: [{ id: 9001, text: 'Lunch with Sam', start: '2026-10-30T12:00' }] }),
+  'calendar.update': ({ id }) => ok({ event: { id } }), 'calendar.delete': () => ok({ decision: 'approved' }),
+  'contacts.find': ({ name }) => ok({ items: [{ text: name, phones: ['+1 555 0100'] }] }),
+  'sms.send': () => ({ ok: false, decision: 'denied', reason: 'mock: not approved' }), 'sms.list': () => ok({ items: [] }), 'calls.list': () => ok({ items: [] }),
+  'call.place': () => ({ ok: false, decision: 'denied', reason: 'mock: not approved' }),
+  'alarms.list': () => ok({ items: [{ id: 3, time: '07:00', days: 'once', label: '', enabled: true }] }), 'alarms.delete': () => ok({ decision: 'approved' }),
+  'device.set': (p) => ok({ status: { ...p } }), 'device.status': () => ok({ status: { battery: 81, charging: false, dnd: 'off' } }),
+  'media.control': ({ action }) => ok({ now_playing: { title: 'Mock Song', playing: action !== 'pause' } }),
+  intent: () => ok({ screen: screen() }),
+  'notifications.list': () => ({ ok: true, notifications: [{ key: 'n1', app: 'Pigeon', pkg: 'local.agentos.pigeon', conversation: 'Mom', sender: 'Mom', text: 'Are you coming for dinner?', when: Date.now() - 60_000, can_reply: true }] }),
+  'notifications.reply': () => ok({ decision: 'approved' }),
+  'trackers.scan': ({ pkg }) => ok({ pkg: pkg || 'com.android.chrome', trackers: [{ domain: 'doubleclick.net', company: 'Google', blocked: false }] }), 'trackers.list': () => ok({ apps: [] }),
+  'trackers.block': () => ok(), 'vault.list': () => ok({ entries: [] }), 'app.mod.list': () => ok({ mods: [] }),
+  // Plugin switches: the same method -> plugin map as the broker (android Plugins.java), refused while a plugin is off.
+  // plugins.set has no owner check here (no uids on a Mac); the real broker only takes it from the launcher or adb.
+  'plugins.list': () => ok({ off: [...plugins.off] }),
+  'plugins.set': ({ id, on }) => ((on ? plugins.off.delete(id) : plugins.off.add(String(id))), publish({ type: 'plugins.changed', id, on: !!on }), ok({ off: [...plugins.off] })),
+  'mock.log': ({ clear }) => { const l = [...calls]; if (clear) calls.length = 0; return { calls: l }; }, // which methods reached the "broker"
+
   'approval.list': () => ({ ok: true, approvals: shown() }),
   'approval.confirm': answer('approved'),
   'approval.deny': answer('denied'),
@@ -90,8 +116,10 @@ createServer((req, res) => {
   let body = '';
   req.on('data', (c) => (body += c)).on('end', () => {
     let m; try { m = JSON.parse(body); } catch { return reply(400, { error: 'bad json' }); }
-    const fn = methods[m.method];
+    const fn = methods[m.method], pl = PLUGIN[m.method === 'intent' ? `intent:${m.params?.kind}` : m.method];
     log('mock-phone', m.method, JSON.stringify(m.params ?? {}));
+    if (!/^(mock\.|plugins\.)/.test(m.method)) calls.push({ method: m.method, params: m.params ?? {} });
+    if (pl && plugins.off.has(pl)) return reply(200, { result: { ok: false, decision: 'refused', reason: `plugin ${pl} is off` } });
     if (!fn) return reply(404, { error: `unknown method ${m.method}` });
     Promise.resolve(fn(m.params ?? {})).then((r) => reply(200, { result: r }));
   });

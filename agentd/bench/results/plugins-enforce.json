@@ -1,0 +1,37 @@
+[
+ {
+  "name": "model: add_event with Calendar off",
+  "ok": true,
+  "detail": "broker saw [notifications.list,list_apps,list_apps]; reply \"I couldn’t add it because there’s no calendar app available on your phone; you can enable the Calendar plugin in AgentOS under Command cente\""
+ },
+ {
+  "name": "runTool add_event with Calendar off",
+  "ok": true,
+  "detail": "{\"ok\":false,\"decision\":\"refused\",\"reason\":\"the user turned off the Calendar plugin; do it on screen if you can, or tell them it can be turned on in AgentOS\"}; broker saw 0 calls"
+ },
+ {
+  "name": "plugin_call add_event with Calendar off",
+  "ok": true,
+  "detail": "{\"ok\":false,\"decision\":\"refused\",\"reason\":\"the user turned off the Calendar plugin; do it on screen if you can, or tell "
+ },
+ {
+  "name": "load_plugin calendar with Calendar off",
+  "ok": true,
+  "detail": "{\"ok\":false,\"decision\":\"refused\",\"reason\":\"the user turned off the Calendar plugin\"}"
+ },
+ {
+  "name": "no model tool can set plugins",
+  "ok": true,
+  "detail": "none"
+ },
+ {
+  "name": "agentd rpc passthrough refuses plugins.set",
+  "ok": true,
+  "detail": "{\"ok\":false,\"error\":\"method not allowed\"}"
+ },
+ {
+  "name": "model asked to turn the plugin on",
+  "ok": true,
+  "detail": "still off: calendar; reply \"I couldn’t turn the Calendar plugin back on or add lunch; please enable it in AgentOS under Command center › Plugins.\""
+ }
+]

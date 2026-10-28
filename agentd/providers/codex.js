@@ -5,8 +5,9 @@ import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { cfg, log } from '../config.js';
-import { SUGGEST_PROMPT, SYSTEM_PROMPT } from '../prompt.js';
-import { TOOLS, appList, runTool } from '../tools.js';
+import { SUGGEST_PROMPT, systemPrompt } from '../prompt.js';
+import { appList, runTool, spec, toolset } from '../tools.js';
+import { LOADERS } from '../plugins.js';
 
 // Turn off everything that would give the model a capability besides our tools.
 const OFF = ['shell_tool', 'unified_exec', 'apps', 'plugins', 'browser_use', 'browser_use_external', 'computer_use',
@@ -149,16 +150,25 @@ export class Codex {
   async #runOnce(session, text, ctx) {
     await this.ready();
     let s = session.codex;
-    if (!s || s.gen !== this.#gen) {
+    // Tools are fixed at thread/start (turn/start has no tools field). The first request's plugins are loaded into the thread;
+    // later ones reach the rest through load_plugin. Codex's own deferLoading isn't used: with gpt-6.1-terra (a code-mode
+    // model) deferred dynamic tools just vanish and no tool_search appears (TOOLS-AT-SCALE-RESULTS.md). A plugin switched
+    // on or off starts a new thread, so the model never sees a tool the owner turned off.
+    const ts = await toolset(ctx.turn.goal);
+    if (!s || s.gen !== this.#gen || s.off !== ts.off.join()) {
+      if (s?.gen === this.#gen) this.#req('thread/unsubscribe', { threadId: s.threadId }).catch(() => {});
+      const names = [...ts.names, ...(ts.deferred.length ? Object.keys(LOADERS) : [])];
       const r = await this.#req('thread/start', {
         ...(cfg.codexModel && { model: cfg.codexModel }), ...tier(), cwd: cfg.codexCwd, ephemeral: true,
-        sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: `${patched(SYSTEM_PROMPT)}${cfg.codexFinish ? `\n${DONE_HINT}` : ''}\n\n# Apps on this phone (label=package)\n${await appList()}`,
-        dynamicTools: Object.entries(TOOLS).map(([name, t]) => ({ type: 'function', name, description: patch.tools?.[name] ?? t.description,
-          inputSchema: cfg.codexFinish && FINISH.has(name) ? { ...t.schema, properties: { ...t.schema.properties, done: DONE } } : t.schema })),
+        sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: `${patched(systemPrompt(ts))}${cfg.codexFinish ? `\n${DONE_HINT}` : ''}\n\n# Apps on this phone (label=package)\n${await appList()}`,
+        dynamicTools: names.map((name) => { const t = spec(name); return { type: 'function', name, description: patch.tools?.[name] ?? t.description,
+          inputSchema: cfg.codexFinish && FINISH.has(name) ? { ...t.schema, properties: { ...t.schema.properties, done: DONE } } : t.schema }; }),
       });
-      s = session.codex = { threadId: r.thread.id, gen: this.#gen };
+      s = session.codex = { threadId: r.thread.id, gen: this.#gen, off: ts.off.join(), loaded: ts.loaded, deferred: ts.deferred };
     }
-    return this.#turn(s.threadId, text, ctx, { effort: cfg.codexEffort });
+    const r = await this.#turn(s.threadId, text, ctx, { effort: cfg.codexEffort });
+    if (r.usage) r.usage.plugins = { mode: cfg.tools, loaded: s.loaded, deferred: s.deferred }; // for the bench
+    return r;
   }
 
   #turn(threadId, text, ctx, extra) {

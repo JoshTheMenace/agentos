@@ -6,6 +6,7 @@ import * as memory from './memory/index.js';
 import { state as events } from './events.js';
 import * as context from './context.js';
 import * as schedule from './schedule.js';
+import * as plugins from './plugins.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -231,11 +232,23 @@ function compact(nodes) {
 const needsApproval = (name, args, turn) => TOOLS[name].tier === 'outward' || (name === 'type' && args.submit)
   || (name === 'tap' && (turn.secure || turn.nodes?.get(args.id)?.risk === 'T3'));
 
+// The tools one turn sees: plugins.toolset() with the owner's switches applied. names are in a fixed order (core, then
+// plugins in manifest order) so the same combination always hits the same prompt cache.
+export const toolset = async (goal) => plugins.toolset(goal, await plugins.disabled(rpc));
+export const spec = (name) => TOOLS[name] ?? plugins.LOADERS[name]; // {description, schema}
+
 // Run one tool call for a provider. Returns {success, text} (text is what the model sees).
 export async function runTool(name, args, ctx) {
+  args = args && typeof args === 'object' ? args : {};
+  if (name === 'plugin_call' && !plugins.LOADERS[args.tool]) return runTool(String(args.tool), args.args, ctx); // a deferred plugin's tool, same path as any other
+  if (name === 'load_plugin') return loadPlugin(String(args.id), ctx);
   const t = TOOLS[name];
   if (!t) return { success: false, text: `Unknown tool ${name}` };
-  args = args && typeof args === 'object' ? args : {};
+  const pl = plugins.pluginOf[name];
+  if (pl && (await plugins.disabled(rpc)).has(pl)) { // checked on every call, not just hidden: models call tools they weren't shown. The broker checks again.
+    ctx.emit({ type: 'tool.result', name: t.method, ok: false, decision: 'refused', reason: `plugin ${pl} is off`, ms: 0 });
+    return { success: false, text: JSON.stringify({ ok: false, decision: 'refused', reason: `the user turned off the ${plugins.BY_ID[pl].name} plugin; do it on screen if you can, or tell them it can be turned on in AgentOS` }) };
+  }
   if (!t.memory && ctx.provider !== 'local') args = memory.unpseudo(args); // cloud models see [P:3]; the phone gets the real number
   const t0 = Date.now(), turn = ctx.turn;
   ctx.emit({ type: 'tool.request', name: t.method, args, tier: t.tier });
@@ -280,6 +293,18 @@ export async function runTool(name, args, ctx) {
     ctx.emit({ type: 'tool.result', name: t.method, ok: false, reason: e.message, ms: Date.now() - t0 });
     return { success: false, text: JSON.stringify({ ok: false, error: e.message }) };
   }
+}
+
+// The fallback for deferred plugins: the plugin's tool schemas (and its prompt lines) as a tool result.
+async function loadPlugin(id, ctx) {
+  const p = plugins.BY_ID[id], off = await plugins.disabled(rpc);
+  ctx.emit({ type: 'tool.request', name: 'load_plugin', args: { id }, tier: 'read' });
+  const r = !p ? { ok: false, error: `no plugin "${id}"; ids: ${plugins.PLUGINS.filter((x) => !off.has(x.id)).map((x) => x.id).join(', ')}` }
+    : off.has(id) ? { ok: false, decision: 'refused', reason: `the user turned off the ${p.name} plugin` }
+    : { ok: true, plugin: id, notes: p.prompt || undefined, tools: p.tools.map((n) => ({ name: n, description: TOOLS[n].description, input_schema: TOOLS[n].schema })),
+      call: 'plugin_call {tool, args}' };
+  ctx.emit({ type: 'tool.result', name: 'load_plugin', ok: r.ok, reason: r.error || r.reason, ms: 0 });
+  return { success: r.ok, text: JSON.stringify(r) };
 }
 
 // act: a short plan run step by step, each through runTool (lease, approval, broker: nothing is skipped). Fewer model

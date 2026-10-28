@@ -8,6 +8,7 @@ import { WebSocketServer } from 'ws';
 import { agentdToken, cfg, log, provisionClients } from './config.js';
 import { classify } from './guard.js';
 import { endTurn, rpc, tasks } from './tools.js';
+import * as plugins from './plugins.js';
 import * as memory from './memory/index.js';
 import * as connectors from './memory/connectors/index.js';
 import * as events from './events.js';
@@ -29,6 +30,7 @@ const providers = Object.fromEntries([codex, cli.available() ? cli : new Claude(
 if (cfg.provider === 'codex') codex.ready().catch(() => {}); // warm start; it also restarts itself if it crashes
 taskman.init(codex); // background workers for voice (and typed task.start); see tasks.js
 events.watch(); // broker approvals/guard/task events -> every connected UI
+events.onEvent((e) => e.type === 'plugins.changed' && plugins.invalidate()); // the owner flipped a plugin: re-read it now
 schedule.init({ start: taskman.start, onUpdate: taskman.onUpdate, rpc, onEvent: events.onEvent, publish: events.publish, flagged: events.flagged }); // scheduled tasks
 context.start(providers[cfg.provider], codex); // notification feed -> context block, memory, reply rules
 const memsync = connectors.start({ log }); // memory connectors: default grants, then whatever is due once a minute (see memory/SOURCES.md)
@@ -166,6 +168,12 @@ wss.on('connection', (ws, req) => {
         reply(r);
         if (r.ok && msg.action === 'grant' && connectors.CONNECTORS[msg.source]) setTimeout(() => { try { memsync.now(String(msg.source)); } catch {} }, 50); // re-read it now
         return;
+      }
+      case 'plugins.list': { // the launcher's Plugins screen: the manifest plus the broker's switches. Read-only: flipping one is
+        // the launcher's own owner line to the broker (plugins.set), never this socket and never a model tool.
+        plugins.invalidate();
+        const off = await plugins.disabled(rpc);
+        return send({ type: 'plugins.list', mode: cfg.tools, core: plugins.CORE, plugins: plugins.PLUGINS.map((x) => ({ id: x.id, name: x.name, summary: x.summary, tools: x.tools, on: !off.has(x.id) })) });
       }
       case 'memory.sync': return send({ type: 'memory.sync', results: memsync.now(msg.source && String(msg.source)) }); // on-demand connector run (UI "Sync now")
       default:

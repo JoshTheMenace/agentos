@@ -19,6 +19,8 @@ export const VARIANTS = {
   base: {},
   fast: { CODEX_SERVICE_TIER: 'priority' },
   finish: { CODEX_FINISH: '1' },
+  all: { AGENTD_TOOLS: 'all' },          // tool plugins (plugins.js): every enabled tool upfront
+  plugins: { AGENTD_TOOLS: 'plugins' },  // core + pre-selected plugins, the rest via load_plugin
 };
 const CANDIDATES = {
   // Tell it where the final reply goes (the `done` field) instead of a separate message.

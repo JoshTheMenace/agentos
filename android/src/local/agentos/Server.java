@@ -76,8 +76,10 @@ final class Server {
                 JSONObject req = new JSONObject(new String(body, StandardCharsets.UTF_8));
                 JSONObject params = req.optJSONObject("params");
                 String m = req.getString("method");
-                int uid = java.util.Arrays.asList("task.start", "approval.confirm", "approval.escalate", "vault.add", "vault.remove", "audit.mark_breaks", "audit.demo_reset", "trackers.block", "trackers.unblock", "schedule.alarm").contains(m) ? callerUid(s) : -1; // only these care who asks
-                res = broker.call(m, params == null ? new JSONObject() : params, uid);
+                JSONObject p = params == null ? new JSONObject() : params;
+                int uid = java.util.Arrays.asList("task.start", "approval.confirm", "approval.escalate", "vault.add", "vault.remove", "audit.mark_breaks", "audit.demo_reset", "trackers.block", "trackers.unblock", "schedule.alarm", "plugins.set").contains(m)
+                        || Plugins.off(m, p) != null ? callerUid(s) : -1; // only these care who asks (a switched-off plugin: is it the owner's own screen?)
+                res = broker.call(m, p, uid);
             } catch (Exception e) {
                 Log.w("AgentOS", "rpc error", e);
                 res = err(e.getMessage() == null ? e.toString() : e.getMessage());

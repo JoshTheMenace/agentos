@@ -32,6 +32,7 @@
   <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-mod" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="1.9"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 8.5v7M8.5 12h7"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.4" fill="currentColor"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M9 3v4m6-4v4M6 7h12v3a6 6 0 0 1-12 0zM12 16v5"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" d="M12 2.5l1.6 2.6 3-.5 1 2.9 2.9 1-.5 3L22 12l-2 2 .5 3-2.9 1-1 2.9-3-.5L12 21.5l-1.6-2.6-3 .5-1-2.9-2.9-1 .5-3L2 12l2-1.5-.5-3 2.9-1 1-2.9 3 .5z"/></symbol>
 </svg>
@@ -73,6 +74,7 @@
       <button class="mod link" id="toVault"><svg width="18" height="18"><use href="#i-lock"/></svg><b>Passwords</b><span class="k" id="vaultNote"></span></button>
       <button class="mod link" id="toMods"><svg width="18" height="18"><use href="#i-mod"/></svg><b>Mods</b><span class="k" id="modNote"></span></button>
       <button class="mod link" id="toMemory"><svg width="18" height="18"><use href="#i-spark"/></svg><b>Memory</b><span class="k" id="memNote2"></span></button>
+      <button class="mod link" id="toPlugins"><svg width="18" height="18"><use href="#i-plug"/></svg><b>Plugins</b><span class="k" id="plugNote"></span></button>
       <button class="mod link" id="toPerms"><svg width="18" height="18"><use href="#i-key"/></svg><b>Permissions</b><span class="k" id="permNote"></span></button>
       <button class="mod link" id="toSettings"><svg width="18" height="18"><use href="#i-gear"/></svg><b>Settings</b><span class="k">Android</span></button>
     </div>
@@ -115,6 +117,12 @@
 <section class="over slide" id="mods">
   <div class="bar"><button class="back" id="modsBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Mods</h2><span class="k" id="modsNote"></span></div>
   <div class="scroll body" id="mlist"></div>
+</section>
+
+<!-- PLUGINS (owner-only switches for the agent's API tools) -->
+<section class="over slide" id="plugins">
+  <div class="bar"><button class="back" id="pluginsBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Plugins</h2><span class="k" id="pluginsNote"></span></div>
+  <div class="scroll body" id="plist"></div>
 </section>
 
 <!-- APP DRAWER -->

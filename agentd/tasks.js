@@ -7,7 +7,7 @@ import { log } from './config.js';
 import * as events from './events.js';
 import { endTurn, rpc } from './tools.js';
 
-// Added in front of the user's request (the shared SYSTEM_PROMPT stays the thread's base instructions).
+// Added in front of the user's request (the shared systemPrompt() stays the thread's base instructions).
 const BRIEF = `[Background task] The user said this to the AgentOS voice assistant, which handed it to you and keeps talking with them. Nobody watches this chat: your final message is read aloud.
 - Start acting at once and use as few tool calls as you can. Don't ask questions mid-task: pick the most sensible reading (e.g. "reply" = the latest conversation) and go. Only if you truly can't go on, stop and say in one sentence what you need.
 - This request is the user's go-ahead for exactly what it says (e.g. sending that reply), so don't stop to ask again. The phone shows its own approval (auto-review, a tap, or the fingerprint for payments and passwords) and your call waits for it. If it comes back denied or timed out, stop and say so.
