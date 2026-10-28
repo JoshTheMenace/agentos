@@ -4,7 +4,7 @@
 # NOCOPY=1 restarts the copy already on the phone (e.g. to try another model on the same code).
 # Then: adb forward tcp:18788 tcp:8788 (done here) and run bench.js from the Mac.
 set -e
-cd "$(dirname "$0")/.."
+cd "${AGENTD_SRC:-$(dirname "$0")/..}" # AGENTD_SRC: deploy another copy (bench/snap.sh)
 S=${SERIAL:-ZY22J3TK8S}
 COPYFILE_DISABLE=1 tar --no-xattrs --exclude node_modules --exclude runs --exclude bench -czf /tmp/bench-agentd.tgz .
 adb -s "$S" push /tmp/bench-agentd.tgz /data/local/tmp/bench-agentd.tgz >/dev/null

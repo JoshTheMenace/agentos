@@ -6,7 +6,7 @@
 //   node bench/climb.js --climb --rounds 2                                 # try each CANDIDATE against the best so far, keep wins
 // Rows go to results/<prefix>-<variant>.jsonl (bench.js format); compare with `node bench/bench.js --summary ...`.
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmdirSync } from 'node:fs';
+import { mkdirSync, rmSync, rmdirSync, writeFileSync } from 'node:fs';
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
 const LOCK = '/tmp/agentos-device.lock', DIR = new URL('..', import.meta.url).pathname;
@@ -37,13 +37,13 @@ const CANDIDATES = {
 
 const run = (cmd, args, env = {}) => execFileSync(cmd, args, { cwd: DIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], env: { ...process.env, ...env }, timeout: 30 * 60_000 });
 async function locked(fn) {
-  for (let i = 0; ; i++) { try { mkdirSync(LOCK); break; } catch { if (i > 300) throw new Error('device lock busy 10 min'); await sleep(2000); } }
-  try { return fn(); } finally { rmdirSync(LOCK); }
+  for (let i = 0; ; i++) { try { mkdirSync(LOCK); writeFileSync(`${LOCK}/pid`, String(process.pid)); break; } catch { if (i > 300) throw new Error('device lock busy 10 min'); await sleep(2000); } }
+  try { return fn(); } finally { rmSync(`${LOCK}/pid`, { force: true }); rmdirSync(LOCK); }
 }
 // Restart the bench agentd with this variant's env (the code is copied once, then NOCOPY restarts).
 let copied = false;
 async function up(env) {
-  await locked(() => run('sh', ['bench/up.sh'], { ...(copied && { NOCOPY: '1' }), ...env }));
+  await locked(() => run('sh', ['bench/snap.sh'], { ...(copied && { NOCOPY: '1' }), ...env }));
   copied = true;
 }
 const bench = (label, tasks) => { try { return run('node', ['bench/bench.js', '--label', label, '--runs', '1', '--tasks', tasks]); } catch (e) { return `FAIL bench.js: ${e.message.split('\n')[0]}`; } }; // bench.js locks per task

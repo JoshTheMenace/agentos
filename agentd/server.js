@@ -135,6 +135,7 @@ wss.on('connection', (ws, req) => {
     let r;
     const c = p.id === 'local' ? null : await context.block({ goal: turn.goal }); // "what's going on" (untrusted notifications etc.)
     if (c) turn.log = c.log; // the reviewer sees which message "reply back" answers
+    const prep = Date.now() - t0; // agentd time before the model sees the request (context block); the bench reads it
     try { r = await p.run(session, (c ? `${c.text}\n\n${turn.goal}` : turn.goal) + note, ctx); }
     catch (e) { r = { status: abort.signal.aborted ? 'interrupted' : 'failed', error: e.message }; }
     await endTurn(turn);
@@ -143,7 +144,7 @@ wss.on('connection', (ws, req) => {
     if (unp && r.text) r.text = memory.unpseudo(r.text);
     active = null;
     if (r.error) send({ type: 'error', code: 'turn_failed', message: r.error, retryable: true });
-    send({ type: 'turn.done', provider: p.id, status: r.status, usage: r.usage ?? null, ms: Date.now() - t0 });
+    send({ type: 'turn.done', provider: p.id, status: r.status, usage: r.usage ?? null, ms: Date.now() - t0, prep });
     return r.text || said || (r.error ? `Sorry, that failed: ${r.error}` : '');
   }
 
