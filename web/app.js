@@ -3,6 +3,20 @@
 'use strict';
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+// Re-render without replaying animations: cards that are still the same card (same classes, same shape) keep their DOM
+// and only get new text/attributes/handlers; anything else is swapped in fresh (and animates in).
+function morph(o, n) {
+  if (o.nodeName !== n.nodeName || o.childNodes.length !== n.childNodes.length || (o.nodeType === 1 && o.getAttribute('class') !== n.getAttribute('class'))) return o.replaceWith(n);
+  if (o.nodeType === 3) { if (o.data !== n.data) o.data = n.data; return; }
+  if (o.nodeType !== 1) return;
+  for (const a of n.attributes) if (o.getAttribute(a.name) !== a.value) o.setAttribute(a.name, a.value);
+  o.onclick = n.onclick; [...o.childNodes].forEach((c, i) => morph(c, n.childNodes[i]));
+}
+function swap(box, ...nodes) {
+  const old = [...box.children];
+  if (old.length === nodes.length && old.every((o, i) => o.className === nodes[i].className)) old.forEach((o, i) => morph(o, nodes[i]));
+  else box.replaceChildren(...nodes);
+}
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const N = window.Native || { // browser shims
   info: () => JSON.stringify({ pkg: 'browser', dev: true, top: 28, bottom: 0, ime: 0 }), token: () => null, launch: () => false, haptic: () => {},
@@ -182,14 +196,14 @@ on('task.list', (m) => { // running ones, plus anything that finished in the las
 function renderNow() {
   const box = $('#now'), t = S.active, h = S.home, ws_ = [...S.tasks.values()].sort((a, b) => WORKING.has(b.state) - WORKING.has(a.state) || b.created - a.created);
   const moments = S.moments.filter((x) => !ws_.some((w) => !WORKING.has(w.state) && Math.abs(w.created - x.ts) < 300000)).map(momentCard); // a done worker card already tells it
-  if (ws_.length) return box.replaceChildren(...ws_.slice(0, 3).map(workerCard), ...moments);
-  if (moments.length && !t && !S.turn) return box.replaceChildren(...moments, ...S.sched.slice(0, 2).map(schedCard));
-  if (!t && !S.turn) { if (h?.done) { const c = el('button', 'glass now done', `<div class="hd"><span class="orb done"></span><div><div class="t">${esc(short(h.goal, 40))}</div><div class="s">${esc(short(h.text || 'Done', 60))}</div></div></div>`); c.onclick = () => { hap(); open('sheet'); }; return box.replaceChildren(c); } return box.replaceChildren(...S.sched.slice(0, 2).map(schedCard)); }
+  if (ws_.length) return swap(box, ...ws_.slice(0, 3).map(workerCard), ...moments);
+  if (moments.length && !t && !S.turn) return swap(box, ...moments, ...S.sched.slice(0, 2).map(schedCard));
+  if (!t && !S.turn) { if (h?.done) { const c = el('button', 'glass now done', `<div class="hd"><span class="orb done"></span><div><div class="t">${esc(short(h.goal, 40))}</div><div class="s">${esc(short(h.text || 'Done', 60))}</div></div></div>`); c.onclick = () => { hap(); open('sheet'); }; return swap(box, c); } return swap(box, ...S.sched.slice(0, 2).map(schedCard)); }
   const goal = short(t?.goal || h?.goal || 'Thinking', 40), last = t && S.audit.filter((e) => e.task === t.task_id && !/^task\./.test(e.tool)).pop();
   const step = S.pending ? 'Waiting for you' : t?.paused ? 'Paused' : S.step || (last ? auditLine(last)[0] : 'Starting'), cls = S.pending ? 'approval' : 'working';
   const c = el('button', 'glass now ' + cls, `<div class="hd"><span class="orb ${cls}"></span><div><div class="t">${esc(goal)}</div><div class="s">${esc(step)}${t ? ' · ' + esc(t.apps.map(appName).join(', ')) : ''}</div></div>${t ? `<button class="ib" data-a="${t.paused ? 'resume' : 'pause'}"><svg width="14" height="14"><use href="#i-${t.paused ? 'play' : 'pause'}"/></svg></button>` : ''}<button class="ib red" data-a="stop"><svg width="14" height="14"><use href="#i-stop"/></svg></button></div><div class="bar2"><i></i></div>`);
   c.onclick = async (e) => { const a = e.target.closest('[data-a]')?.dataset.a; hap(); if (!a) return open('sheet'); if (a === 'stop') { send({ type: 'stop' }); S.turn = false; } if (t) await rpc('task.' + a, { task_id: t.task_id }); refresh(); };
-  box.replaceChildren(c);
+  swap(box, c);
 }
 // Suggestions: agentd's feed (context) plus one from the real next calendar event. One tap starts the task; nothing else to read.
 const SICON = { chat: '#i-msg', msg: '#i-msg', car: '#i-car', eye: '#i-eye', shield: '#i-shield', cal: '#i-cal', spark: '#i-spark' };
@@ -199,8 +213,8 @@ function renderSugg() {
   if (c && c.location && mins > 0 && mins <= 120 && !c.allDay) items.unshift({ id: 'leave', title: `Leave for ${short(c.title, 22)} soon`, detail: `${fmtT(c.begin)} · ${short(c.location, 30)}`, icon: 'car', goal: `Open directions to ${c.location} in Maps` });
   $('#forK').textContent = items.length ? 'For you' : '';
   $('.feed').classList.toggle('none', !items.length);
-  if (!items.length) return $('#sugg').replaceChildren(el('div', 'calm', `<svg width="14" height="14"><use href="#i-check"/></svg>All caught up`));
-  $('#sugg').replaceChildren(...items.slice(0, 4).map((it, i) => {
+  if (!items.length) return swap($('#sugg'), el('div', 'calm', `<svg width="14" height="14"><use href="#i-check"/></svg>All caught up`));
+  swap($('#sugg'), ...items.slice(0, 4).map((it, i) => {
     const b = el('button', 'glass sg'); b.style.animationDelay = i * .05 + 's';
     const ic = it.app && S.names[it.app] ? `<span class="appic">${ICOHTML(it.app)}</span>` : `<span class="appic" style="background:${it.icon === 'eye' || it.icon === 'shield' ? 'var(--green)' : it.icon === 'car' ? 'var(--blue)' : 'var(--purple)'}"><svg width="18" height="18"><use href="${SICON[it.icon] || '#i-spark'}"/></svg></span>`;
     b.innerHTML = `${ic}<div><div class="t">${esc(it.title)}</div><div class="s">${esc(it.detail || '')}</div></div><span class="orb working sm"></span><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg>`;
@@ -496,7 +510,7 @@ on('voice.delegation', (m) => { V.state('Working'); $('#vsteps').replaceChildren
 function renderVoiceTask() {
   if (!$('#voice').classList.contains('on')) return;
   const w = [...S.tasks.values()].filter((w) => w.id !== 'opt').sort((a, b) => WORKING.has(b.state) - WORKING.has(a.state) || b.created - a.created)[0];
-  $('#vtask').replaceChildren(...(w && Date.now() - w.created < 120000 ? [workerCard(w)] : []));
+  swap($('#vtask'), ...(w && Date.now() - w.created < 120000 ? [workerCard(w)] : []));
 }
 on('voice.result', (m) => { V.state('Speaking'); $('#va').textContent = m.text; });
 on('voice.closed', () => V.state('Ended')); on('voice.error', (m) => V.state(short(m.message, 40)));
