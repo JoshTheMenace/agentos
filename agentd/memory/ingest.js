@@ -191,7 +191,17 @@ function pigeon(db, { file } = {}) {
   return { rows, added };
 }
 
-export const INGESTORS = { samsung_health, contacts, calendar, calllog, sms, notifications, whatsapp, pigeon };
+// Smart home inventory (agentd/home.js): a JSON list the owner provided, [{name, room, type, ecosystem, watts_est, watts_basis,
+// seen_at (ms), state_seen}], one event per device. A device re-imported with new details replaces the old row.
+function home_devices(db, { file } = {}) {
+  if (!file) throw new Error('home_devices needs file=<inventory .json>');
+  const list = JSON.parse(readFileSync(file, 'utf8'));
+  let added = 0;
+  for (const d of list) if (putEvent(db, { source: 'home_devices', kind: 'device', ts: n(d.seen_at), title: d.name, body: JSON.stringify(d), ext_id: d.name })) added++;
+  return { rows: list.length, added };
+}
+
+export const INGESTORS = { samsung_health, contacts, calendar, calllog, sms, notifications, whatsapp, pigeon, home_devices };
 
 export function ingest(db, source, opts = {}) {
   if (!INGESTORS[source]) throw new Error(`no ingestor for ${source}`);

@@ -23,6 +23,7 @@ export const SOURCES = {
   chrome: 'Chrome browsing history (page titles and addresses without query strings)',
   media: 'What is playing (media sessions: track, artist, app)',
   alarms: 'The next alarm clock',
+  home_devices: 'Smart home devices you have in Google Home (name, room, type; an owner-provided list, no live state or control)',
 };
 export const SCOPES = ['cloud', 'local']; // cloud: redacted results may go to cloud models. local: only local models see it.
 const USER = 'user'; // memory_remember notes: the user said it, no grant needed

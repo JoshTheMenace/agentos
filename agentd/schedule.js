@@ -56,7 +56,7 @@ function next(at, repeat, after = null) {
 }
 
 const when = (t) => new Date(t).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-const view = (x) => ({ id: x.id, prompt: x.prompt, next: when(x.next), at: x.next, repeat: x.repeat });
+const view = (x) => ({ id: x.id, prompt: x.prompt, next: when(x.next), at: x.next, repeat: x.repeat, ...(x.parent && { daily_check: x.parent }) });
 export const list = () => items.map(view);
 
 function save() {
@@ -75,6 +75,7 @@ export function check(now = Date.now()) {
   if (!due.length) return;
   for (const x of due) {
     if (now - x.next > LATE_MS) { log(`schedule ${x.id} missed (${when(x.next)})`); audit('missed', x); }
+    else if (x.plan && planner) { log(`schedule ${x.id} re-plan: ${x.plan}`); planner(x).catch((e) => log('re-plan failed', e.message)); } // home.js: code, no model
     else { log(`schedule ${x.id} due: ${x.prompt}`); const t = io.start(x.prompt, { origin: 'schedule' }); fired.set(t.id, x); }
     if (x.repeat === 'none') items = items.filter((y) => y !== x);
     else { let n = x.next; while (n <= now) n = next(n, x.repeat, n); x.next = n; }
@@ -89,7 +90,7 @@ export async function call(name, args, turn = {}) {
     const w = String(args.which || '').toLowerCase(), words = w.split(/\W+/).filter((x) => x.length > 2);
     const x = items.find((i) => i.id === w) || items.find((i) => words.length && words.every((k) => i.prompt.toLowerCase().includes(k)));
     if (!x) return { ok: false, error: 'no such scheduled task', items: list() };
-    items = items.filter((i) => i !== x); audit('cancelled', x); save();
+    items = items.filter((i) => i !== x && i.parent !== x.id); audit('cancelled', x); save(); // a daily check takes its reminder with it
     return { ok: true, cancelled: view(x) };
   }
   // schedule_task: only the user's own, clean request. A turn that read flagged text (or a reply rule's, or a scheduled
@@ -108,6 +109,19 @@ export async function call(name, args, turn = {}) {
 }
 
 export const cancel = (id) => call('cancel_scheduled', { which: id });
+
+// Daily checks (home.js home_daily): a daily item with `plan` is re-planned by code when due (planner), and owns at most one
+// one-shot reminder (parent = its id) that rebook() replaces. Only the user's own home_daily call creates one.
+let planner = null;
+export const onPlan = (fn) => { planner = fn; };
+export function setPlan(id, plan) { const x = items.find((i) => i.id === id); if (x) { x.plan = plan; save(); } }
+export function rebook(parent, r) {
+  items = items.filter((i) => i.parent !== parent);
+  const x = r && { id: `s${Date.now().toString(36)}r`, prompt: r.prompt.slice(0, 300), repeat: 'none', next: r.at, created: Date.now(), by: 'daily-check', parent };
+  if (x) { items.push(x); items.sort((a, b) => a.next - b.next); audit('created', x); }
+  save();
+  return x && view(x);
+}
 
 // io: {start, onUpdate, rpc, onEvent, publish, flagged} from server.js.
 export function init(deps) {
