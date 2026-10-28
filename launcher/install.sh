@@ -24,6 +24,7 @@ uid=$(adb -s "$S" shell pm list packages -U $P | grep "^package:$P " | sed "s/.*
 D=/data/data/$P/files
 adb -s "$S" shell "su -c 'mkdir -p $D && cp /data/data/com.termux/files/home/.agentos/agentd.token $D/agentd.token && cp /data/data/local.agentos/files/token $D/phone.token && chown -R $uid:$uid $D && chmod 600 $D/*.token && restorecon -RD /data/data/$P'"
 adb -s "$S" shell pm grant $P android.permission.RECORD_AUDIO
+adb -s "$S" shell pm grant $P android.permission.CAMERA # voice vision (agentd VOICE_VISION=1)
 adb -s "$S" shell pm grant $P android.permission.READ_CALENDAR
 [ "${1:-}" = --set ] && adb -s "$S" shell cmd package set-home-activity $P/.Home
 adb -s "$S" shell am start -n $P/.Home

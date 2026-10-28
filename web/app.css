@@ -26,8 +26,9 @@ body{position:fixed;inset:0}
 .h-date{color:var(--l2);font-weight:600;font-size:15px;text-align:center}
 .h-time{font-size:78px;font-weight:700;letter-spacing:-.05em;line-height:1;text-align:center;margin:2px 0 8px;text-shadow:0 2px 24px rgba(0,0,0,.4);font-variant-numeric:tabular-nums}
 .h-status{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--l2);font-weight:500;font-size:14px}
-.feed{display:flex;flex-direction:column;gap:10px;margin-top:18px;flex:1;min-height:0;padding-bottom:8px;-webkit-mask:linear-gradient(#000 calc(100% - 28px),transparent)}
-.fk{padding:6px 6px 0}
+.feed{display:flex;flex-direction:column;gap:10px;margin-top:18px;flex:1;min-height:0;padding-bottom:34px;-webkit-mask:linear-gradient(#000 calc(100% - 28px),transparent)}
+.fk{padding:6px 6px 0;display:flex;align-items:center}
+.fk .more{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500;color:var(--l3)}
 #now{order:-2}
 .feed.none #wcal{order:-1}
 .fk:empty{display:none}
@@ -201,6 +202,16 @@ body{position:fixed;inset:0}
 .rowi.mod{margin-bottom:6px;padding:10px 12px}
 .bempty small{color:var(--l3);font-size:12.5px}
 
+/* remote */
+.rst{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600;letter-spacing:-.01em;padding:4px 0 2px}
+.rst .s{display:block;color:var(--l2);font-size:12px;font-weight:500;margin-top:1px}
+.code{font-size:34px;font-weight:700;letter-spacing:.12em;text-align:center;font-variant-numeric:tabular-nums;padding:10px 0 2px;color:var(--l1)}
+.url{display:block;font-size:12.5px;font-weight:500;color:var(--teal);word-break:break-all;text-align:center;padding:0 6px 6px}
+.pairbtn{height:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;color:#fff;background:var(--blue);box-shadow:0 6px 18px rgba(10,132,255,.35);transition:transform .25s var(--spring)}
+.pairbtn:active{transform:scale(.97)}
+.pairbtn.dim{background:rgba(255,255,255,.1);color:var(--l3);box-shadow:none}
+.revoke{align-self:center;color:#FF8A82;font-size:13px;font-weight:600;padding:12px 16px}
+
 /* passwords */
 .pw{display:flex;align-items:center;gap:11px;padding:11px 13px;margin-bottom:8px;animation:rise .5s var(--soft) both}
 .pw .appic{width:40px;height:40px;border-radius:11px}
@@ -222,6 +233,23 @@ body{position:fixed;inset:0}
 .app .ico{width:56px;height:56px;border-radius:14px}
 .app span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .app:active .ico{transform:scale(.9)}
+
+/* my apps: micro-apps the agent built (agentd apps.js), each a small widget card: emoji, name, the live one-line summary the app leaves. Tap opens it full screen (MicroApp); hold shows Remove. */
+#myapps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#myapps:empty{display:none}
+.ma{display:flex;align-items:center;gap:10px;padding:11px 12px;text-align:left;min-width:0;width:100%;animation:rise .6s var(--soft) both;transition:transform .25s var(--spring)}
+.ma:active{transform:scale(.97)}
+.ma .emo{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:21px;line-height:1;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.ma>div{min-width:0;flex:1}
+.ma .t{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ma .s{color:var(--l2);font-size:11.5px;font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ma .s.live{color:var(--teal)}
+.ma .rm:not([hidden]){position:absolute;inset:0;border-radius:inherit;background:rgba(255,69,58,.88);color:#fff;font-size:13px;font-weight:600;display:grid;place-items:center;animation:pop .3s var(--spring) both}
+.ma.new{box-shadow:0 0 0 1px rgba(48,209,88,.5),0 0 24px rgba(48,209,88,.25)}
+.grid.mine{flex:none;padding-bottom:0;margin-bottom:6px}
+.grid.mine:empty{display:none}
+#drawerScroll{display:block;padding:0}
+.app .ico .emo{font-size:28px;line-height:1}
 
 /* ask sheet */
 .scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .45s var(--ease)}
@@ -297,3 +325,5 @@ body{position:fixed;inset:0}
 .kbtn{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;color:var(--l1);transition:transform .25s var(--spring)}
 .kbtn:active{transform:scale(.9)}
 .kbtn.red{color:var(--red)}
+.kbtn.on{background:var(--l1);color:#000}
+.vcam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5;z-index:-1;pointer-events:none} /* voice vision: what the camera sees, behind the glass */

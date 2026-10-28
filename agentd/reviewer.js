@@ -72,7 +72,7 @@ export async function onApproval(codex, a, { turn, flagged }, emit) {
   const ordinary = !!a.allowed_channels?.includes('reviewer'), fpOnly = !a.allowed_channels?.includes('tap');
   const v = await grade(codex, { user: turn ? turn.asks || [turn.goal] : [], transcript: turn?.log || [],
     action: { tool: a.tool, app: a.pkg, args: { target: a.target, text: a.text || undefined } }, floor: ordinary ? 'auto' : fpOnly ? 'fingerprint' : 'tap' });
-  const held = fpOnly ? 'fingerprint-only approval' : !ordinary ? `needs a person: ${a.held_because || 'broker'}` : flagged ? 'guard flag in this task' : a.fingerprint_because ? `broker: ${a.fingerprint_because}` : v.tainted ? 'tainted content' : null;
+  const held = fpOnly ? 'fingerprint-only approval' : !ordinary ? `needs a person: ${a.held_because || 'broker'}` : turn?.remote ? `request from ${turn.remote}, not the owner` : flagged ? 'guard flag in this task' : a.fingerprint_because ? `broker: ${a.fingerprint_because}` : v.tainted ? 'tainted content' : null;
   let action = v.decision === 'auto' && held ? `left to the user (${held})` : 'left to the user';
   const call = async (method, params, did) => ((await rpc(method, { approval_id: a.approval_id, channel: 'reviewer', ...params }, 10_000)
     .catch((e) => ({ ok: false, reason: e.message }))).ok === false ? `${method} refused` : did);

@@ -21,7 +21,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const N = window.Native || { // browser shims
   info: () => JSON.stringify({ pkg: 'browser', dev: true, top: 28, bottom: 0, ime: 0 }), token: () => null, launch: () => false, haptic: () => {},
   settings: () => {}, shade: () => {}, calendarNext: () => null, get: (id) => setTimeout(() => app.rpcDone(id, { ok: false, error: 'browser' })),
-  phone: (id) => setTimeout(() => app.rpcDone(id, { ok: false, error: 'browser' })), vaultAdd: () => {},
+  phone: (id) => setTimeout(() => app.rpcDone(id, { ok: false, error: 'browser' })), vaultAdd: () => {}, openApp: () => {}, appSummaries: () => '{}',
   apps: () => JSON.stringify([['local.agentos.pigeon', 'Pigeon'], ['local.agentos.beacon', 'Beacon'], ['com.android.chrome', 'Chrome'], ['com.android.camera2', 'Camera'], ['com.google.android.calendar', 'Calendar']].map(([pkg, label]) => ({ pkg, label }))),
 };
 const app = window.app = {};
@@ -66,7 +66,7 @@ on('rpc.result', (m) => app.rpcDone(m.id, m.result));
 const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [], sugg: [], step: null, home: null, trackers: null, tasks: new Map(), mods: null, vault: null, sched: [] }; // tasks = agentd background workers (task.update) // active = latest task.state; home = a turn started from a home suggestion
 const appName = (pkg) => S.names[pkg] || (pkg || '').split('.').pop().replace(/^\w/, (c) => c.toUpperCase());
 const fmtT = (ts, sec) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}) }).replace(/\s?[AP]M/i, '');
-const TOOLN = { act: 'Acting', open_app: 'Opening an app', tap: 'Tapping', type: 'Typing', swipe: 'Scrolling', back: 'Going back', screen: 'Reading the screen', wait: 'Waiting', 'notifications.reply': 'Replying', 'notifications.list': 'Reading notifications', notifications_reply: 'Replying', schedule_task: 'Scheduling', list_scheduled: 'Checking the schedule', cancel_scheduled: 'Cancelling a schedule', 'vault.fill': 'Signing in', vault_fill: 'Signing in', 'trackers.block': 'Blocking trackers', 'trackers.list': 'Scanning for trackers', 'firewall.set': 'Setting the firewall', 'app.mod.add': 'Adding a button', memory_search: 'Remembering', memory_recall: 'Remembering', 'task.start': 'Starting', phone_unlock: 'Unlocking', 'phone.unlock': 'Unlocking' };
+const TOOLN = { act: 'Acting', open_app: 'Opening an app', tap: 'Tapping', type: 'Typing', swipe: 'Scrolling', back: 'Going back', screen: 'Reading the screen', wait: 'Waiting', 'notifications.reply': 'Replying', 'notifications.list': 'Reading notifications', notifications_reply: 'Replying', schedule_task: 'Scheduling', list_scheduled: 'Checking the schedule', cancel_scheduled: 'Cancelling a schedule', 'vault.fill': 'Signing in', vault_fill: 'Signing in', 'trackers.block': 'Blocking trackers', 'trackers.list': 'Scanning for trackers', 'firewall.set': 'Setting the firewall', 'app.mod.add': 'Adding a button', memory_search: 'Remembering', memory_recall: 'Remembering', 'task.start': 'Starting', phone_unlock: 'Unlocking', 'phone.unlock': 'Unlocking', build_app: 'Designing your app', list_my_apps: 'Checking your apps', remove_app: 'Removing an app' };
 const toolName = (n) => TOOLN[n] || String(n || '').replace(/[._]/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 const stepText = (s) => TOOLN[s] || s;
 const ago = (ms) => { const s = Math.max(0, Math.round((Date.now() - ms) / 1000)); return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`; };
@@ -117,6 +117,8 @@ const auditLine = (e) => { // one human line per audit entry: what happened, in 
     case 'app.mod.press': return [`You used "${e.id || 'a mod'}"${inApp}`, ''];
     case 'app.mod.remove': return ['Removed a mod', ''];
     case 'audit.break': return ['Audit chain break marked', 'c'];
+    case 'screen.capture': return [bad ? `Didn't look at ${app_ || 'the screen'} · ${short(e.reason, 34)}` : `Looked at your screen${inApp}${/blacked/.test(e.reason || '') ? ' · private parts hidden' : ''}`, bad ? 'c' : 'a'];
+    case 'remote.read': return [`${e.from || 'A remote assistant'} ${e.target === 'memory_lookup' ? 'searched your memory' : 'read your latest messages'}`, 'b'];
     default: { // direct Android API tools (contacts.find, sms.send, calendar.add …): "<verb> <what> · <where>"
       const m = /^(contacts|sms|calls|call|calendar|clock|maps|alarm|device|media)\.(\w+)$/.exec(e.tool);
       if (m) {
@@ -266,6 +268,32 @@ function renderGrid(q) {
   }));
 }
 $('#q').oninput = (e) => renderGrid(e.target.value);
+// ---------- my apps: micro-apps the agent built (agentd apps.js, GET /apps). Widget cards on Home + a row in the drawer; open = MicroApp
+// (own sandboxed WebView, no network). The summary line is what the app last wrote with AOS.summary ("3 workouts this week").
+S.myapps = []; S.summ = {}; S.fresh = null;
+async function loadMyApps() {
+  const r = await nget('/apps'); if (r?.apps) S.myapps = r.apps;
+  try { S.summ = JSON.parse(N.appSummaries() || '{}'); } catch {}
+  renderMyApps();
+}
+function appCard(a) {
+  const live = S.summ[a.id], b = el('button', 'glass ma' + (a.id === S.fresh ? ' new' : ''), `<span class="emo">${esc(a.icon || '✨')}</span><div><div class="t">${esc(a.name)}</div><div class="s${live ? ' live' : ''}">${esc(live || a.description || '')}</div></div><span class="rm" hidden>Remove</span>`);
+  b.dataset.id = a.id; return b;
+}
+function renderMyApps() {
+  const n = S.myapps.length; // Home shows the 4 most recent (two rows fit above the chips; a swipe up here opens the drawer, which has them all)
+  $('#myK').innerHTML = n ? `My apps${n > 4 ? `<span class="more">${n - 4} more in the drawer</span>` : ''}` : '';
+  swap($('#myapps'), ...S.myapps.slice(0, 4).map(appCard));
+  $('#mygrid').replaceChildren(...S.myapps.map((a) => { const b = el('button', 'app'); b.innerHTML = `<i class="ico"><span class="emo">${esc(a.icon || '✨')}</span></i><span>${esc(a.name)}</span>`; b.onclick = () => { hap(); N.openApp(a.id); setTimeout(() => close('drawer'), 250); }; return b; }));
+}
+{ const box = $('#myapps'); let hold = null; // tap opens; hold 600 ms arms Remove (3 s), a tap on it removes (owner only, agentd apps.remove)
+  box.onpointerdown = (e) => { const c = e.target.closest('.ma'); if (!c) return; hold = setTimeout(() => { hold = null; hap('heavy'); const rm = $('.rm', c); rm.hidden = false; setTimeout(() => (rm.hidden = true), 3000); }, 600); };
+  box.onpointerup = box.onpointercancel = box.onpointerleave = () => { clearTimeout(hold); hold = null; };
+  box.onclick = (e) => { const c = e.target.closest('.ma'); if (!c) return; const rm = $('.rm', c);
+    if (!rm.hidden) { hap(); c.style.opacity = .4; send({ type: 'apps.remove', id: c.dataset.id }); return; }
+    hap(); N.openApp(c.dataset.id); }; }
+on('apps.changed', (m) => { if (m.why === 'built') { S.fresh = m.id; hap('heavy'); setTimeout(() => { S.fresh = null; renderMyApps(); }, 20000); } loadMyApps(); });
+on('tool.progress', (m) => { S.step = m.text; const s = steps[m.name]; if (s) $('span:last-child', s).textContent = `${toolName(m.name)} · ${m.text}`; renderNow(); }); // build_app: Designing / Building · 4 KB / Installing
 
 // ---------- pager + gestures ----------
 const pager = $('#pager'); let page = 0, W = innerWidth;
@@ -295,7 +323,7 @@ function open(id) { const o = $('#' + id); if (o.classList.contains('on')) retur
 function close(id) { const o = $('#' + id); o.classList.remove('on'); const i = stack.indexOf(id); if (i >= 0) stack.splice(i, 1); if (id === 'sheet') { $('#scrim').classList.remove('on'); $('#askIn').blur(); } if (id === 'voice') voiceStop(); }
 app.back = () => { if (stack.length) close(stack[stack.length - 1]); else if (page) go(0); };
 app.home = () => { [...stack].forEach(close); go(0); };
-app.resume = () => { W = innerWidth; if (wsOk) { refresh(); send({ type: 'task.list' }); } if (page === 2) loadMemory(); if ($('#vault').classList.contains('on')) loadVault(); };
+app.resume = () => { W = innerWidth; if (wsOk) { refresh(); send({ type: 'task.list' }); loadMyApps(); } if (page === 2) loadMemory(); if ($('#vault').classList.contains('on')) loadVault(); };
 $('#scrim').onclick = () => close('sheet');
 $('#permsBack').onclick = () => close('perms');
 $('#drawer .grab').onclick = () => close('drawer');
@@ -305,6 +333,8 @@ $('#toMods').onclick = () => { hap(); openMods(); };
 $('#modsBack').onclick = () => close('mods');
 $('#toPlugins').onclick = () => { hap(); open('plugins'); renderPlugins(); send({ type: 'plugins.list' }); };
 $('#pluginsBack').onclick = () => close('plugins');
+$('#toRemote').onclick = () => { hap(); open('remote'); renderRemote(); send({ type: 'remote', action: 'status' }); };
+$('#remoteBack').onclick = () => close('remote');
 $('#toVault').onclick = () => { hap(); openVault(); };
 $('#vaultBack').onclick = () => close('vault');
 $('#vaultAdd').onclick = () => { hap('heavy'); N.vaultAdd(''); };
@@ -460,6 +490,32 @@ function renderPlugins() {
 }
 on('plugins.list', (m) => { S.plugins = m.plugins; renderPlugins(); });
 on('plugins.changed', () => send({ type: 'plugins.list' }));
+// ---------- remote: outside assistants (Grok, Dots) over agentd's remote MCP (agentd/mcp-remote.js) ----------
+// Everything goes over the websocket as {type:'remote', action}; agentd takes changes from this app's uid only. The phone dials
+// out to a relay, so "Relay connected" means Grok can reach it; "Phone offline" means the line is down and callers get 503.
+const remoteAct = (action, extra = {}) => { hap(); send({ type: 'remote', action, ...extra }); };
+function renderRemote() {
+  const box = $('#rlist'), r = S.remote, n = r?.paired?.length || 0;
+  const state = !r ? '' : !r.on ? 'Off' : !r.enabled ? 'Paused' : r.relay === 'connected' ? 'Relay connected' : 'Phone offline';
+  $('#remoteNote2').textContent = $('#remoteNote').textContent = !r ? '' : state === 'Relay connected' ? (n ? `${n} paired` : 'Ready') : state;
+  if (!r) return box.replaceChildren(el('div', 'empty', 'Offline'));
+  const orb = state === 'Relay connected' ? 'done' : state === 'Phone offline' ? 'approval' : 'alert';
+  const st = el('div', 'mod', `<div class="k">Status</div><div class="rst"><span class="orb ${orb}"></span><div>${state}<span class="s">${esc(!r.on ? 'One step: put REMOTE_MCP=1 in ~/.agentos/agentd.env on the phone and restart agentd' : !r.enabled ? 'Every remote request is refused until you turn it back on' : state === 'Phone offline' ? 'Reconnecting to the relay · assistants get "try again"' : 'Assistants can ask; only you can approve, here on the phone')}</span></div></div>`);
+  const sw = (label, sub, on, action) => { const row = el('div', 'rowi', `<div>${label}<span class="s">${sub}</span></div><div class="r"><button class="toggle${on ? ' on' : ''}" aria-label="${on ? 'On' : 'Off'}"></button></div>`); $('button', row).onclick = () => { $('button', row).classList.toggle('on'); remoteAct(action, { on: !on }); }; return row; };
+  st.append(sw('Allow remote assistants', 'Kill switch · off stops their running tasks too', r.enabled, 'enable'), sw('Let them read', 'Latest messages and memory search, codes masked', r.reads, 'reads'));
+  const paired = el('div', 'mod', `<div class="k">Paired assistants<span>${n || 'none yet'}</span></div>`);
+  paired.append(...r.paired.map((p) => { const row = el('div', 'rowi', `<span class="appic" style="background:var(--${p.from === 'Grok' ? 'purple' : p.from === 'Dots' ? 'green' : 'blue'})">${esc(p.from[0])}</span><div>${esc(p.from)}<span class="s">${esc(p.client || '')} · ${p.used ? 'used ' + ago(p.used).replace(/ \d+s$/, '') + ' ago' : 'never used'}</span></div><div class="r"><button class="tag">Unpair</button></div>`);
+    const b = $('button', row); b.onclick = () => { if (b.textContent !== 'Sure?') { hap(); b.textContent = 'Sure?'; b.classList.add('c'); setTimeout(() => { b.textContent = 'Unpair'; b.classList.remove('c'); }, 3000); return; } row.style.opacity = .4; remoteAct('unpair', { grant: p.grant }); }; return row; }));
+  if (!n) paired.append(el('div', 'provnote', 'Pair one below, then ask it to "use AgentOS"'));
+  const pair = el('div', 'mod', '<div class="k">Pair an assistant</div>');
+  if (S.pairCode && S.pairCode.exp > Date.now()) { const left = Math.round((S.pairCode.exp - Date.now()) / 1000);
+    pair.append(el('div', 'code', esc(S.pairCode.code)), el('div', 'provnote', `One-time code · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left`), el('span', 'url', esc(r.url || 'Set REMOTE_PUBLIC_URL on the phone for the address')), el('div', 'provnote', 'In Grok: Connectors › New › Custom, paste the address, then type the code on the sign-in page'));
+  } else { const b = el('button', 'pairbtn' + (r.on ? '' : ' dim'), '<svg width="16" height="16"><use href="#i-plus"/></svg>Pair an assistant'); b.onclick = () => remoteAct('pair'); pair.append(b, el('div', 'provnote', r.url ? `Address: ${r.url}` : 'Shows a one-time code (10 minutes) and the address to paste in Grok or ChatGPT')); }
+  box.replaceChildren(st, paired, pair);
+  if (n) { const rv = el('button', 'revoke', 'Revoke all · everyone must pair again'); rv.onclick = () => { if (rv.textContent !== 'Sure? Tap again') { hap(); rv.textContent = 'Sure? Tap again'; setTimeout(() => (rv.textContent = 'Revoke all · everyone must pair again'), 3000); return; } remoteAct('revoke'); }; box.append(rv); }
+}
+on('remote', (m) => { if (m.ok === false) { hap('heavy'); return; } if (m.action === 'pair') { S.pairCode = { code: m.code, exp: Date.now() + (m.expires_in || 600) * 1000 }; send({ type: 'remote', action: 'status' }); } else S.remote = m; renderRemote(); });
+setInterval(() => { if ($('#remote').classList.contains('on') && S.pairCode) renderRemote(); }, 1000);
 on('tracker.blocked', (m) => { S.audit = [...S.audit.slice(-199), { ...m, tool: 'tracker.blocked', ts: m.ts || Date.now() }]; renderCenter(); if ($('#blockers').classList.contains('on')) openBlockers(); });
 
 // ---------- ask sheet ----------
@@ -507,10 +563,10 @@ on('approval.resolved', (m) => {
 on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" height="14"><use href="#i-shield"/></svg><span>Suspicious message in ${esc(appName(m.source_pkg))}</span>`)); scrollDown(); });
 on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; } body.append(el('div', 'msg err', esc(m.message))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
 on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
-on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
+on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- voice (WebRTC per agentd/voice.html; hold the orb to talk) ----------
-let pc, mic, micTrack;
+let pc, mic, micTrack, cam;
 const V = { state: (s) => ($('#vstate').textContent = s) };
 async function voiceStart() {
   open('voice'); $('#voice').classList.remove('live'); $('#vu').textContent = $('#va').textContent = ''; $('#vsteps').replaceChildren(); $('#vtask').replaceChildren(); V.state('Connecting');
@@ -527,8 +583,8 @@ async function voiceStart() {
     send({ type: 'voice.start', sdp: pc.localDescription.sdp });
   } catch (e) { V.state('Mic unavailable'); }
 }
-function voiceStop() { send({ type: 'voice.stop' }); pc?.close(); pc = null; mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; $('#wave').classList.remove('on'); }
-on('voice.answer', async (m) => { if (pc) await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); });
+function voiceStop() { if (cam) camOff(); send({ type: 'voice.stop' }); pc?.close(); pc = null; mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; $('#wave').classList.remove('on'); }
+on('voice.answer', async (m) => { $('#vcamBtn').hidden = !m.vision; if (pc) await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); });
 on('voice.started', () => V.state('Hold to talk'));
 on('voice.transcript', (m) => { $('#voice').classList.add('live'); const p = $(m.role === 'user' ? '#vu' : '#va'); p.innerHTML = esc(m.text) + (m.final ? '' : '<span class="cur"></span>'); if (m.role !== 'user') V.state('Speaking'); });
 on('voice.delegation', (m) => { V.state('Working'); $('#vsteps').replaceChildren(); renderVoiceTask(); });
@@ -538,13 +594,31 @@ function renderVoiceTask() {
   swap($('#vtask'), ...(w && Date.now() - w.created < 120000 ? [workerCard(w)] : []));
 }
 on('voice.result', (m) => { V.state('Speaking'); $('#va').textContent = m.text; });
+on('voice.seen', (m) => { if (m.text && $('#voice').classList.contains('on')) $('#vsteps').append(el('li', '', `<span class="orb done sm"></span>${m.source === 'screen' ? 'Looked at your screen' : 'Looked'}`)); });
 on('voice.closed', () => V.state('Ended')); on('voice.error', (m) => V.state(short(m.message, 40)));
 on('tool.request', (m) => { if ($('#voice').classList.contains('on')) { $('#vsteps').append(el('li', '', `<span class="orb working sm"></span>${esc(toolName(m.name))}`)); } });
 on('tool.result', (m) => { const li = $('#vsteps li:last-child'); if (li) $('.orb', li).className = 'orb sm ' + (/denied|blocked/.test(m.decision || '') ? 'alert' : 'done'); });
 const sorb = $('#sorbBtn');
-sorb.onpointerdown = (e) => { e.preventDefault(); if (!micTrack) return; $('#voice').classList.add('live'); sorb.setPointerCapture(e.pointerId); micTrack.enabled = true; sorb.classList.add('hot'); $('#wave').classList.add('on'); V.state('Listening'); hap('tick'); };
+sorb.onpointerdown = (e) => { e.preventDefault(); if (!micTrack) return; snap(); $('#voice').classList.add('live'); sorb.setPointerCapture(e.pointerId); micTrack.enabled = true; sorb.classList.add('hot'); $('#wave').classList.add('on'); V.state('Listening'); hap('tick'); };
 sorb.onpointerup = sorb.onpointercancel = () => { if (!micTrack) return; micTrack.enabled = false; sorb.classList.remove('hot'); $('#wave').classList.remove('on'); V.state('Thinking'); };
 $('#vend').onclick = () => { hap(); close('voice'); };
+// Voice vision (agentd VOICE_VISION=1, agentd/research/LIVE-VISION.md): the camera shows behind the sheet; each orb press sends
+// agentd one 768 px JPEG of what it sees (never a stream). agentd's vision model describes it and the voice answers.
+$('#vcamBtn').onclick = async () => {
+  hap(); if (cam) return camOff();
+  try {
+    cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
+    const v = $('#vcam'); v.srcObject = cam; v.hidden = false; await v.play();
+    $('#vcamBtn').classList.add('on'); send({ type: 'voice.camera', on: true });
+  } catch (e) { cam = null; V.state('Camera unavailable'); }
+};
+function camOff() { cam.getTracks().forEach((k) => k.stop()); cam = null; $('#vcam').hidden = true; $('#vcamBtn').classList.remove('on'); send({ type: 'voice.camera', on: false }); }
+function snap() {
+  const v = $('#vcam'); if (!cam || !v.videoWidth) return;
+  const k = Math.min(1, 768 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement('canvas');
+  c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k); c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  send({ type: 'voice.frame', image: c.toDataURL('image/jpeg', 0.7) });
+}
 $('#vkbd').onclick = () => { hap(); close('voice'); open('sheet'); setTimeout(() => $('#askIn').focus(), 350); };
 (() => { const w = $('#wave'); for (let i = 0; i < 24; i++) { const b = el('i'); b.style.setProperty('--h', (0.3 + Math.abs(Math.sin(i * .7)) * .7).toFixed(2)); b.style.animationDelay = (i * .06) + 's'; b.style.animationDuration = (.9 + Math.random() * .6) + 's'; w.append(b); } })();
 

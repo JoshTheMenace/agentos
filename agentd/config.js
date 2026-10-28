@@ -28,6 +28,8 @@ export const cfg = {
   suggestModel: env.SUGGEST_MODEL || 'gpt-6-luna', // keyboard suggestions: small and fast, no tools
   suggestEffort: env.SUGGEST_EFFORT || 'low',
   suggestProvider: env.SUGGEST_PROVIDER || 'codex', // 'local' = llama-server for mode "reply" (fix/rewrite stay on Codex)
+  appsModel: env.APPS_MODEL || env.CODEX_MODEL || 'gpt-6.1-terra', // micro-app generator (apps.js): the fast model writes one HTML file
+  appsEffort: env.APPS_EFFORT || 'low',
   reviewModel: env.REVIEW_MODEL || 'codex-auto-review', // approval reviewer (what Codex's own Auto-review uses)
   reviewMs: Number(env.REVIEW_MS || 4000),             // slower than this -> the human decides
   codexCwd: env.CODEX_CWD || join(STATE, 'codex-cwd'),
@@ -37,6 +39,8 @@ export const cfg = {
   claudeEffort: env.CLAUDE_EFFORT || 'medium',
   localUrl: env.LOCAL_URL || 'http://127.0.0.1:8081', // llama-server (deploy/local-model)
   debug: !!env.AGENTD_DEBUG,
+  voiceVision: (env.VOICE_VISION ?? (existsSync(join(STATE, 'vision.on')) ? '1' : '0')) === '1', // camera + "look at my screen" for the voice (research/LIVE-VISION.md); off by default
+  visionModel: env.VISION_MODEL || 'gpt-6-luna', // the voice's eyes: answers from a camera frame or screenshot (~1.3 s warm)
   clientPkgs: (env.AGENTD_CLIENT_PKGS ?? 'local.agentos,local.agentos.keys,local.agentos.home').split(',').filter(Boolean), // apps that get the WS token
 
 };

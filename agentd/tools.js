@@ -7,6 +7,7 @@ import { state as events } from './events.js';
 import * as context from './context.js';
 import * as schedule from './schedule.js';
 import * as plugins from './plugins.js';
+import * as microapps from './apps.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -143,9 +144,10 @@ export const TOOLS = {
 for (const m of memory.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, memory: true };
 for (const m of context.ruleTools()) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true }; // reply rules
 for (const m of schedule.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, sched: true }; // schedule.js
+for (const m of microapps.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, apps: true }; // apps.js (micro-apps)
 
 // Memory results: any text from other people (trusted:false) goes through the guard like screen text.
-async function guardMemory(x, ctx) {
+export async function guardMemory(x, ctx) {
   if (Array.isArray(x)) { for (const v of x) await guardMemory(v, ctx); return x; }
   if (!x || typeof x !== 'object') return x;
   if (x.trusted === false && typeof x.text === 'string') {
@@ -258,7 +260,7 @@ export async function runTool(name, args, ctx) {
     return { success: true, text: JSON.stringify(r) };
   }
   if (t.local) {
-    const r = await (t.sched ? schedule.call(name, args, turn) : context.call(name, args));
+    const r = await (t.apps ? microapps.call(name, args, ctx) : t.sched ? schedule.call(name, args, turn) : context.call(name, args));
     ctx.emit({ type: 'tool.result', name, ok: r.ok !== false, reason: r.error, ms: Date.now() - t0 });
     return { success: r.ok !== false, text: JSON.stringify(r) };
   }

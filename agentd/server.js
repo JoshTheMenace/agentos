@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { agentdToken, cfg, log, provisionClients } from './config.js';
 import { classify } from './guard.js';
-import { endTurn, rpc, tasks } from './tools.js';
+import { endTurn, guardMemory, rpc, tasks } from './tools.js';
 import * as plugins from './plugins.js';
 import * as memory from './memory/index.js';
 import * as connectors from './memory/connectors/index.js';
@@ -16,7 +16,9 @@ import * as reviewer from './reviewer.js';
 import * as context from './context.js';
 import * as taskman from './tasks.js';
 import * as schedule from './schedule.js';
+import * as apps from './apps.js';
 import { Voice } from './voice.js';
+import * as remote from './mcp-remote.js';
 import * as homeSuggest from './home-suggest.js'; // TODO(context): context.js replaces this stand-in
 import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
@@ -32,12 +34,14 @@ taskman.init(codex); // background workers for voice (and typed task.start); see
 events.watch(); // broker approvals/guard/task events -> every connected UI
 events.onEvent((e) => e.type === 'plugins.changed' && plugins.invalidate()); // the owner flipped a plugin: re-read it now
 schedule.init({ start: taskman.start, onUpdate: taskman.onUpdate, rpc, onEvent: events.onEvent, publish: events.publish, flagged: events.flagged }); // scheduled tasks
+apps.init(codex, { publish: events.publish }); // micro-apps (apps.js): build_app writes ~/.agentos/apps, served below at GET /apps
 context.start(providers[cfg.provider], codex); // notification feed -> context block, memory, reply rules
 const memsync = connectors.start({ log }); // memory connectors: default grants, then whatever is due once a minute (see memory/SOURCES.md)
 if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approval card; see reviewer.js for what it may do
   const turn = tasks.get(a.task_id);
   reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size }, events.publish);
 });
+if (process.env.REMOTE_MCP === '1') remote.start({ taskman, context, memory, guard: guardMemory, publish: events.publish, rpc }); // Grok / Dots over MCP (mcp-remote.js)
 if (cfg.reviewModel !== 'off') reviewer.grade(codex, { user: ['warm-up'], transcript: [], action: { tool: 'scroll' } }, 60_000); // first real review is warm (<4 s)
 // UI passthrough to the tool server, so the launcher needs no :7777 token. Read/UI methods only; approvals are never here
 // (firewall.set is allowed because the broker still puts up its fingerprint card for it).
@@ -74,6 +78,13 @@ const http = createServer((req, res) => {
   if (req.url.split('?')[0] === '/memory/graph.json') { // same bearer token as the WebSocket
     if (!authorized(req)) return res.writeHead(401).end();
     return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(memory.graph()));
+  }
+  if (req.url.startsWith('/apps')) { // the launcher's micro-apps: the list, and each app's file (loaded into its own sandboxed WebView)
+    if (!authorized(req)) return res.writeHead(401).end();
+    const m = req.url.match(/^\/apps\/([a-z0-9-]{1,32})\/index\.html$/);
+    if (m) { try { return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(apps.html(m[1])); } catch { return res.writeHead(404).end(); } }
+    if (req.url === '/apps') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ apps: apps.list().map(({ id, name, icon, description, updated }) => ({ id, name, icon, description, updated })) }));
+    return res.writeHead(404).end();
   }
   if (req.url.split(/[?#]/)[0] === '/voice') return res.writeHead(200, { 'content-type': 'text/html' }).end(readFileSync(VOICE_PAGE)); // no secrets in it
   res.writeHead(req.url === '/health' ? 200 : 404).end(req.url === '/health' ? 'ok\n' : '');
@@ -153,7 +164,7 @@ wss.on('connection', (ws, req) => {
         const result = await rpc(msg.method, msg.params && typeof msg.params === 'object' ? msg.params : {}, ms).catch((e) => ({ ok: false, error: e.message }));
         return send({ type: 'rpc.result', id: msg.id, method: msg.method, result });
       }
-      case 'voice.start': case 'voice.stop': case 'voice.say': case 'voice.delegate': case 'voice.text': return voice.handle(msg);
+      case 'voice.start': case 'voice.stop': case 'voice.say': case 'voice.delegate': case 'voice.text': case 'voice.camera': case 'voice.frame': return voice.handle(msg);
       case 'task.start': return taskman.start(String(msg.goal || ''), { origin: 'typed' }); // background task; progress comes as task.update
       case 'task.list': return send({ type: 'task.list', tasks: taskman.list() });
       case 'task.cancel': return taskman.stop(String(msg.id || ''));
@@ -174,6 +185,15 @@ wss.on('connection', (ws, req) => {
         plugins.invalidate();
         const off = await plugins.disabled(rpc);
         return send({ type: 'plugins.list', mode: cfg.tools, core: plugins.CORE, plugins: plugins.PLUGINS.map((x) => ({ id: x.id, name: x.name, summary: x.summary, tools: x.tools, on: !off.has(x.id) })) });
+      }
+      case 'remote': { // {action: status|pair|key|enable|reads|unpair|revoke, ...}: the launcher's Remote screen. Owner only: a pairing
+        // code or key lets an outside assistant send tasks (it still can't approve anything), so the token alone isn't enough.
+        if (msg.action !== 'status' && !(owner ??= fromOwner(req.socket))) return send({ type: 'remote', ok: false, error: 'only the owner (launcher) can change remote access' });
+        return send({ type: 'remote', action: msg.action, ...remote.owner(String(msg.action || 'status'), msg) });
+      }
+      case 'apps.remove': { // the owner's long-press on a home-screen app (launcher only); a model removes apps through remove_app
+        if (!(owner ??= fromOwner(req.socket))) return send({ type: 'error', code: 'owner', message: 'only the launcher can remove apps' });
+        return apps.call('remove_app', { app: String(msg.id || '') }, { emit() {} });
       }
       case 'memory.sync': return send({ type: 'memory.sync', results: memsync.now(msg.source && String(msg.source)) }); // on-demand connector run (UI "Sync now")
       default:

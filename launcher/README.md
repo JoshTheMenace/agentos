@@ -54,6 +54,13 @@ same at start (`local.agentos.home` is in the default `AGENTD_CLIENT_PKGS`). The
 - **Ask sheet**: typing dots while thinking, 17 px answers, "Done · 6s". **Voice**: "Try saying" examples until the first transcript; the live task card sits above the orb.
 - Shots: `shots/climb-a/` (before/after pairs; `.tools/task.mjs` starts a task from the Mac over `adb forward tcp:18787 tcp:8787`).
 
+## Micro-apps (`MicroApp.java`, `web/apps/`, agentd `apps.js`)
+"I want to track my workouts" → the agent's `build_app` writes one HTML file → it appears under **My apps** on Home (2-column widget cards: emoji, name, the live one-line summary the app left, e.g. "0 of 8 glasses today"; tap opens, hold 600 ms shows Remove = `apps.remove` over the WebSocket, owner only) and as a row in the drawer. The task card streams "Designing → Building · 4 KB → Installing".
+- **Sandbox:** each app opens full screen in `MicroApp` (own task, so it sits in recents like a real app) in a separate WebView with its own origin `https://<id>.agentos.app`, a CSP of `default-src 'none'` (inline script/style, `/ui.css`, `/ui.js`, the font; `connect-src 'none'`), `setBlockNetworkLoads`, no file/content access, alert/confirm swallowed, no `Native` bridge. Its only bridge is `AgentOSApp.summary(text)` (the home widget line, `microapps` prefs), `haptic(kind)`, `close()`. Storage = the origin's own localStorage. Probed on the phone (`shots/apps-*`): fetch/WebSocket/img to example.com, agentd :8787 and the broker :7777 all blocked by CSP, `window.Native` undefined.
+- The file comes from agentd `GET /apps/<id>/index.html` (bearer) and is cached in `files/apps/`, so apps still open when agentd is down. `web/apps/ui.css` + `ui.js` are the runtime every generated app links (A2 tokens, cards, buttons, lists, `AOS.bars` chart, `AOS.ring`, `AOS.load/save`, `AOS.summary`, `AOS.toast`).
+- Shots: `shots/apps-building.png` (task card mid-build), `apps-home.png` (My apps with 5 apps), `apps-workout.png`, `apps-water-tracker.png`, `apps-dice-roller.png`, `apps-habit-streaks.png`, `apps-plant-care.png`.
+- The Plugins toggle "Apps" needs the broker to know the id (`android Plugins.java` IDS has it in source; rebuild + install local.agentos for the switch to take; until then the plugin is simply on).
+
 ## Notes
 - 3-button navigation. Edge to edge; the shell passes status/nav/IME insets to CSS variables.
 - Only `transform`/`opacity` animate; no blur, no libraries. Inter is bundled (`web/fonts`, 350 KB).

@@ -22,7 +22,7 @@ const SUGGEST_SCHEMA = { type: 'object', properties: { items: { type: 'array', i
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Finishing tools (cfg.codexFinish): the model may pass its final reply as `done`. If the call succeeds (so the broker
 // allowed it), agentd shows that reply and ends the turn: the "tell the user it's done" model call (~2.5 s) is skipped.
-const FINISH = new Set(['set_alarm', 'set_timer', 'web_search', 'notifications_reply', 'act']);
+const FINISH = new Set(['set_alarm', 'set_timer', 'web_search', 'notifications_reply', 'act', 'build_app']);
 const DONE = { type: 'string', description: 'Only if this call completes the whole request and nothing is left to read or report: your final short reply to the user, e.g. "Alarm set for 7:00 AM." It is shown only if the call succeeds, and your turn ends there.' };
 const DONE_HINT = '- Finish in the same call: when an action call completes the request (set_alarm, set_timer, web_search, notifications_reply, or an act that ends with the result on screen), put your final reply in its `done` field. Then you are finished; don\'t send another message.';
 const tier = () => cfg.codexTier && { serviceTier: cfg.codexTier };
@@ -171,7 +171,7 @@ export class Codex {
     return r;
   }
 
-  #turn(threadId, text, ctx, extra) {
+  #turn(threadId, text, ctx, { images = [], ...extra } = {}) { // images: data: URLs sent with the text (vision.js)
     return new Promise((resolve) => {
       // Watchdog: on a dead network Codex can wait silently for minutes. No progress for STALL_MS (approval waits
       // don't count) -> recycle app-server; the turn then fails as "exited" and run() retries it.
@@ -183,7 +183,7 @@ export class Codex {
       this.#turns.get(threadId)?.done({ status: 'failed', error: 'turn superseded' }); // one live turn per thread
       this.#turns.set(threadId, t);
       ctx.signal?.addEventListener('abort', () => t.turnId && this.#req('turn/interrupt', { threadId, turnId: t.turnId }).catch(() => {}), { once: true });
-      this.#req('turn/start', { threadId, ...extra, input: [{ type: 'text', text, text_elements: [] }] })
+      this.#req('turn/start', { threadId, ...extra, input: [{ type: 'text', text, text_elements: [] }, ...images.map((url) => ({ type: 'image', url }))] })
         .then((r) => { t.turnId ??= r.turn?.id; })
         .catch((e) => t.done({ status: 'failed', error: e.message }));
     });
@@ -191,8 +191,8 @@ export class Codex {
 
   // Small tool-less JSON jobs on warm threads, one per kind: the warm connection and prompt cache make a turn ~1 s
   // instead of ~3 s. One request at a time per kind; rotated so history stays small. Returns the parsed JSON; abort = stale.
-  // job: {model, effort, prompt, schema, rotate}
-  async quick(kind, job, text, signal) {
+  // job: {model, effort, prompt, schema?, rotate, images?}; onDelta(text) streams the output (apps.js shows build progress). No schema = raw text.
+  async quick(kind, job, text, signal, onDelta) {
     await this.ready();
     let s = this.#warm.get(kind);
     if (!s || s.gen !== this.#gen || s.n >= job.rotate) {
@@ -204,11 +204,11 @@ export class Codex {
     await s.idle; // a stale or timed-out turn is being interrupted; wait for it to end
     if (signal.aborted) throw new Error('stale');
     s.n++;
-    const turn = this.#turn(s.threadId, text, { emit: () => {}, signal }, { effort: job.effort, outputSchema: job.schema });
+    const turn = this.#turn(s.threadId, text, { emit: (m) => m.type === 'text.delta' && onDelta?.(m.text), signal }, { effort: job.effort, images: job.images, ...(job.schema && { outputSchema: job.schema }) });
     s.idle = turn;
     const r = await turn;
     if (r.status !== 'completed') throw new Error(r.error || r.status);
-    return JSON.parse(r.text);
+    return job.schema ? JSON.parse(r.text) : r.text;
   }
 
   // Keyboard suggestions -> items[].

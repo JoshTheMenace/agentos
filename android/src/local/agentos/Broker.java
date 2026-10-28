@@ -145,6 +145,7 @@ final class Broker {
         if (Api.SPECS.containsKey(m)) synchronized (actLock) { return act(m, p, uid); } // Android's own APIs (Api.java): the same gate as a tap
         switch (m) {
             case "screen.read": return read();
+            case "screen.capture": synchronized (actLock) { return Look.capture(svc, audit, p, lease != null, who(uid)); } // voice: one private screenshot (Look.java)
             case "guard.classify": return PromptGuard.classify(p.getString("text"));
             case "guard.screen": return PromptGuard.annotate(new JSONObject().put("nodes", p.getJSONArray("nodes"))); // test hook: android/guard-tests
             case "list_apps": return ok(true).put("apps", Actions.listApps(svc));
@@ -189,6 +190,12 @@ final class Broker {
                 return Plugins.set(p.getString("id"), p.optBoolean("on"), uid == 2000 ? "operator over adb" : "owner (Plugins screen)", audit);
             case "approval.deny": return deny(p);
             case "schedule.alarm": return schedule(p, uid);
+            case "remote.read": { // agentd (mcp-remote.js): a paired outside assistant read phone_brief or memory_lookup; one chain line, no card
+                if (!callerIn(uid, "lease_callers")) return ok(false).put("reason", "remote.read only from agentd, not " + who(uid));
+                audit.log(new JSONObject().put("task", "remote").put("tool", "remote.read").put("from", Guard.clip(p.optString("from"), 20))
+                        .put("target", Guard.clip(p.optString("tool"), 30)).put("decision", "auto").put("reason", "paired assistant, reads on"));
+                return ok(true);
+            }
             case "approval.escalate": return escalate(p, uid);
             case "tap": case "type": case "scroll": case "press": case "open_app": case "intent": case "firewall.set": case "firewall.clear":
             case "trackers.block": case "trackers.unblock": case "notifications.reply":

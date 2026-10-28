@@ -1,19 +1,21 @@
 <!doctype html><meta charset="utf-8"><title>AgentOS voice</title>
-<button id="go">Start voice</button> <button id="end">Stop</button>
-<audio id="spk" autoplay></audio><pre id="out"></pre>
+<button id="go">Start voice</button> <button id="end">Stop</button> <button id="cam" hidden>Camera</button>
+<audio id="spk" autoplay></audio><video id="view" playsinline muted hidden width="240"></video><pre id="out"></pre>
 <script>
 // Bare voice client for agentd (browser or the island WebView; restyle freely, keep the WebRTC part).
 // Open http://127.0.0.1:8787/voice#token=<agentd token>. ?auto starts at once; ?wav=<url> plays a speech file instead of the mic.
 // Flow: mic + "oai-events" data channel -> offer -> agentd voice.start -> voice.answer. Audio goes straight to OpenAI.
+// Vision (agentd VOICE_VISION=1, research/LIVE-VISION.md): the camera sends agentd one JPEG frame (voice.frame) each time
+// the user starts talking, never a stream; agentd's eyes model answers and the voice says it. ?img=<url> stands in for the camera.
 const T0 = performance.now(), now = () => Math.round(performance.now() - T0), $ = (id) => document.getElementById(id);
 const out = (s) => { console.log(`${now()} ${s}`); $('out').textContent += `${now()} ${s}\n`; };
 const q = new URLSearchParams(location.search), token = new URLSearchParams(location.hash.slice(1)).get('token');
 const ws = new WebSocket(`ws://${location.host}/`, 'agentos.bearer.' + token);
-let pc, t;
+let pc, t, cam, lastShot = 0;
 
 ws.onmessage = async (e) => {
   const m = JSON.parse(e.data);
-  if (m.type === 'voice.answer') { await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); out(`answer applied +${now() - t}ms (agentd ${m.ms}ms)`); }
+  if (m.type === 'voice.answer') { $('cam').hidden = !m.vision; if (q.get('img')) ws.send(JSON.stringify({ type: 'voice.camera', on: true })); await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); out(`answer applied +${now() - t}ms (agentd ${m.ms}ms)`); }
   else if (m.type !== 'text.delta') out(`${m.type} ${JSON.stringify(m).slice(0, 300)}`);
 };
 
@@ -29,6 +31,7 @@ async function start() {
     if (m.type === 'delegation.created') // hand it to agentd at once (agentd also hears it via app-server; it dedupes)
       ws.send(JSON.stringify({ type: 'voice.delegate', item_id: m.item.id, text: m.item.content.map((c) => c.text).join('') }));
     if (m.type === 'turn.done') out(`dc turn.done ${m.turn?.role}: ${m.turn?.transcript ?? ''}`);
+    else if (/error/.test(m.type)) out(`dc ${m.type} ${JSON.stringify(m).slice(0, 1500)}`);
     else if (/^(session.started|delegation)/.test(m.type) || (q.has('wav') && !/delta|audio|usage/.test(m.type))) out(`dc ${m.type} ${JSON.stringify(m).slice(0, 240)}`);
   };
   pc.onconnectionstatechange = () => out(`pc ${pc.connectionState} +${now() - t}ms`);
@@ -49,7 +52,7 @@ function meter(micStream, remote) {
   let lastMic = 0, lastSpk = 0, micOn = false, spkOn = false;
   setInterval(() => {
     const tt = now();
-    if (lvl(micA) > 0.02) { lastMic = tt; if (!micOn) { micOn = true; out('mic speech start'); } }
+    if (lvl(micA) > 0.02) { lastMic = tt; if (!micOn) { micOn = true; out('mic speech start'); snap(); } }
     if (micOn && tt - lastMic > 400) { micOn = false; out('mic speech end'); }
     if (lvl(spkA) > 0.01) { if (!spkOn) { spkOn = true; out(`REPLY AUDIO start, ${micOn ? 'while user talking' : tt - lastMic + 'ms after mic end'}`); } lastSpk = tt; }
     if (spkOn && tt - lastSpk > 600) { spkOn = false; out('reply audio end'); }
@@ -63,6 +66,25 @@ async function fileStream(url) { // test mode: a speech file as the "mic"
   return dest.stream;
 }
 
+// One JPEG (long side <= max px) of a video or image element.
+function jpeg(src, w, h, max = 768, q = 0.7) {
+  const k = Math.min(1, max / Math.max(w, h)), c = document.createElement('canvas');
+  c.width = Math.round(w * k); c.height = Math.round(h * k); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', q);
+}
+// Camera open (or ?img): the user just started talking, so send what the camera sees now (at most one per 1.5 s).
+async function snap() {
+  const v = $('view'), img = q.get('img') && await new Promise((ok) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.src = q.get('img'); });
+  if ((!cam && !img) || now() - lastShot < 1500) return;
+  lastShot = now();
+  const image = img ? jpeg(img, img.naturalWidth, img.naturalHeight) : jpeg(v, v.videoWidth, v.videoHeight);
+  ws.send(JSON.stringify({ type: 'voice.frame', image })); out(`frame sent ${Math.round(image.length * 0.75 / 1024)} KB`);
+}
+$('cam').onclick = async () => {
+  if (cam) { cam.getTracks().forEach((k) => k.stop()); cam = null; $('view').hidden = true; ws.send(JSON.stringify({ type: 'voice.camera', on: false })); return; }
+  cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
+  $('view').srcObject = cam; $('view').hidden = false; await $('view').play(); ws.send(JSON.stringify({ type: 'voice.camera', on: true }));
+};
 $('go').onclick = () => start().catch((e) => out('ERR ' + e));
 $('end').onclick = () => { ws.send(JSON.stringify({ type: 'voice.stop' })); pc?.close(); out('stopped'); };
 if (q.has('auto')) ws.onopen = $('go').onclick;

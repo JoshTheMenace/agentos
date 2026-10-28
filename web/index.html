@@ -49,6 +49,8 @@
       <div id="now"></div>
       <div class="k fk" id="forK">For you</div>
       <div id="sugg"></div>
+      <div class="k fk" id="myK"></div>
+      <div id="myapps"></div>
       <button class="glass w cal rise" id="wcal">
         <div class="hd"><span class="ai"><svg width="10" height="10"><use href="#i-cal"/></svg></span><span id="calWhen">Next</span></div>
         <div class="row"><div><div class="t" id="calTitle">Nothing scheduled</div><div class="s" id="calSub">This week</div></div></div>
@@ -75,6 +77,7 @@
       <button class="mod link" id="toMods"><svg width="18" height="18"><use href="#i-mod"/></svg><b>Mods</b><span class="k" id="modNote"></span></button>
       <button class="mod link" id="toMemory"><svg width="18" height="18"><use href="#i-spark"/></svg><b>Memory</b><span class="k" id="memNote2"></span></button>
       <button class="mod link" id="toPlugins"><svg width="18" height="18"><use href="#i-plug"/></svg><b>Plugins</b><span class="k" id="plugNote"></span></button>
+      <button class="mod link" id="toRemote"><svg width="18" height="18"><use href="#i-cloud"/></svg><b>Remote</b><span class="k" id="remoteNote"></span></button>
       <button class="mod link" id="toPerms"><svg width="18" height="18"><use href="#i-key"/></svg><b>Permissions</b><span class="k" id="permNote"></span></button>
       <button class="mod link" id="toSettings"><svg width="18" height="18"><use href="#i-gear"/></svg><b>Settings</b><span class="k">Android</span></button>
     </div>
@@ -125,11 +128,17 @@
   <div class="scroll body" id="plist"></div>
 </section>
 
+<!-- REMOTE (owner-only: outside assistants such as Grok and Dots, over agentd's remote MCP) -->
+<section class="over slide" id="remote">
+  <div class="bar"><button class="back" id="remoteBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Remote</h2><span class="k" id="remoteNote2"></span></div>
+  <div class="scroll body" id="rlist"></div>
+</section>
+
 <!-- APP DRAWER -->
 <section class="over slide drawer" id="drawer">
   <div class="grab"></div>
   <label class="glass search"><svg width="18" height="18"><use href="#i-search"/></svg><input id="q" placeholder="Search" autocomplete="off" autocorrect="off"></label>
-  <div class="grid scroll" id="grid"></div>
+  <div class="grid scroll" id="drawerScroll"><div class="grid mine" id="mygrid"></div><div class="grid" id="grid"></div></div>
 </section>
 
 <!-- ASK SHEET -->
@@ -143,6 +152,7 @@
 
 <!-- VOICE -->
 <section class="over voice" id="voice">
+  <video class="vcam" id="vcam" playsinline muted hidden></video>
   <div class="vedge"><i></i></div>
   <div class="vglow g1"></div><div class="vglow g2"></div><div class="vglow g3"></div>
   <div class="vstate"><span class="orb approval"></span><span id="vstate">Connecting</span></div>
@@ -152,7 +162,7 @@
   <div class="vtask" id="vtask"></div>
   <div class="sorb" id="sorbBtn"><i class="halo2"></i><i class="halo"></i><i class="core"></i></div>
   <div class="wave" id="wave"></div>
-  <div class="vfoot"><button class="kbtn" id="vkbd"><svg width="20" height="20"><use href="#i-kbd"/></svg></button><span id="vhint">Hold the orb to talk</span><button class="kbtn red" id="vend"><svg width="18" height="18"><use href="#i-power"/></svg></button></div>
+  <div class="vfoot"><button class="kbtn" id="vkbd"><svg width="20" height="20"><use href="#i-kbd"/></svg></button><span id="vhint">Hold the orb to talk</span><button class="kbtn" id="vcamBtn" hidden><svg width="20" height="20"><use href="#i-eye"/></svg></button><button class="kbtn red" id="vend"><svg width="18" height="18"><use href="#i-power"/></svg></button></div>
   <audio id="spk" autoplay></audio>
 </section>
 

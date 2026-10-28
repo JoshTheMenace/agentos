@@ -37,7 +37,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -80,11 +79,17 @@ public class Home extends Activity {
       @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return !allowed(r.getUrl()); } // bundled or dev pages only
     });
     web.setWebChromeClient(new WebChromeClient() {
-      @Override public void onPermissionRequest(PermissionRequest r) { // page getUserMedia -> needs RECORD_AUDIO too
-        boolean micOnly = Arrays.equals(r.getResources(), new String[] {PermissionRequest.RESOURCE_AUDIO_CAPTURE});
-        if (!micOnly || !allowed(r.getOrigin())) { r.deny(); return; }
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) r.grant(r.getResources());
-        else { pendingMic = r; requestPermissions(new String[] {Manifest.permission.RECORD_AUDIO}, 1); }
+      @Override public void onPermissionRequest(PermissionRequest r) { // page getUserMedia: mic (voice) or camera (voice vision), each needs its Android permission too
+        List<String> need = new ArrayList<>();
+        for (String res : r.getResources()) {
+          if (res.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) need.add(Manifest.permission.RECORD_AUDIO);
+          else if (res.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) need.add(Manifest.permission.CAMERA);
+          else { r.deny(); return; }
+        }
+        if (!allowed(r.getOrigin())) { r.deny(); return; }
+        need.removeIf(p -> checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED);
+        if (need.isEmpty()) r.grant(r.getResources());
+        else { pendingMic = r; requestPermissions(need.toArray(new String[0]), 1); }
       }
       @Override public boolean onConsoleMessage(ConsoleMessage m) { Log.i(TAG, "js: " + m.message() + " (" + m.lineNumber() + ")"); return true; }
     });
@@ -112,7 +117,8 @@ public class Home extends Activity {
   @Override public void onBackPressed() { js("window.app&&app.back&&app.back()"); } // never leave home
   @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
     if (pendingMic == null) return;
-    if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pendingMic.grant(pendingMic.getResources()); else pendingMic.deny();
+    boolean ok = res.length > 0; for (int x : res) ok &= x == PackageManager.PERMISSION_GRANTED;
+    if (ok) pendingMic.grant(pendingMic.getResources()); else pendingMic.deny();
     pendingMic = null;
   }
 
@@ -142,7 +148,8 @@ public class Home extends Activity {
     }
   }
 
-  String file(String name) { try { return new String(Files.readAllBytes(new File(getFilesDir(), name).toPath()), StandardCharsets.UTF_8).trim(); } catch (Exception e) { return null; } }
+  String file(String name) { return readFile(this, name); }
+  static String readFile(Activity a, String name) { try { return new String(Files.readAllBytes(new File(a.getFilesDir(), name).toPath()), StandardCharsets.UTF_8).trim(); } catch (Exception e) { return null; } }
 
   /** The JS side of the frame. Every method is a request; nothing here grants anything. Runs on a WebView worker thread. */
   class Bridge {
@@ -205,6 +212,12 @@ public class Home extends Activity {
       try { http(id, "http://127.0.0.1:7777/rpc", "phone.token", new JSONObject().put("method", method).put("params", new JSONObject(params == null || params.isEmpty() ? "{}" : params)).toString()); }
       catch (Exception e) { js("window.app&&app.rpcDone(" + JSONObject.quote(id) + ",{\"ok\":false,\"error\":\"bad params\"})"); }
     }
+    /** Micro-apps (MicroApp.java): open one full screen in its own task; the one-line summaries they left for the home widgets. */
+    @JavascriptInterface public void openApp(String id) {
+      if (id == null || !id.matches("[a-z0-9-]{1,32}")) return;
+      startActivity(new Intent(Home.this, MicroApp.class).putExtra("id", id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+    }
+    @JavascriptInterface public String appSummaries() { return new JSONObject(getSharedPreferences(MicroApp.PREFS, 0).getAll()).toString(); }
     /** Add a saved password: the native screen in local.agentos (the password never enters this WebView). */
     @JavascriptInterface public void vaultAdd(String pkg) {
       startActivity(new Intent().setClassName("local.agentos", "local.agentos.VaultAddActivity").putExtra("pkg", pkg == null ? "" : pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
