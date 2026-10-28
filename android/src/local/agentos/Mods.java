@@ -76,7 +76,7 @@ final class Mods {
     private final float dp;
     private boolean sampling;
     private final Map<String, Long> previews = new java.util.concurrent.ConcurrentHashMap<>();
-    private int checkedWindow = -1; private boolean checkingWindow, windowSafe;
+    private int checkedWindow = -1, windowEpoch; private boolean checkingWindow, windowSafe;
     private final List<View> highlights = new ArrayList<>();
     private final Runnable clearPreview = this::clearPreview;
     private volatile boolean watching, closed;
@@ -114,8 +114,17 @@ final class Mods {
 
     /** AgentA11y: any window/content/scroll event. Re-place on the next frame (16 ms debounce). */
     void onEvent(android.view.accessibility.AccessibilityEvent e) {
-        if ("local.agentos".contentEquals(e.getPackageName() == null ? "" : e.getPackageName())) return;
-        if (e.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) checkedWindow = -1;
+        if (e.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_WINDOWS_CHANGED
+                || "local.agentos".contentEquals(e.getPackageName() == null ? "" : e.getPackageName())) {
+            try {
+                AccessibilityNodeInfo root = svc.getRootInActiveWindow();
+                String pkg = root == null ? "" : String.valueOf(root.getPackageName());
+                if (!pkg.equals(fgPkg)) { clearPreview(); hideAll(); }
+                if (root != null && (e.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_WINDOWS_CHANGED
+                        ? e.getWindowId() != root.getWindowId() : !pkg.equals("local.agentos"))) return;
+            } catch (RuntimeException error) { hideAll(); return; }
+        }
+        checkedWindow = -1; windowEpoch++; // secure flags can change without a new window id
         clearPreview();
         for (Mod m : mods.values()) try { if (ModMask.is(m.spec)) hide(m); } catch (RuntimeException error) { fail(m, "event exception"); }
         svc.main.removeCallbacks(refreshR); svc.main.postDelayed(refreshR, 16);
@@ -487,7 +496,7 @@ final class Mods {
 
     private boolean safeWindow(AccessibilityNodeInfo root) {
         if (svc.getSystemService(android.app.KeyguardManager.class).isKeyguardLocked()) return false;
-        int id = root.getWindowId();
+        int id = root.getWindowId(), epoch = windowEpoch;
         if (checkedWindow == id) return windowSafe;
         if (!checkingWindow) {
             checkingWindow = true;
@@ -495,7 +504,7 @@ final class Mods {
                 checkingWindow = false;
                 try {
                     AccessibilityNodeInfo now = svc.getRootInActiveWindow();
-                    if (now != null && now.getWindowId() == id) { checkedWindow = id; windowSafe = error == null && Boolean.TRUE.equals(safe); }
+                    if (epoch == windowEpoch && now != null && now.getWindowId() == id) { checkedWindow = id; windowSafe = error == null && Boolean.TRUE.equals(safe); }
                 } catch (RuntimeException ignored) { windowSafe = false; }
                 if (!closed) refresh();
             }));

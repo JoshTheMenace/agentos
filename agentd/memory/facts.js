@@ -123,7 +123,7 @@ export function list(db, { about = [], q, history = false, cloud = true, srcs, l
   if (words.length) rows = rows.filter((f) => { const s = `${f.pred} ${say(f)}`.toLowerCase(); return words.some((w) => s.includes(w)); }).slice(0, limit);
   const red = (s) => (cloud ? S.redact(db, s) : s);
   return rows.map((f) => ({ id: f.id, subj: f.subj, name: f.name === 'Me' ? 'you' : red(f.name), pred: f.pred, obj: red(f.obj), text: `${f.name === 'Me' ? 'You' : red(f.name)} ${say({ ...f, obj: red(f.obj) })}${f.status === 'active' ? (f.valid_from && SINGLE.test(f.pred) ? ` (since ${when(f.valid_from)})` : '') : ` (${f.status === 'superseded' ? 'until' : 'retracted'} ${when(f.valid_to)})`}`,
-    since: f.valid_from, until: f.valid_to, status: f.status, event_id: f.event_id, by: f.by, conf: f.conf, kind: f.kind }));
+    since: f.valid_from, until: f.valid_to, status: f.status, event_id: f.event_id, by: f.by, conf: f.conf, kind: f.kind, source: f.source, at: f.observed_at }));
 }
 
 // Owner controls: edit a fact's value, or retract it (kept as a row, never shown again).

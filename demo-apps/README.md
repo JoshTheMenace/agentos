@@ -4,7 +4,7 @@ Two tiny Android apps (plain Java Views, no Gradle, no AndroidX) so we can show 
 
 | App | Package | What it is for |
 |---|---|---|
-| **Pigeon** | `local.agentos.pigeon` | Offline chat app: contacts, conversations, text field + **Send**. Ships with a prompt-injection canary from "Unknown number". Nothing leaves the phone: Send only appends to `files/chats.json`. |
+| **Pigeon** | `local.agentos.pigeon` | Offline chat app: contacts, conversations, text field + **Send** (the field also takes images from the keyboard via `commitContent`, shown as a photo bubble). Ships with a prompt-injection canary from "Unknown number". Nothing leaves the phone: Send only appends to `files/chats.json`. |
 | **Beacon** | `local.agentos.beacon` | Weather + notes app that phones home every 5 s: one real request (`GET wttr.in`) and one "analytics" beacon (`POST httpbin.org/post` by default). On-screen request log with status codes, latency and the app uid, so a firewall rule fails visibly, live. |
 
 ## Build (SDK-free: aapt2 → javac → D8 → zipalign → apksigner, ~2 s)

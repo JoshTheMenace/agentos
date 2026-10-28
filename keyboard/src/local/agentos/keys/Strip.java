@@ -145,7 +145,7 @@ final class Strip extends View {
             tmp.set(cells[i]); tmp.inset(3 * d, 4 * d); tmp.offset(0, (1 - ease) * 6 * d);
             if (i == pressedCell) { fill.setColor(Theme.CHIP_PRESSED); c.drawRoundRect(tmp, Theme.CHIP_R * d, Theme.CHIP_R * d, fill); }
             text.setColor(tappable ? Theme.TEXT : Theme.TEXT3); text.setAlpha(Math.round(255 * ease));
-            CharSequence s = TextUtils.ellipsize(items.get(i), text, w - 2 * Theme.CHIP_PAD_X * d, TextUtils.TruncateAt.END);
+            CharSequence s = TextUtils.ellipsize(items.get(i).replace('\n', ' ').replaceAll("\\s+", " "), text, w - 2 * Theme.CHIP_PAD_X * d, TextUtils.TruncateAt.END); // an email's newlines would draw as boxes
             c.drawText(s.toString(), tmp.centerX(), baseline(tmp.centerY()), text);
         }
         if (animating) postInvalidateOnAnimation();

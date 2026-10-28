@@ -25,6 +25,16 @@ public class ModTests extends Instrumentation {
         throw new NoSuchMethodException(name);
     }
     private static void check(boolean ok, Object why) { if (!ok) throw new AssertionError(String.valueOf(why)); }
+    private void front(android.app.Service svc, String pkg) {
+        String current = "";
+        for (int i = 0; i < 80; i++) {
+            android.view.accessibility.AccessibilityNodeInfo root = ((android.accessibilityservice.AccessibilityService) svc).getRootInActiveWindow();
+            current = root == null ? "" : String.valueOf(root.getPackageName());
+            if (pkg.equals(current)) return;
+            SystemClock.sleep(100);
+        }
+        throw new AssertionError("expected " + pkg + ", foreground " + current);
+    }
     private int shot(android.app.Service svc, String name, int x, int y) throws Exception {
         java.util.concurrent.CompletableFuture<Integer> done = new java.util.concurrent.CompletableFuture<>();
         ((android.accessibilityservice.AccessibilityService) svc).takeScreenshot(0, svc.getMainExecutor(), new android.accessibilityservice.AccessibilityService.TakeScreenshotCallback() {
@@ -57,8 +67,8 @@ public class ModTests extends Instrumentation {
             android.app.Service svc = (android.app.Service) field(broker, "svc"); mods = field(broker, "mods");
             final Object test = mods;
             android.content.Intent fixture = new android.content.Intent().setClassName("com.agentos.modfixture", "local.agentos.ModFixture").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-            runOnMainSync(() -> svc.startActivity(fixture)); SystemClock.sleep(1500);
-            JSONArray times = new JSONArray();
+            runOnMainSync(() -> svc.startActivity(fixture)); front(svc, "com.agentos.modfixture");
+            JSONArray times = new JSONArray(), visible = new JSONArray();
             for (int i = 0; i < 10; i++) {
                 JSONObject s = spec("mod-test");
                 JSONObject preview = (JSONObject) call(mods, "preview", s);
@@ -66,18 +76,18 @@ public class ModTests extends Instrumentation {
                 long t = SystemClock.uptimeMillis();
                 JSONObject r = ((JSONObject) call(mods, "apply", s, "isolated renderer test", 2500L));
                 check(r.getBoolean("shown"), r); times.put(SystemClock.uptimeMillis() - t);
-                if (i == 0) {
+                {
                     SystemClock.sleep(350);
                     JSONArray rct = preview.getJSONArray("matches").getJSONArray(0);
                     int pixel = shot(svc, "mods-fixture-mask.png", (rct.getInt(0) + rct.getInt(2)) / 2, (rct.getInt(1) + rct.getInt(3)) / 2);
                     check((pixel & 0xFFFFFF) == 0x101820, "mask not visible: " + Integer.toHexString(pixel));
-                    report.put("first_mask_screenshot_verified_ms", SystemClock.uptimeMillis() - t);
+                    visible.put(SystemClock.uptimeMillis() - t);
                 }
                 check(((JSONObject) call(mods, "remove", "mod-test", "isolated renderer test")).getBoolean("ok"), "remove failed");
             }
-            report.put("mask_apply_remove_ms", times);
-            JSONObject noPreview = (JSONObject) call(broker, "call", "app.mod.apply", new JSONObject().put("spec", spec("mod-test")), 2000);
-            check(!noPreview.getBoolean("ok") && noPreview.optString("reason").contains("preview"), "production apply accepted without preview");
+            report.put("mask_apply_remove_ms", times).put("screenshot_verified_ms", visible);
+            JSONObject noPreview = (JSONObject) call(broker, "call", "app.mod.apply", new JSONObject().put("spec", new JSONObject("{\"id\":\"no-preview\",\"package\":\"com.google.android.calculator\",\"label\":\"Gate test\",\"action\":{\"type\":\"mask\",\"match\":{\"id\":\"op_div\"}}}")), 2000);
+            check(!noPreview.getBoolean("ok") && noPreview.optString("reason").contains("preview"), "production preview gate: " + noPreview);
             report.put("production_preview_gate", "pass");
             Class<?> rootClass = loader.loadClass("local.agentos.Root");
             String targetPid = ((String) call(rootClass, "run", "pidof com.agentos.modfixture")).trim();
@@ -108,7 +118,7 @@ public class ModTests extends Instrumentation {
             call(mods, "remove", "mod-test", "test cleanup");
             call(mods, "apply", spec("mod-test"), "restart test", 2500L);
             call(rootClass, "run", "am force-stop com.agentos.modfixture");
-            runOnMainSync(() -> svc.startActivity(fixture)); SystemClock.sleep(1500);
+            runOnMainSync(() -> svc.startActivity(fixture)); front(svc, "com.agentos.modfixture");
             check(((JSONArray) call(mods, "list")).getJSONObject(0).getBoolean("shown"), "mod did not survive target restart");
             call(mods, "disable", "", "global kill test");
             check(((JSONArray) call(mods, "list")).getJSONObject(0).optString("disabled").equals("global kill test"), "global kill failed");
@@ -122,7 +132,8 @@ public class ModTests extends Instrumentation {
             check(((JSONArray) call(mods, "list")).getJSONObject(0).optString("disabled").equals("target crash/ANR"), "crash watchdog failed: " + call(mods, "list"));
             report.put("real_fixture_crash", call(mods, "list"));
             call(mods, "remove", "mod-test", "fixture cleanup");
-            runOnMainSync(() -> svc.startActivity(svc.getPackageManager().getLaunchIntentForPackage("com.google.android.calculator").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))); SystemClock.sleep(1500);
+            call(rootClass, "run", "am force-stop com.agentos.modfixture");
+            runOnMainSync(() -> svc.startActivity(svc.getPackageManager().getLaunchIntentForPackage("com.google.android.calculator").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP))); front(svc, "com.google.android.calculator");
 
             JSONObject button = new JSONObject("{\"id\":\"mod-button-test\",\"package\":\"com.google.android.calculator\",\"label\":\"Double\",\"anchor\":\"op_div\",\"place\":\"above\",\"gap\":8,\"w\":\"anchor\",\"h\":44,\"action\":{\"type\":\"press\",\"press\":[\"op_mul\",\"digit_2\",\"eq\"]}}");
             check(((JSONObject) call(mods, "preview", button)).getBoolean("ok"), "button preview");

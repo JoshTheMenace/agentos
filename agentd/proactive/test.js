@@ -5,7 +5,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const home = mkdtempSync(join(tmpdir(), 'proactive-'));
-Object.assign(process.env, { AGENTOS_HOME: home, MEMORY_DB: join(home, 'memory.db'), PROACTIVE_QUIET: '0-0' }); // never quiet, for the test
+Object.assign(process.env, { AGENTOS_HOME: home, MEMORY_DB: join(home, 'memory.db'), PROACTIVE_QUIET: '0-0', PROACTIVE_REPLY_MIN: '0.05' }); // never quiet; questions ripen after 3 s, for the test
 const P = await import('../proactive.js');
 let fails = 0; const ok = (c, m) => { console.log(`${c ? 'ok  ' : 'FAIL'} ${m}`); if (!c) fails++; };
 const listeners = [], published = [], scheduled = [];
@@ -32,6 +32,7 @@ const cards = P.cards();
 ok(cards.length === 2 && cards.some((c) => c.title === 'Your promise to Priya') && cards.some((c) => c.title === 'Reply to Sam?'), `home cards: ${cards.map((c) => c.title).join(' | ')}`);
 ok(cards.every((c) => c.goal.length < 500 && /approval/.test(c.goal)), 'card goals ask for approval and fit a task goal');
 ok(published.some((e) => e.type === 'promises'), 'published promises to the UIs');
+ok(cards.every((c) => P.drafted(c.goal)) && !P.drafted('Text Sam that I am running late'), 'tasks from cards are marked drafted (no reviewer auto-approve); typed goals are not');
 
 dnd = 'on'; await P.tick(); ok(scheduled.length === 0 && P.budget().used === 0, 'DND on: no reminder, budget untouched');
 dnd = 'off'; await P.tick(); ok(scheduled.length === 1 && scheduled[0].t.origin === 'proactive' && /^Remind me: /.test(scheduled[0].a.prompt), `DND off: one reminder via schedule.js (${scheduled[0]?.a.prompt})`);
@@ -51,5 +52,9 @@ P.handle({ type: 'promises.update', id: pr.id, action: 'done' });
 ok(P.handle({ type: 'promises.list' }).items.find((x) => x.id === pr.id).state === 'done', 'done');
 msg('Priya', "on it, I'll send them today", now - yday9, true); await P.scan('test 3');
 ok(P.handle({ type: 'promises.list' }).items.filter((x) => x.who === 'Priya').every((x) => x.state === 'done'), 'done stays done after a rescan');
+msg('Lee', 'Are you free Sunday for brunch?', 1000); await P.scan('test 4'); // 1 s old: too young for a nudge
+ok(!P.handle({ type: 'promises.list' }).items.some((x) => x.who === 'Lee'), 'a fresh question: no card yet');
+await new Promise((r) => setTimeout(r, 5500)); // no new message: the ripen timer must rescan it on its own
+ok(P.handle({ type: 'promises.list' }).items.some((x) => x.who === 'Lee' && x.kind === 'reply'), 'the same question once old enough: Reply to Lee? (rescanned by itself)');
 console.log(fails ? `${fails} failed` : 'all passed');
 process.exit(fails ? 1 : 0);

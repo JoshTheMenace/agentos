@@ -38,3 +38,27 @@ L2 future gate: one reviewed interpreter, no model-supplied code. Versioned sche
 ## Proof / handoff
 
 Record actual test results below after implementation. Screenshots: `launcher/shots/mods-*.png`. Separate phone-render latency from owner-approval wait and model/voice latency. No synthesized approval taps and no privileged production apply bypass for tests.
+
+## Code walkthrough and review
+
+`android/src/local/agentos/ModMask.java` contains the bounded matcher and painter. `item` chooses a child of the nearest scrollable ancestor, clips it to the app viewport, and refuses an oversized rectangle. It can inspect an offscreen marker still present in the tree so an item's visible remainder stays covered. If the app removes that marker from accessibility entirely, matching cannot identify the remaining content safely. Taps on a mask are consumed; an owner's vertical swipe requests only a collection scroll. No hidden Like/Send/etc. can be clicked through the mask.
+
+`Mods.java` owns preview receipts, overlay lifetime, saved specs and disable reasons. It clears stale masks before rematching, checks secure-window state asynchronously, ignores its own overlay window events, and invalidates stale security checks when app content changes. Render exceptions disable only the affected mod. The logcat watchdog handles Java/native crash and ANR package markers; loss of the observer disables mods. `AgentA11y` connects events and the physical kill switch. `Broker.mod` validates before showing the native card and rechecks the preview after approval, so a kill/remove during a pending card wins.
+
+`agentd/tools.js` and `plugins.js` expose the six Mods tools. Legacy `app_mod_*` definitions remain for compatibility; the model's Mods menu contains only the six current tools. `Plugins.java` applies the same toggle to the new broker methods.
+
+Tests live in `android/mod-tests/`. Build with `sh android/mod-tests/build.sh` after `android/build.sh`. They use a separate instrumentation APK and a separate fictitious-feed APK, both temporary and signed with the existing development key. Tests call the renderer in isolation, not an approval-bypassing production RPC. The production broker's negative preview gate is tested separately. A forced invalid color after validation exercises the actual rendering exception handler. A genuine crash in the fictitious feed exercises the external observer; no real app is deliberately crashed. Each of ten mask cycles checks the framebuffer's actual mask color, not merely attached-window state. Screenshot sampling waits 350 ms to respect Android's screenshot rate limit; its timings are conservative upper bounds, including capture/PNG time.
+
+The requested `code-golf` skill was absent from the supplied catalog and local Codex/Agents/Claude skill directories. A manual cleanup pass removed duplicate legacy tool descriptions from the model menu. No formatter was run.
+
+## Owner approval and later demo steps
+
+The isolated renderer tests do not constitute owner approval to activate a persistent LinkedIn mod. The owner-facing apply remains gated. A direct test RPC was denied by the reviewer (the broker returned only `denied by reviewer`, no rationale); the final request is made as an ordinary agentd user turn so it carries trusted task context.
+
+1. Open LinkedIn's Home feed with a Promoted card visible. Stay out of Messaging and account settings for this rehearsal.
+2. Say/type: **Hide Promoted posts in LinkedIn using a passive mask. Preview it, then ask me to approve.**
+3. Inspect the blue rectangle; tap **Approve** on the native AgentOS card. No fingerprint is needed. If the card expired, repeat step 2; a new preview is required after five minutes or any kill/remove.
+4. For the second real-app demo, open Calculator and ask **Add a Double button that presses multiply, 2, equals. Preview it, then ask me to approve.** The exact spec is `android/mod-tests/calculator-double.json`.
+5. Ask **List my mods** / **Remove the LinkedIn mod**, or **Disable all mods**. A volume-down hold of at least one second disables all mods immediately and persists that state. Re-enabling requires preview and approval again.
+
+Limits: visual masking, no layout collapse/reorder, no removal from the accessibility tree/network, and possible brief exposure while content changes or a marker leaves the tree. Banking/security exclusions use the existing Guard lists plus package-name exclusions; this is not a complete classification of every app in the Play Store. No Frida/LSPosed compatibility, battery benchmark, voice-to-visible timing, or live LinkedIn apply should be claimed without its corresponding run/owner tap.

@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONObject;
 
-/** Passive masks only: no app actions, injected code, arbitrary regex or layout mutations. */
+/** Passive masks: no automated clicks, injected code, arbitrary regex or layout mutations. */
 final class ModMask {
     static boolean is(JSONObject spec) { return "mask".equals(spec.optJSONObject("action").optString("type")); }
 
@@ -29,7 +29,7 @@ final class ModMask {
     }
 
     private static void walk(AccessibilityNodeInfo n, JSONObject spec, Rect screen, List<Rect> out, int[] budget, int depth) {
-        if (n == null || --budget[0] < 0 || depth > 40 || out.size() >= 12 || !n.isVisibleToUser()
+        if (n == null || --budget[0] < 0 || depth > 40 || out.size() >= 12
                 || !spec.optString("package").contentEquals(n.getPackageName())) return;
         JSONObject a = spec.optJSONObject("action"), m = a.optJSONObject("match");
         boolean hit = m.has("text") ? m.optString("text").equalsIgnoreCase(String.valueOf(n.getText()).trim())

@@ -318,6 +318,15 @@ export const about = (ctx = {}) => brain.v2.about(dbOf(ctx), { cloud: ctx.cloud 
 export const identity = { pending: (ctx = {}, limit = 5) => brain.v2.pending(dbOf(ctx), limit), confirm: (a, b, same, ctx = {}) => brain.v2.confirm(dbOf(ctx), a, b, same, ctx.actor || 'user:owner'),
   target: (name, ctx = {}) => brain.v2.target(dbOf(ctx), String(name), { cloud: ctx.cloud !== false }) };
 export const correct = (factId, change, ctx = {}) => F.correct(dbOf(ctx), factId, change);
+// knownPeople(ctx) -> the launcher's People list: everyone with linked cards or durable facts, one entry per (hard) group.
+export function knownPeople(ctx = {}) {
+  const db = dbOf(ctx), seen = new Set(), out = [];
+  let ids = [];
+  brain.v2.pending(db, 1); // warms the identity tables and links (brain cache) so a cold start lists the same people as a warm one
+  try { ids = db.prepare(`SELECT a id FROM identity_link UNION SELECT b FROM identity_link UNION SELECT DISTINCT subj FROM fact WHERE status='active'`).all().map((r) => r.id); } catch {}
+  for (const id of ids) { const p = person(id, ctx); if (!p || p.id === db.me || seen.has(p.id)) continue; seen.add(p.id); out.push(p); }
+  return out.sort((a, b) => (b.also?.length || 0) - (a.also?.length || 0) || b.closeness - a.closeness);
+}
 export const syncFacts = (ctx = {}) => F.sync(dbOf(ctx), ctx);
 export const people = (ctx = {}) => brain.profile(dbOf(ctx), { cloud: ctx.cloud !== false }).find((f) => f.k === 'close_people') ? brain.recall(dbOf(ctx), 'people', { cloud: ctx.cloud !== false, k: 0 }).people : [];
 
@@ -326,7 +335,7 @@ export function contextLines(goal, ctx = {}) {
   const r = brain.context(dbOf(ctx), String(goal || ''), { cloud: ctx.cloud !== false });
   if (!r) return [];
   const q = (s, n = 160) => JSON.stringify(String(s).replace(/\s+/g, ' ').slice(0, n));
-  const lines = r.facts.map((f) => ({ text: `${f.fact}${f.cites.length ? ` [mem ${f.cites.join(',')}]` : ''}`, untrusted: false, fact: !f.profile }));
+  const lines = r.facts.map((f) => ({ text: `${f.fact}${f.cites.length ? ` [mem ${f.cites.join(',')}]` : ''}`, untrusted: false, fact: !f.profile, ambiguous: f.ambiguous }));
   for (const p of r.people) lines.push({ text: `${p.name}${p.also ? ` (also "${p.also.slice(0, 3).join('", "')}")` : ''}${p.maybe ? ` (possibly also "${p.maybe.slice(0, 3).join('", "')}", not confirmed)` : ''}: ${[...p.apps.slice(0, 4), ...p.phone.slice(0, 1).map((x) => `phone ${x}`)].join(', ')}`, untrusted: false });
   for (const e of r.events) lines.push({ text: `[${e.app || e.source} · ${e.when}${e.from ? ` · ${e.from}` : ''}${e.to && e.to !== 'you' ? ` → ${e.to}` : ''}${e.group ? ` · ${e.group}` : ''}${e.place ? ` @ ${e.place}` : ''}] ${e.title && e.kind !== 'message' ? e.title : ''}${e.text ? ` ${q(e.text)}` : ''} [mem ${e.id}]`, untrusted: !e.trusted && !!e.text, source: e.source });
   return lines;

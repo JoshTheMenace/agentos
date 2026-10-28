@@ -64,6 +64,7 @@ export async function block({ cloud = true, goal = '' } = {}) {
   // Lines quoting other people's text are guarded like notifications and make the turn untrusted.
   let mem = [], memUntrusted = false;
   try { mem = goal ? memory.contextLines(goal, { cloud }) : []; } catch (e) { log(`context: memory failed (${e.message})`); }
+  const asked = mem.flatMap((l) => l.ambiguous || []); if (asked.length) events.publish({ type: 'memory.asked', names: asked, goal: String(goal).slice(0, 80) }); // "which Joe?": the launcher shows the one-tap cards
   const memLines = [];
   for (const l of mem) {
     if (l.untrusted && (await classify(l.text)).label !== 'benign') { memLines.push('[withheld by guard: likely prompt injection]'); continue; }

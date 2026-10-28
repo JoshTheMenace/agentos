@@ -42,7 +42,7 @@ context.start(providers[cfg.provider], codex); // notification feed -> context b
 const memsync = connectors.start({ log }); // memory connectors: default grants, then whatever is due once a minute (see memory/SOURCES.md)
 if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approval card; see reviewer.js for what it may do
   const turn = tasks.get(a.task_id);
-  reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size }, events.publish);
+  reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size, drafted: proactive.drafted(turn?.goal) }, events.publish);
 });
 if (process.env.REMOTE_MCP === '1') remote.start({ taskman, context, memory, guard: guardMemory, publish: events.publish, rpc }); // Grok / Dots over MCP (mcp-remote.js)
 if (cfg.reviewModel !== 'off') reviewer.grade(codex, { user: ['warm-up'], transcript: [], action: { tool: 'scroll' } }, 60_000); // first real review is warm (<4 s)
@@ -185,7 +185,7 @@ wss.on('connection', (ws, req) => {
       case 'task.cancel': return taskman.stop(String(msg.id || ''));
       case 'schedule.list': return send({ type: 'schedule.list', items: schedule.list() });
       case 'schedule.cancel': return schedule.cancel(String(msg.id || '')); // the owner's x on the home screen
-      case 'promises.list': case 'promises.update': return send(proactive.handle(msg)); // the launcher's Promises list (done / dismiss / snooze)
+      case 'promises.list': case 'promises.update': case 'promises.scan': return send(proactive.handle(msg)); // the launcher's Promises list (done / dismiss / snooze)
       case 'memory.consent': { // {source, action:"grant"|"revoke", scope?}: the launcher's toggle. Revoke deletes the source's data; its connector stops.
         const reply = (r) => send({ type: 'memory.consent', source: msg.source, action: msg.action, ...r });
         if (!(owner ??= fromOwner(req.socket))) return reply({ ok: false, error: 'only the owner (launcher) can change memory consent' });
@@ -210,6 +210,17 @@ wss.on('connection', (ws, req) => {
       case 'apps.remove': { // the owner's long-press on a home-screen app (launcher only); a model removes apps through remove_app
         if (!(owner ??= fromOwner(req.socket))) return send({ type: 'error', code: 'owner', message: 'only the launcher can remove apps' });
         return apps.call('remove_app', { app: String(msg.id || '') }, { emit() {} });
+      }
+      case 'memory.about': case 'memory.identity': case 'memory.identity.confirm': case 'memory.correct': { // the launcher's "What I know" screen
+        // (web/app.js): facts with their source, one-tap fix/forget, linked cards per person, "same person?" cards. Owner only, reads
+        // included: the facts go out raw (no [P:n]), and a model must never settle an identity or edit memory here (its tools need a card).
+        if (!(owner ??= fromOwner(req.socket))) return send({ type: msg.type, ok: false, error: 'only the owner (launcher) can see or change memory' });
+        const ctx = { cloud: false, actor: 'user:owner' }, who = (x) => { const p = memory.person(x.id, ctx); return { ...x, apps: p?.apps || [], rel: p?.relationship }; };
+        const about = () => send({ type: 'memory.about', v2: process.env.MEMORY_V2 === '1', ...memory.about(ctx), facts: memory.facts({ history: true }, ctx), people: memory.knownPeople(ctx) });
+        const identity = () => send({ type: 'memory.identity', pending: memory.identity.pending(ctx, 10).map((c) => ({ ...c, a: who(c.a), b: who(c.b) })) });
+        if (msg.type === 'memory.identity.confirm') { const link = memory.identity.confirm(+msg.a, +msg.b, !!msg.same, ctx); log(`memory identity #${msg.a}/#${msg.b} ${msg.same ? 'same' : 'different'} by owner`); send({ type: msg.type, ok: true, link }); return identity(), about(); }
+        if (msg.type === 'memory.correct') { const r = memory.correct(+msg.id, msg.retract ? { retract: true } : { obj: String(msg.obj || '') }, ctx); log(`memory fact #${msg.id} ${msg.retract ? 'forgotten' : 'corrected'} by owner: ${r.ok}`); send({ type: msg.type, id: msg.id, ...r }); return about(); }
+        return msg.type === 'memory.about' ? about() : identity();
       }
       case 'memory.sync': return send({ type: 'memory.sync', results: memsync.now(msg.source && String(msg.source)) }); // on-demand connector run (UI "Sync now")
       default:

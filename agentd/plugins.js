@@ -66,7 +66,7 @@ export const PLUGINS = [
     route: /\b(apps?|build|make|create|track|tracker|tracking|log|logger|counter|dice|roller|habits?|streaks?|widget|intake)\b/,
     prompt: '- Apps: when the user wants to track, log, count, roll or time something, or asks for an app/tool, call build_app once with their request (no questions; sensible defaults). "Add X to my <name> app" = build_app with update:"<name>". It takes about half a minute; then say it is on their home screen.' },
   { id: 'mods', name: 'Mods', on: true, summary: 'Preview and mask promoted app content, simplify screens, add safe buttons, list/remove mods.',
-    tools: ['mod_inspect', 'mod_preview', 'mod_apply', 'mod_list', 'mod_remove', 'mod_disable', 'app_mod_apply', 'app_mod_targets', 'app_mod_list', 'app_mod_remove'],
+    tools: ['mod_inspect', 'mod_preview', 'mod_apply', 'mod_list', 'mod_remove', 'mod_disable'],
     route: /\b(mods?|buttons?|promoted|sponsored|simplify|restyle|hide|reorder|banners?)\b/,
     prompt: '' },
 ];

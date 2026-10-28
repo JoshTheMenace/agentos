@@ -189,6 +189,22 @@ public class Main extends Activity {
             addBubble(append(name, t, true, null, System.currentTimeMillis()));
         });
         in.setOnEditorActionListener((v, id, e) -> send.performClick());
+        // Images from the keyboard (commitContent, e.g. AgentOS "✨ make an image of ..."): shown as a bubble, like a sent photo.
+        in.setOnReceiveContentListener(new String[]{"image/*"}, (v, payload) -> {
+            android.content.ClipData clip = payload.getClip();
+            for (int i = 0; i < clip.getItemCount(); i++) {
+                android.net.Uri u = clip.getItemAt(i).getUri(); if (u == null) continue;
+                try (java.io.InputStream s = getContentResolver().openInputStream(u)) {
+                    android.widget.ImageView iv = new android.widget.ImageView(this);
+                    iv.setImageBitmap(android.graphics.BitmapFactory.decodeStream(s));
+                    iv.setClipToOutline(true); iv.setBackground(pill(R.color.accent));
+                    LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(dp(220), dp(220)); lp2.gravity = android.view.Gravity.END; lp2.topMargin = dp(6);
+                    bubbles.addView(iv, lp2);
+                    scroller.post(() -> scroller.fullScroll(View.FOCUS_DOWN));
+                } catch (Exception e) { android.util.Log.w("Pigeon", "image from keyboard failed", e); }
+            }
+            return null; // consumed
+        });
         page.addView(bar);
 
         chatView = page;

@@ -215,11 +215,14 @@ function renderSugg() {
   const items = [...S.sugg];
   const c = S.cal, mins = c ? Math.round((c.begin - Date.now()) / 60000) : 0;
   if (c && c.location && mins > 0 && mins <= 120 && !c.allDay) items.unshift({ id: 'leave', title: `Leave for ${short(c.title, 22)} soon`, detail: `${fmtT(c.begin)} · ${short(c.location, 30)}`, icon: 'car', goal: `Open directions to ${c.location} in Maps` });
+  const asked = S.asked && Date.now() - S.asked.at < 30 * 60000 ? S.asked.names.map((n) => n.toLowerCase().split(/\W/)[0]) : [];
+  const first = (n) => String(n || '').toLowerCase().split(/\W/)[0];
+  for (const c of (S.pending || []).filter((c) => !later.has(c.a.id + ':' + c.b.id) && asked.includes(first(c.a.name))).slice(0, 2)) items.unshift({ id: `same:${c.a.id}:${c.b.id}`, title: sameQ(c), detail: 'I asked which one · tap to answer', icon: 'spark', view: 'know' });
   $('#forK').textContent = items.length ? 'For you' : '';
   $('.feed').classList.toggle('none', !items.length);
   if (!items.length) return swap($('#sugg'), el('div', 'calm', `<svg width="14" height="14"><use href="#i-check"/></svg>All caught up`));
   swap($('#sugg'), ...items.slice(0, 4).map((it, i) => {
-    const b = el('button', 'glass sg'); b.style.animationDelay = i * .05 + 's';
+    const b = el('button', 'glass sg' + (it.view === 'know' ? ' same' : '')); b.style.animationDelay = i * .05 + 's';
     const ic = it.app && S.names[it.app] ? `<span class="appic">${ICOHTML(it.app)}</span>` : `<span class="appic" style="background:${it.icon === 'eye' || it.icon === 'shield' ? 'var(--green)' : it.icon === 'car' ? 'var(--blue)' : 'var(--purple)'}"><svg width="18" height="18"><use href="${SICON[it.icon] || '#i-spark'}"/></svg></span>`;
     b.innerHTML = `${ic}<div><div class="t">${esc(it.title)}</div><div class="s">${esc(it.detail || '')}</div></div><span class="orb working sm"></span><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg>`;
     b.onclick = () => startSuggestion(it, b); return b;
@@ -229,6 +232,7 @@ function startSuggestion(it, b) {
   hap('heavy');
   if (it.view === 'blockers') return openBlockers();
   if (it.view === 'activity') return go(1);
+  if (it.view === 'know') return $('#toKnow').onclick();
   if (!it.goal) return;
   b.classList.add('busy');
   S.goal = it.goal; if (!send({ type: 'task.start', goal: it.goal })) return b.classList.remove('busy');
@@ -492,6 +496,57 @@ function renderPromises() {
 }
 $('#toPromises').onclick = () => { hap(); open('promises'); renderPromises(); send({ type: 'promises.list' }); };
 $('#promisesBack').onclick = () => close('promises');
+// ---------- what I know (agentd memory v2, MEMORY_V2=1): "same person?" cards, facts with the app and day they came from
+// (Fix edits inline, the x forgets), people with their linked cards. agentd takes all four messages from this app's uid only
+// (fromOwner), so a model can't settle an identity or edit a fact through here; its own tools need a card.
+const SRC = (s) => ({ calllog: 'Call log', sms: 'Texts', user: 'You told me', notifications: 'Notifications', contacts: 'Contacts' })[s] || String(s || '').replace(/^\w/, (c) => c.toUpperCase());
+const day = (ts) => ts ? new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+const GROUP = (f) => f.name !== 'you' ? 'People' : /^(favorite|likes|dislikes|prefers|diet|allergic)/.test(f.pred) ? 'Favorites' : /^(plan|wants|project)$/.test(f.pred) ? 'Plans' : 'Routines & life';
+const sameQ = (c) => `Is ${c.a.name}${c.a.apps?.[0] ? ` on ${c.a.apps[0]}` : ''} the same as ${c.b.name}${c.b.rel ? ` (your ${c.b.rel})` : c.b.apps?.[0] ? ` in ${c.b.apps[0]}` : ''}?`;
+const later = new Set(); // "Not sure": hidden until the launcher restarts
+function sameCard(c, cls = 'glass pw same') {
+  const r = el('div', cls, `<div class="qq">${esc(sameQ(c))}</div><span class="s">${esc(c.why.join(' · '))}</span><div class="acts"><button class="tag" data-a="yes">Yes, same person</button><button class="tag" data-a="no">No</button><button class="tag ghost" data-a="later">Not sure</button></div>`);
+  r.onclick = (e) => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; hap(); e.target.classList.add('on'); r.classList.add('gone');
+    if (a === 'later') later.add(c.a.id + ':' + c.b.id); else send({ type: 'memory.identity.confirm', a: c.a.id, b: c.b.id, same: a === 'yes' });
+    setTimeout(() => { S.pending = S.pending.filter((x) => x !== c); renderKnow(); renderSugg(); }, 350); };
+  return r;
+}
+function factRow(f) {
+  const old = f.status !== 'active', r = el('div', 'rowi fact' + (old ? ' old' : ''), `<div>${esc(f.text)}<span class="s">${esc(SRC(f.source))} · ${day(f.at)}${f.by === 'owner' ? ' · you fixed it' : ''}</span></div>` + (old ? '' : `<div class="r"><button class="tag" data-a="fix">Fix</button><button class="ib" data-a="forget" aria-label="Forget"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`));
+  r.onclick = (e) => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; hap();
+    if (a === 'forget') { r.classList.add('gone'); return send({ type: 'memory.correct', id: f.id, retract: true }); }
+    if (a === 'save') { const v = $('input', r).value.trim(); if (v && v !== f.obj) send({ type: 'memory.correct', id: f.id, obj: v }); else renderKnow(); return; }
+    $('div', r).innerHTML = `<input value="${esc(f.obj)}" autocomplete="off"><span class="s">${esc(f.name === 'you' ? 'You' : f.name)} · ${esc(f.pred.replace(/^favorite:/, 'favorite ').replace(/_/g, ' '))}</span>`;
+    $('.r', r).innerHTML = '<button class="tag b" data-a="save">Save</button>'; const i = $('input', r); i.focus(); i.onkeydown = (k) => k.key === 'Enter' && $('[data-a=save]', r).click(); };
+  return r;
+}
+function renderKnow() {
+  const box = $('#klist'), k = S.know, pend = (S.pending || []).filter((c) => !later.has(c.a.id + ':' + c.b.id));
+  $('#knowNote').textContent = $('#knowNote2').textContent = !k ? '' : pend.length ? `${pend.length} to confirm` : k.facts.length ? `${k.facts.length} facts` : k.v2 ? 'nothing yet' : 'off';
+  if (!$('#know').classList.contains('on')) return;
+  if (!k) return box.replaceChildren(el('div', 'empty', 'Offline'));
+  const parts = [];
+  if (pend.length) { const m = el('div', 'mod', `<div class="k">Same person?<span>${pend.length}</span></div><div class="provnote" style="margin-bottom:8px">Your answer settles it; I never guess before sending</div>`); m.append(...pend.map((c) => sameCard(c))); parts.push(m); }
+  const groups = new Map(); for (const f of k.facts) (groups.get(GROUP(f)) ?? groups.set(GROUP(f), []).get(GROUP(f))).push(f);
+  const about = el('div', 'mod', '<div class="k">About you<span>tap Fix or x · each line says where it came from</span></div>');
+  for (const g of ['Favorites', 'People', 'Plans', 'Routines & life']) if (groups.get(g)) about.append(Object.assign(el('div', 'k', g), { style: 'margin:10px 0 2px;color:var(--l2)' }), ...groups.get(g).map(factRow));
+  if (!k.facts.length) about.append(el('div', 'empty', k.v2 ? 'Nothing durable yet. Tell me things, or let the connectors read a little.' : 'Memory v2 is off on this phone (MEMORY_V2=1 in agentd.env)'));
+  parts.push(about);
+  const people = el('div', 'mod', `<div class="k">People<span>${k.people.length ? 'linked cards per person' : ''}</span></div>`);
+  people.append(...k.people.map((p) => { const why = (p.linked || []).map((l) => l.replace(/^(same person|possibly the same person): /, '').replace(/ \(\d+%\)$/, '')).join(' · ');
+    return el('div', 'rowi', `<span class="appic" style="background:var(--${p.relationship ? 'purple' : 'blue'})">${esc(p.name[0])}</span><div>${esc(p.name)}${p.relationship ? ` <span class="tag">your ${esc(p.relationship)}</span>` : ''}<span class="s">${esc([p.apps.slice(0, 3).join(' + '), p.also?.length ? `also "${p.also.slice(0, 2).join('", "')}"` : '', p.maybe?.length ? `maybe "${p.maybe.slice(0, 2).join('", "')}"` : '', why].filter(Boolean).join(' · '))}</span></div>`); }));
+  if (!k.people.length) people.append(el('div', 'empty', 'No one yet'));
+  parts.push(people);
+  box.replaceChildren(...parts);
+}
+on('ws.open', () => { send({ type: 'memory.about' }); send({ type: 'memory.identity' }); });
+on('memory.about', (m) => { if (m.ok === false) return; S.know = m; renderKnow(); });
+on('memory.identity', (m) => { if (m.ok === false) return; S.pending = m.pending || []; renderKnow(); renderSugg(); });
+on('memory.identity.confirm', (m) => { if (!m.ok) hap('heavy'); });
+on('memory.correct', (m) => { if (!m.ok) { hap('heavy'); renderKnow(); } });
+on('memory.asked', (m) => { S.asked = { names: m.names || [], at: Date.now() }; send({ type: 'memory.identity' }); }); // "which Joe?": the matching cards go to Home
+$('#toKnow').onclick = () => { hap(); open('know'); renderKnow(); send({ type: 'memory.about' }); send({ type: 'memory.identity' }); };
+$('#knowBack').onclick = () => close('know');
 // ---------- plugins: the owner's switches for groups of the agent's API tools (agentd/plugins.js) ----------
 // The list comes from agentd (names, summaries); a switch goes over the owner line to the broker (plugins.set), which takes it
 // only from this app's uid. agentd and models can't flip one. Off = the agent loses those API tools; it can still use the app on screen.

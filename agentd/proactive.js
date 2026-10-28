@@ -22,7 +22,8 @@ import { open as openMemory, readable } from './memory/store.js';
 const FILE = join(process.env.AGENTOS_HOME || join(homedir(), '.agentos'), 'promises.json');
 const MAX = +(process.env.PROACTIVE_MAX || 3), [QS, QE] = (process.env.PROACTIVE_QUIET || '22-8').split('-').map(Number);
 const H = 36e5, DAY = 24 * H, WINDOW = 3 * DAY; // threads older than 3 days are left alone
-let io = null, items = [], calCards = [], db = null, debounce = null, scanning = Promise.resolve();
+let io = null, items = [], calCards = [], db = null, debounce = null, ripen = null, scanning = Promise.resolve();
+const served = new Set(); // goals of cards/list rows we showed: a task started from one carries model-drafted text (drafted())
 const live = new Map(); // thread id -> {app, pkg, conversation, group, key, msgs[]} from the notification feed
 const seen = new Map(); // thread id -> signature at the last scan (unchanged threads are not re-sent)
 
@@ -65,14 +66,18 @@ function threads() {
 }
 
 // ---------------------------------------------------------------- scan: one batched model call for what changed
-const sig = (t) => hash(t.msgs.map((m) => `${m.from}:${m.when}`).join('|'));
+// A question that just turned old enough (REPLY_AFTER) changes the signature, so the gate sees it again instead of never.
+const young = (t, now) => t.msgs.at(-1).from !== 'me' && now - t.msgs.at(-1).when < D.REPLY_AFTER;
+const sig = (t, now) => hash(t.msgs.map((m) => `${m.from}:${m.when}`).join('|') + young(t, now));
 export function scan(why = '') { return (scanning = scanning.then(() => scanNow(why)).catch((e) => log(`proactive scan failed: ${e.message}`))); }
 async function scanNow(why) {
-  const now = Date.now(), todo = [];
-  for (const t of threads().filter((t) => seen.get(t.id) !== sig(t)).sort((a, b) => b.msgs.at(-1).when - a.msgs.at(-1).when).slice(0, 40)) {
+  const now = Date.now(), todo = [], all = threads();
+  const wait = Math.min(...all.filter((t) => young(t, now)).map((t) => D.REPLY_AFTER - (now - t.msgs.at(-1).when)));
+  if (wait < Infinity) { clearTimeout(ripen); ripen = setTimeout(() => scan('question ripe'), wait + 2000); ripen.unref?.(); }
+  for (const t of all.filter((t) => seen.get(t.id) !== sig(t, now)).sort((a, b) => b.msgs.at(-1).when - a.msgs.at(-1).when).slice(0, 40)) {
     // Other people's text is untrusted: a thread with a flagged message is never sent to a model or turned into a card.
     const flagged = (await Promise.all(t.msgs.filter((m) => m.from !== 'me').map((m) => classify(m.text)))).some((g) => g.label !== 'benign');
-    seen.set(t.id, sig(t));
+    seen.set(t.id, sig(t, now));
     if (!flagged) todo.push({ ...t, msgs: t.msgs.map((m) => ({ ...m, text: m.text.replace(/(?<![\d.:])\d{4,8}(?![\d.:])/g, '[code]') })) });
   }
   if (!todo.length) return;
@@ -144,19 +149,23 @@ function goal(x) {
   if (x.kind === 'request') return `${where} asked me: "${short(x.quote, 140)}". Help me do it: do what you can on the phone and draft any message to ${x.who} for my approval. ${ask}`;
   return `I promised ${where}: "${short(x.quote, 140)}". Help me keep it: do what you can on the phone and draft the message to ${x.who} for my approval. ${ask}`;
 }
-const card = (x) => ({ id: `p:${x.id}`, app: x.pkg || undefined, icon: x.kind === 'reply' ? 'chat' : 'spark', goal: goal(x),
+const shown = (g) => { if (served.size > 500) served.clear(); served.add(g); return g; };
+export const drafted = (g) => !!g && served.has(g); // the reviewer never auto-approves a send from these (reviewer.js)
+const card = (x) => ({ id: `p:${x.id}`, app: x.pkg || undefined, icon: x.kind === 'reply' ? 'chat' : 'spark', goal: shown(goal(x)),
   title: x.kind === 'reply' ? `Reply to ${short(x.who, 24)}?` : x.what ? short(x.what, 40) : x.kind === 'commitment' ? `Your promise to ${short(x.who, 24)}` : `${short(x.who, 24)} asked you`,
   detail: x.kind === 'reply' || !x.what ? `${ago(x.at)}: ${short(x.quote, 44)}` : x.kind === 'request' ? `${short(x.who, 20)} asked · ${x.due ? `due ${dayLabel(x.due)}` : ago(x.at)}` : `You told ${short(x.who, 20)} · ${x.due ? `due ${dayLabel(x.due)}` : ago(x.at)}` });
 // Home: calendar first (time-bound), then the 2 most pressing promises. Cards you tapped hide for 2 h (the task is on it).
-export const cards = () => !io ? [] : [...calCards, ...items.filter((x) => x.state === 'open' && !(x.acted > Date.now() - 2 * H))
+export const cards = () => !io ? [] : [...calCards.map((c) => (shown(c.goal), c)), ...items.filter((x) => x.state === 'open' && !(x.acted > Date.now() - 2 * H))
   .sort((a, b) => RANK(a) - RANK(b) || a.at - b.at).slice(0, 2).map(card)].slice(0, 3);
 export const list = () => items.filter((x) => x.state === 'open' || x.state === 'snoozed' || x.closed > Date.now() - DAY)
   .sort((a, b) => (a.state !== 'open') - (b.state !== 'open') || RANK(a) - RANK(b) || a.at - b.at)
-  .map((x) => ({ ...x, dueLabel: x.due ? dayLabel(x.due) : '', ago: ago(x.at), goal: goal(x) }));
+  .map((x) => ({ ...x, dueLabel: x.due ? dayLabel(x.due) : '', ago: ago(x.at), goal: shown(goal(x)) }));
 
 // WebSocket messages from the launcher: {type:"promises.list"} | {type:"promises.update", id, action:"done"|"dismiss"|"snooze"|"open", hours?}
+// | {type:"promises.scan"} (PROACTIVE_STAGE=1 only: scan now; the result is pushed)
 export function handle(m) {
   if (!io) return { type: 'promises', items: [], off: true };
+  if (m.type === 'promises.scan') { if (!D.STAGE) return { type: 'promises', items: list(), error: 'scan on demand needs PROACTIVE_STAGE=1' }; scan('on demand'); } // the result is pushed as {type:"promises"}
   if (m.type === 'promises.update') {
     const x = items.find((y) => y.id === String(m.id || '').replace(/^p:/, ''));
     if (!x) return { type: 'promises', items: list(), error: 'no such item' };
@@ -165,24 +174,25 @@ export function handle(m) {
     else if (m.action === 'open') Object.assign(x, { state: 'open', closed: undefined, until: undefined });
     changed();
   }
-  return { type: 'promises', items: list(), budget: budget() };
+  return { type: 'promises', items: list(), budget: budget(), stage: D.STAGE };
 }
 
 // io: {codex, rpc, publish, onEvent, schedule} from server.js.
 export function init(deps) {
   io = deps;
   try { items = existsSync(FILE) ? JSON.parse(readFileSync(FILE, 'utf8')) : []; } catch (e) { log('promises.json unreadable', e.message); }
-  const soon = (why) => { clearTimeout(debounce); debounce = setTimeout(() => scan(why), 20_000); };
+  const soon = (why) => { clearTimeout(debounce); debounce = setTimeout(() => scan(why), D.STAGE ? 3000 : 20_000); };
   io.onEvent((e) => {
     if (e.type === 'notification.posted' && e.message) { note(e, e.from_me ? 'me' : e.group ? e.sender : e.conversation); soon('message'); }
     if (e.type === 'audit.append' && e.tool === 'notifications.reply' && e.ok) { // a reply we sent: find its thread by the audit's target
-      const t = [...live.values()].find((x) => x.pkg === e.pkg && `Reply to ${x.conversation}` === e.target);
-      if (t) { note({ ...t, text: e.text, when: Date.now() }, 'me'); soon('my reply'); }
+      const t = [...live.values()].find((x) => x.pkg === e.pkg && `Reply to ${x.conversation}` === e.target)
+        ?? { pkg: e.pkg, app: [...live.values()].find((x) => x.pkg === e.pkg)?.app, conversation: String(e.target || '').replace(/^Reply to /, '') };
+      if (t.conversation && e.text) { note({ ...t, text: e.text, when: Date.now() }, 'me'); soon('my reply'); }
     }
     if (e.type === 'task.update' && e.task?.goal) for (const x of items) if (x.state === 'open' && goal(x) === e.task.goal && !x.acted) { x.acted = Date.now(); changed(); }
   });
   setInterval(() => scan('memory sync'), 10 * 60_000).unref?.();
   setInterval(() => tick().catch((e) => log(`proactive tick failed: ${e.message}`)), 60_000).unref?.();
   setTimeout(() => { scan('start'); tick().catch(() => {}); }, 15_000).unref?.();
-  log(`proactive: on (${items.filter((x) => x.state === 'open').length} open, ${MAX} reminders/day, quiet ${QS}-${QE})`);
+  log(`proactive: on (${items.filter((x) => x.state === 'open').length} open, ${MAX} reminders/day, quiet ${QS}-${QE}, reply after ${D.REPLY_AFTER / 6e4} min${D.STAGE ? ', STAGE' : ''})`);
 }
