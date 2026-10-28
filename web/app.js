@@ -5,8 +5,9 @@ const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [..
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 // Re-render without replaying animations: cards that are still the same card (same classes, same shape) keep their DOM
 // and only get new text/attributes/handlers; anything else is swapped in fresh (and animates in).
+const same = (o, n) => o.className === n.className || (!!o.dataset?.k && o.dataset.k === n.dataset?.k); // keyed cards (data-k) stay put through a state change
 function morph(o, n) {
-  if (o.nodeName !== n.nodeName || o.childNodes.length !== n.childNodes.length || (o.nodeType === 1 && o.getAttribute('class') !== n.getAttribute('class'))) return o.replaceWith(n);
+  if (o.nodeName !== n.nodeName || o.childNodes.length !== n.childNodes.length || (o.nodeType === 1 && !same(o, n))) return o.replaceWith(n);
   if (o.nodeType === 3) { if (o.data !== n.data) o.data = n.data; return; }
   if (o.nodeType !== 1) return;
   for (const a of n.attributes) if (o.getAttribute(a.name) !== a.value) o.setAttribute(a.name, a.value);
@@ -15,7 +16,7 @@ function morph(o, n) {
 }
 function swap(box, ...nodes) {
   const old = [...box.children];
-  if (old.length === nodes.length && old.every((o, i) => o.className === nodes[i].className)) old.forEach((o, i) => morph(o, nodes[i]));
+  if (old.length === nodes.length && old.every((o, i) => same(o, nodes[i]))) old.forEach((o, i) => morph(o, nodes[i]));
   else box.replaceChildren(...nodes);
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -176,7 +177,7 @@ function workerCard(w) {
   const on = WORKING.has(w.state), cls = w.state === 'waiting' ? 'approval' : on ? 'working' : w.state === 'done' ? 'done' : 'alert';
   const meta = [w.provider === 'local' ? 'On device' : '', on ? `${ago(w.created)}${w.steps ? ` · ${w.steps} step${w.steps > 1 ? 's' : ''}` : ''}` : w.state === 'done' ? dur(w.timing?.total_ms).slice(3) : ''].filter(Boolean).join(' · ');
   const c = el('button', `glass now ${cls}${on ? '' : ' done'}${w.gone ? ' gone' : ''}`, `<div class="hd">${on ? `<span class="orb ${cls}"></span>` : `<span class="ok ${cls}"><svg width="12" height="12"><use href="#i-${w.state === 'done' ? 'check' : 'x'}"/></svg></span>`}<div><div class="t">${esc(short(w.goal, 40))}</div><div class="s">${esc(short(on ? stepText(w.step) : w.result || w.error || stepText(w.step), 80))}</div></div>${meta ? `<span class="meta">${meta}</span>` : ''}${on ? `<button class="ib red" data-a="cancel"><svg width="14" height="14"><use href="#i-stop"/></svg></button>` : ''}</div><div class="bar2"><i></i></div>`);
-  c.onclick = (e) => { hap(); if (e.target.closest('[data-a]')) { send({ type: 'task.cancel', id: w.id }); return; } open('sheet'); };
+  c.dataset.k = w.goal; c.onclick = (e) => { hap(); if (e.target.closest('[data-a]')) { send({ type: 'task.cancel', id: w.id }); return; } open('sheet'); };
   return c;
 }
 on('task.update', (m) => {
@@ -634,7 +635,7 @@ let askAt = 0, dots = null;
 // The stopwatch (DEMO-WOW #4): the header counts up quietly while working ("Thinking · 4 s") and ends on the measured time
 // from agentd ("Done · 6.8 s"; past 30 s just "Done"). The island shows the same number.
 let shState = 'Ask', shCls = '', shMs = 0;
-function setSheet(state, cls, ms) { shState = state; shCls = cls || ''; shMs = ms || 0; shRender(); $('#shorb').className = 'orb ' + shCls; $('#shstop').hidden = !S.turn; if (cls !== 'working') { dots?.remove(); dots = null; } }
+function setSheet(state, cls, ms) { shState = state; shCls = cls || ''; shMs = ms || 0; shRender(); $('#shorb').className = 'orb ' + shCls; $('.shd').dataset.s = shCls; $('#shstop').hidden = !S.turn; if (cls !== 'working') { dots?.remove(); dots = null; } }
 function shRender() { const s = shCls === 'working' && askAt ? Math.floor((Date.now() - askAt) / 1000) : 0; $('#shstate').textContent = shState + (shMs ? dur(shMs) : s >= 1 ? ` · ${s} s` : ''); $('#shdev').hidden = !S.onDevice; }
 // agentd's router may answer on the phone's own model when there is no network: events then carry provider "local" (the user's toggle is untouched).
 const device = (m) => { if (typeof m.provider === 'string') { S.onDevice = m.provider === 'local'; shRender(); } };
@@ -673,6 +674,9 @@ app.picked = (url, kind) => {
 $('#askForm').onsubmit = (e) => { e.preventDefault(); const t = $('#askIn').value.trim(); $('#askIn').value = ''; hap('tick'); sendUser(t); };
 $('#shstop').onclick = () => { hap(); send({ type: 'stop' }); };
 on('text.delta', (m) => { dots?.remove(); dots = null; if (!aiMsg) body.append(aiMsg = el('div', 'msg ai')); aiMsg.textContent += m.text; if (S.home) S.home.text = aiMsg.textContent; scrollDown(); });
+on('catchup', (m) => { dots?.remove(); dots = null; aiMsg = null; const ICO = { chat: 'msg', cal: 'cal', spark: 'spark', shield: 'shield' }, list = el('div', 'catch'); // "What did I miss?" rows land before the spoken answer
+  list.append(...(m.cards || []).slice(0, 8).map((c) => { const r = el(c.goal ? 'button' : 'div', 'crow', `${ICO[c.icon] ? `<svg width="14" height="14"><use href="#i-${ICO[c.icon]}"/></svg>` : '<i></i>'}<b>${esc(c.title)}</b>${c.detail ? `<span class="s">${esc(c.detail)}</span>` : ''}`); if (c.goal) r.onclick = () => { hap('tick'); sendUser(c.goal); }; return r; }));
+  body.append(list); scrollDown(); });
 on('tool.request', (m) => {
   const a = m.args || {}, what = m.name === 'open_app' ? appName(a.pkg) : m.name === 'task.start' ? (a.apps || []).map(appName).join(', ') : a.text ? `“${short(a.text, 30)}”` : a.id != null ? `#${a.id}` : a.key || a.pkg || '';
   const line = m.name === 'open_app' && what ? `Opening ${what}` : `${toolName(m.name)} ${what}`.trim(); // "Opening Pigeon", not "Opening an app Pigeon"

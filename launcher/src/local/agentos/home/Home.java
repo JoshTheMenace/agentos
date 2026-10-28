@@ -25,6 +25,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowInsets;
+import android.view.WindowInsetsAnimation;
 import android.view.WindowInsetsController;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
@@ -63,7 +64,7 @@ public class Home extends Activity {
   static final String TAG = "AgentOSHome", ORIGIN = "https://agentos.home", DEV_FLAG = "/data/local/tmp/agentos-home.dev";
   WebView web; PermissionRequest pendingMic; String devOrigin; boolean wakeOnLoad;
   final Map<String, byte[]> icons = new HashMap<>();
-  float density; int insTop, insBottom, insIme;
+  float density; int insTop, insBottom, insIme; boolean imeAnim; // imeAnim: the keyboard is sliding; its frames drive insIme
 
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
@@ -104,9 +105,18 @@ public class Home extends Activity {
     });
     web.setOnApplyWindowInsetsListener((v, ins) -> {
       insTop = ins.getInsets(WindowInsets.Type.statusBars()).top; insBottom = ins.getInsets(WindowInsets.Type.navigationBars()).bottom;
-      insIme = ins.getInsets(WindowInsets.Type.ime()).bottom;
+      if (!imeAnim) insIme = ins.getInsets(WindowInsets.Type.ime()).bottom; // while the keyboard slides, onProgress below owns insIme (this call carries the end state)
       js("window.app&&app.insets&&app.insets(" + px(insTop) + "," + px(insBottom) + "," + px(insIme) + ")");
       return ins;
+    });
+    web.setWindowInsetsAnimationCallback(new WindowInsetsAnimation.Callback(WindowInsetsAnimation.Callback.DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+      // The keyboard's own animation frames: the ask bar rides up on the keyboard instead of hiding behind it and jumping.
+      @Override public void onPrepare(WindowInsetsAnimation a) { if ((a.getTypeMask() & WindowInsets.Type.ime()) != 0) imeAnim = true; }
+      @Override public WindowInsets onProgress(WindowInsets ins, List<WindowInsetsAnimation> anims) {
+        if (imeAnim) { insIme = ins.getInsets(WindowInsets.Type.ime()).bottom; js("window.app&&app.insets&&app.insets(" + px(insTop) + "," + px(insBottom) + "," + px(insIme) + ")"); }
+        return ins;
+      }
+      @Override public void onEnd(WindowInsetsAnimation a) { if ((a.getTypeMask() & WindowInsets.Type.ime()) != 0) { imeAnim = false; insIme = web.getRootWindowInsets() == null ? insIme : web.getRootWindowInsets().getInsets(WindowInsets.Type.ime()).bottom; js("window.app&&app.insets&&app.insets(" + px(insTop) + "," + px(insBottom) + "," + px(insIme) + ")"); } }
     });
     setContentView(web);
     WindowInsetsController ic = web.getWindowInsetsController(); // light icons on dark bars (needs the decor view: after setContentView)

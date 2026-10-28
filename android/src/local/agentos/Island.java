@@ -89,7 +89,7 @@ final class Island extends FrameLayout {
         pill.setGravity(Gravity.CENTER_VERTICAL);
         pill.setPadding(dp(12), 0, dp(10), 0);
         pill.addView(orb = new Orb(c, accent), dp(12), dp(12));
-        label = text(c, "AgentOS", 13, 600, L1);
+        label = text(c, "AgentOS", 14, 600, L1);
         label.setSingleLine(); label.setEllipsize(TextUtils.TruncateAt.END); label.setMaxWidth(dp(150));
         pill.addView(label, margin(dp(8), 0));
         pill.addView(ring = new Ring(c, accent), new LinearLayout.LayoutParams(dp(20), dp(20)) {{ leftMargin = dp(8); }});
@@ -133,13 +133,12 @@ final class Island extends FrameLayout {
         v.start();
     }
 
-    /** Crossfade the label, then let the pill grow or shrink to fit it. */
+    /** New label at once, brightening in (a fade out first leaves an empty pill for a visible beat), and the pill re-fits. */
     private void swap(String s) {
-        label.animate().alpha(0).setDuration(140).withEndAction(() -> {
-            label.setText(s);
-            label.animate().alpha(1).setDuration(220).start();
-            fit();
-        }).start();
+        label.animate().cancel();
+        label.setText(s); label.setAlpha(.25f);
+        label.animate().alpha(1).setDuration(220).start();
+        fit();
     }
 
     private void fit() {
@@ -163,7 +162,7 @@ final class Island extends FrameLayout {
         int fh = measureFace();
         open = true;
         tint(acc);
-        window(-1, fh + dp(SLACK)); // once, before the motion
+        window(dp(CARD_W), fh + dp(SLACK)); // once, before the motion
         morph(dp(CARD_W), fh, dp(CARD_R), 0, 1, 560, SPRING, null);
     }
 
@@ -194,8 +193,8 @@ final class Island extends FrameLayout {
     void refit() {
         if (!open || face == null) return;
         int fh = measureFace();
-        window(-1, Math.max(fh, (int) sh) + dp(SLACK));
-        morph(dp(CARD_W), fh, dp(CARD_R), 1, 1, 360, EASE, () -> window(-1, fh + dp(SLACK)));
+        window(dp(CARD_W), Math.max(fh, (int) sh) + dp(SLACK));
+        morph(dp(CARD_W), fh, dp(CARD_R), 1, 1, 360, EASE, () -> window(dp(CARD_W), fh + dp(SLACK)));
     }
 
     boolean isOpen() { return open; }
@@ -253,6 +252,7 @@ final class Island extends FrameLayout {
     void hide() {
         if (!shown) return;
         shown = false; open = false; active = false; closing = false; state = "idle"; pct = -1;
+        accent = orb.color = ring.color = IDLE; // the next pill starts grey, not in the last card's colour
         removeCallbacks(autoHide);
         if (anim != null) anim.cancel();
         if (face != null) removeView(face);
