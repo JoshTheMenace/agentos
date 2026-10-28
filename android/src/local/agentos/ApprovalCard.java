@@ -149,7 +149,9 @@ final class ApprovalCard {
     private LinearLayout face(View icon, String src, String title, int accent, boolean orb) {
         LinearLayout f = col();
         f.setPadding(dp(18), dp(16), dp(18), dp(16));
+        f.setClipToPadding(false);
         LinearLayout hd = row();
+        hd.setClipChildren(false); // the orb's halo reaches past its box
         hd.addView(icon, new LinearLayout.LayoutParams(dp(36), dp(36)));
         LinearLayout tt = col();
         tt.addView(text(src, 12, 500, L2));

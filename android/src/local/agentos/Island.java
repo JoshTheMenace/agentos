@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PathMeasure;
 import android.graphics.PixelFormat;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
@@ -46,7 +47,7 @@ import android.widget.TextView;
 final class Island extends FrameLayout {
     // ---- A2 tokens
     static final int L1 = 0xFFFFFFFF, L2 = 0x99EBEBF5, L3 = 0x4DEBEBF5, HAIR = 0x17FFFFFF, FILL14 = 0x24FFFFFF,
-            BLUE = 0xFF0A84FF, GREEN = 0xFF30D158, ORANGE = 0xFFFF9F0A, RED = 0xFFFF453A, IDLE = 0xFF8E8E93;
+            BLUE = 0xFF0A84FF, GREEN = 0xFF30D158, ORANGE = 0xFFFF9F0A, RED = 0xFFFF453A, AMBER = 0xFFFFC43D, IDLE = 0xFF8E8E93;
     static final int TOP_DP = 8, PILL_H = 37, PILL_W = 126, CARD_W = 378, CARD_R = 44, WIN_PILL_W = 240, SLACK = 20;
     static final Interpolator SPRING = new OvershootInterpolator(1f), EASE = new DecelerateInterpolator(2f);
 
@@ -87,6 +88,7 @@ final class Island extends FrameLayout {
         pill = new LinearLayout(c);
         pill.setGravity(Gravity.CENTER_VERTICAL);
         pill.setPadding(dp(12), 0, dp(10), 0);
+        pill.setClipChildren(false); pill.setClipToPadding(false); // the orb's glow and halo reach past its 12 dp box
         pill.addView(orb = new Orb(c, accent), dp(12), dp(12));
         label = text(c, "AgentOS", 14, 600, L1);
         label.setSingleLine(); label.setEllipsize(TextUtils.TruncateAt.END); label.setMaxWidth(dp(150));
@@ -103,7 +105,7 @@ final class Island extends FrameLayout {
     void set(String st, String lbl, int p) {
         if (!shown) show();
         removeCallbacks(autoHide);
-        if (st != null && !st.equals(state)) { state = st; tint(color(st)); }
+        if (st != null && !st.equals(state)) { state = st; tint(color(st)); orb.state(st); }
         active = "working".equals(state); // only a running task keeps the pill; other states are moments that fade
         label.setMaxWidth(dp(p >= 0 ? 150 : 190)); // a moment without the ring ("Blocked · Google Analytics") can use the ring's room
         if (p >= 0 != (ring.getVisibility() == VISIBLE)) { ring.setVisibility(p >= 0 ? VISIBLE : GONE); fit(); }
@@ -118,12 +120,17 @@ final class Island extends FrameLayout {
             case "working": return ORANGE;
             case "approval": return BLUE;
             case "done": return GREEN;
-            case "alert": return RED;
+            case "alert": return AMBER; // flagged: calm, not alarming (founder 10-28)
             default: return IDLE;
         }
     }
 
     int accent() { return accent; }
+
+    /** The orb state a card header in this accent should show. */
+    static String stateFor(int color) {
+        return color == BLUE ? "approval" : color == GREEN ? "done" : color == ORANGE ? "working" : color == AMBER || color == RED ? "alert" : "idle";
+    }
 
     private void tint(int to) {
         ValueAnimator v = ValueAnimator.ofObject(new ArgbEvaluator(), accent, to);
@@ -252,6 +259,7 @@ final class Island extends FrameLayout {
         if (!shown) return;
         shown = false; open = false; active = false; closing = false; state = "idle"; pct = -1;
         accent = orb.color = ring.color = IDLE; // the next pill starts grey, not in the last card's colour
+        orb.state("idle");
         removeCallbacks(autoHide);
         if (anim != null) anim.cancel();
         if (face != null) removeView(face);
@@ -314,28 +322,95 @@ final class Island extends FrameLayout {
 
     // ------------------------------------------------------------------ drawing primitives
 
-    /** Breathing orb: white highlight over the accent, 2.4 s scale 1 -> 1.14 with a soft glow. */
+    /** The agent's presence: a 12 dp glass sphere (white specular, accent body, dark rim, soft glow) whose motion says the
+     *  state. working: a light orbits it, behind then in front. approval: it breathes inside a halo. done: it pops and a
+     *  check draws in. alert: a calm, slow pulse. idle: nearly still. States cross-fade through presence weights (480 ms;
+     *  the done weight overshoots, which is the pop); the Island tints the colour. Canvas only: one small view, redrawn
+     *  per frame while attached, transform and alpha math on the CPU side is a few multiplies. */
     static final class Orb extends View {
-        final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        final ValueAnimator a = ValueAnimator.ofFloat(0, 1);
+        final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG), s = new Paint(Paint.ANTI_ALIAS_FLAG);
+        final ValueAnimator clock = ValueAnimator.ofFloat(0, 1);
+        final Path check = new Path(), trimmed = new Path();
+        final PathMeasure pm = new PathMeasure();
+        final float[] w = new float[4]; // presence of working, approval, done, alert
+        final ValueAnimator[] fade = new ValueAnimator[4];
         int color;
-        float phase;
-        Orb(Context c, int color) {
+        float t; // seconds, wraps every 48 s
+        Orb(Context c, int color) { this(c, color, stateFor(color)); }
+        Orb(Context c, int color, String st) {
             super(c);
             this.color = color;
-            a.setDuration(2400); a.setRepeatCount(-1); a.setInterpolator(new LinearInterpolator());
-            a.addUpdateListener(v -> { phase = (float) v.getAnimatedValue(); invalidate(); });
+            clock.setDuration(48_000); clock.setRepeatCount(-1); clock.setInterpolator(new LinearInterpolator());
+            clock.addUpdateListener(v -> { t = (float) v.getAnimatedValue() * 48; invalidate(); });
+            s.setStyle(Paint.Style.STROKE); s.setStrokeCap(Paint.Cap.ROUND); s.setStrokeJoin(Paint.Join.ROUND);
+            int i = idx(st);
+            if (i >= 0) w[i] = 1;
         }
-        @Override protected void onAttachedToWindow() { super.onAttachedToWindow(); a.start(); }
-        @Override protected void onDetachedFromWindow() { a.cancel(); super.onDetachedFromWindow(); }
+        static int idx(String st) {
+            switch (st) { case "working": return 0; case "approval": return 1; case "done": return 2; case "alert": return 3; default: return -1; }
+        }
+        /** Cross-fade to a state: the old motion fades while the new one grows. */
+        void state(String st) {
+            int to = idx(st);
+            for (int i = 0; i < 4; i++) {
+                float goal = i == to ? 1 : 0;
+                if (fade[i] != null) fade[i].cancel();
+                if (w[i] == goal) continue;
+                boolean pop = i == 2 && goal == 1;
+                ValueAnimator a = fade[i] = ValueAnimator.ofFloat(w[i], goal);
+                a.setDuration(pop ? 640 : 480); a.setInterpolator(pop ? new OvershootInterpolator(1.8f) : EASE);
+                final int k = i;
+                a.addUpdateListener(v -> w[k] = (float) v.getAnimatedValue());
+                a.start();
+            }
+        }
+        @Override protected void onAttachedToWindow() { super.onAttachedToWindow(); clock.start(); }
+        @Override protected void onDetachedFromWindow() { clock.cancel(); super.onDetachedFromWindow(); }
         @Override protected void onDraw(Canvas c) {
-            float cx = getWidth() / 2f, cy = getHeight() / 2f, k = (1 + (float) Math.sin(phase * 2 * Math.PI)) / 2;
-            float r = Math.min(cx, cy) * (0.78f + 0.11f * k);
-            int dark = Color.rgb(Color.red(color) * 3 / 5, Color.green(color) * 3 / 5, Color.blue(color) * 3 / 5);
-            p.setShadowLayer(r * (0.7f + 0.5f * k), 0, 0, color);
-            p.setShader(new RadialGradient(cx - r * .3f, cy - r * .36f, r * 1.3f, new int[]{0xF2FFFFFF, color, dark}, new float[]{0, .4f, 1}, Shader.TileMode.CLAMP));
-            p.setAlpha((int) (224 + 31 * k));
+            float cx = getWidth() / 2f, cy = getHeight() / 2f, R = Math.min(cx, cy);
+            float wW = w[0], wA = w[1], wD = clamp(w[2]), wF = w[3], wI = clamp(1 - wW - wA - wD - wF);
+            float br = (float) Math.sin(t / 2.4 * 2 * Math.PI) * .5f + .5f;   // 2.4 s breath (A2 `breathe`)
+            float slow = (float) Math.sin(t / 3.6 * 2 * Math.PI) * .5f + .5f; // 3.6 s calm pulse
+            float pop = w[2] > 1 ? 1 + (w[2] - 1) * .7f : 1;                  // the overshoot of the done fade
+            float r = R * .7f * (1 + .12f * wA * br + .05f * wF * slow + .025f * wI * slow) * pop;
+            int dark = Color.rgb(Color.red(color) * 11 / 20, Color.green(color) * 11 / 20, Color.blue(color) * 11 / 20);
+            // halo (approval): a thin ring breathing outward
+            if (wA > .01f) {
+                s.setStrokeWidth(R * .1f); s.setColor(color); s.setAlpha((int) (110 * wA * (1 - br * .55f)));
+                c.drawCircle(cx, cy, r * (1.3f + .32f * br), s);
+            }
+            // orbit (working): a light passes behind the sphere, then in front
+            double th = t / 1.7 * 2 * Math.PI;
+            float ox = cx + (float) Math.cos(th) * r * 1.08f, oy = cy + (float) Math.sin(th) * r * .45f;
+            boolean front = Math.sin(th) > 0;
+            if (wW > .01f && !front) spark(c, ox, oy, R * .17f, wW * .6f);
+            // the sphere: specular top-left, accent body, dark rim; the glow grows with the state
+            float glow = R * (.35f + .4f * wA * br + .25f * wW + .3f * wF * slow + .35f * wD);
+            p.setShadowLayer(glow, 0, 0, (color & 0x00FFFFFF) | ((int) (140 + 70 * wD) << 24));
+            p.setShader(new RadialGradient(cx - r * .32f, cy - r * .38f, r * 1.35f, new int[]{0xF7FFFFFF, color, dark}, new float[]{0, .42f, 1}, Shader.TileMode.CLAMP));
+            p.setAlpha(255);
             c.drawCircle(cx, cy, r, p);
+            p.clearShadowLayer();
+            // gloss cap: the glass look
+            p.setShader(new RadialGradient(cx, cy - r * .6f, r * .85f, 0x80FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
+            c.save(); c.clipRect(cx - r, cy - r, cx + r, cy); c.drawCircle(cx, cy, r, p); c.restore();
+            p.setShader(null);
+            if (wW > .01f && front) spark(c, ox, oy, R * .2f, wW);
+            // check (done): draws in with the pop, white on the green
+            if (wD > .01f) {
+                check.reset();
+                check.moveTo(cx - r * .44f, cy + r * .02f); check.lineTo(cx - r * .12f, cy + r * .34f); check.lineTo(cx + r * .48f, cy - r * .34f);
+                pm.setPath(check, false); trimmed.reset(); pm.getSegment(0, pm.getLength() * wD, trimmed, true);
+                s.setStrokeWidth(R * .21f); s.setColor(Color.WHITE); s.setAlpha((int) (255 * wD));
+                c.drawPath(trimmed, s);
+            }
+        }
+        /** The orbiting light: a white-hot dot with a glow in the accent. */
+        private void spark(Canvas c, float x, float y, float rad, float a) {
+            p.setShadowLayer(rad * 1.8f, 0, 0, (color & 0x00FFFFFF) | ((int) (210 * a) << 24));
+            p.setColor(Color.WHITE); p.setAlpha((int) (240 * a));
+            c.drawCircle(x, y, rad, p);
+            p.clearShadowLayer();
         }
     }
 
