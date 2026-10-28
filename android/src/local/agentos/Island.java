@@ -40,8 +40,8 @@ import android.widget.TextView;
  * the only colors in the overlays.
  *
  * API (main thread): set(state, label, pct) drives the pill; expand(face, accent) / collapse() open and close a card;
- * refit() after a card changes height; hide() removes the window. Touches injected by accessibility services
- * (flag 0x800) are swallowed, so the agent can't press anything here.
+ * refit() after a card changes height; hide() removes the window. Software-made touches (HumanTouch.injected)
+ * are swallowed, so the agent can't press anything here.
  */
 final class Island extends FrameLayout {
     // ---- A2 tokens
@@ -49,7 +49,6 @@ final class Island extends FrameLayout {
             BLUE = 0xFF0A84FF, GREEN = 0xFF30D158, ORANGE = 0xFFFF9F0A, RED = 0xFFFF453A, IDLE = 0xFF8E8E93;
     static final int TOP_DP = 8, PILL_H = 37, PILL_W = 126, CARD_W = 378, CARD_R = 44, WIN_PILL_W = 240, SLACK = 20;
     static final Interpolator SPRING = new OvershootInterpolator(1f), EASE = new DecelerateInterpolator(2f);
-    private static final int FLAG_FROM_ACCESSIBILITY = 0x800;
 
     private final WindowManager wm;
     private final WindowManager.LayoutParams lp;
@@ -308,8 +307,7 @@ final class Island extends FrameLayout {
     }
 
     @Override public boolean dispatchTouchEvent(MotionEvent e) {
-        if (open && e.getActionMasked() == MotionEvent.ACTION_DOWN) android.util.Log.i("ApprovalTouch", "root flags=" + e.getFlags() + " source=" + e.getSource() + " tool=" + e.getToolType(0) + " inside=" + box.contains(e.getX(), e.getY()));
-        if ((e.getFlags() & FLAG_FROM_ACCESSIBILITY) != 0) return true; // agent-made touch: swallow
+        if (HumanTouch.injected(e)) return true; // agent-made touch: swallow
         if (e.getAction() == MotionEvent.ACTION_DOWN && !box.contains(e.getX(), e.getY())) return false;
         return super.dispatchTouchEvent(e);
     }
