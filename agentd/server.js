@@ -32,7 +32,7 @@ import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
 import { ClaudeCli, handleMcp } from './providers/claude-cli.js';
 import { Local, suggest as localSuggest } from './providers/local.js';
-import { createSuggestFacts, calendarReplies, FACTS_RULE } from './suggest-facts.js';
+import { createSuggestFacts, calendarReplies, feedLines, FACTS_RULE } from './suggest-facts.js';
 import { calendarSnapshot } from './suggest-calendar.js';
 import { Router } from './providers/router.js';
 
@@ -181,26 +181,31 @@ wss.on('connection', (ws, req) => {
     suggesting?.abort();
     const abort = (suggesting = new AbortController()), t0 = Date.now(), reply = (x) => !abort.signal.aborted && send({ type: 'suggestions', id: m.id, ...x, ms: Date.now() - t0 });
     if ([0x81, 0x91, 0xe1, 0x12].includes((Number(m.field?.inputType) || 0) & 0xfff)) return reply({ items: [] }); // password fields: never
-    const lines = [];
-    for (const l of (Array.isArray(m.screen) ? m.screen : []).slice(-40).map((x) => String(x).slice(0, 300))) {
+    const lines = [], screen = (Array.isArray(m.screen) ? m.screen : []).slice(-40).map((x) => String(x).slice(0, 300));
+    const feed = m.type === 'write' ? [] : await feedLines(rpc, m.field?.pkg, screen).catch(() => []); // newest feed message ends up last
+    for (const l of screen) {
       const g = await classify(l);
       if (g.label !== 'benign') send({ type: 'guard.alert', source_pkg: m.field?.pkg, score: g.score, label: g.label, excerpt: l.slice(0, 160) });
       lines.push(g.label === 'benign' ? l : `[withheld by guard: likely prompt injection, score ${g.score}]`);
     }
+    lines.push(...feed);
     const write = m.type === 'write'; // "Write for me": {task, intent, lang} in, one text out (items:[text])
     const online = Object.values(networkInterfaces()).flat().some((x) => !x.internal && !x.address.startsWith('fe80')); // airplane mode: only lo + link-local
     const local = !write && (cfg.suggestProvider === 'local' || !online) && (m.mode || 'reply') === 'reply'; // the local prompt only writes replies
-    const tm = { guard: Date.now() - t0 }, factsStart = Date.now();
+    const tm = { guard: Date.now() - t0, feed: feed.length }, factsStart = Date.now();
     const facts = await suggestFacts(m, lines, abort.signal).catch(() => null);
     if (abort.signal.aborted) return;
     tm.facts = Date.now() - factsStart;
     const concrete = calendarReplies(facts, m, lines), cacheMs = facts?.source === 'saved calendar' ? 5000 : 60_000;
-    if (concrete) return reply({ items: concrete, cache_ms: cacheMs, timing: `guard=${tm.guard} facts=${tm.facts} calendar=local` });
+    if (concrete) return reply({ items: concrete, cache_ms: cacheMs, timing: `guard=${tm.guard} feed=${tm.feed} facts=${tm.facts} calendar=local` });
     const input = (facts ? FACTS_RULE + '\n' : '') + JSON.stringify({ mode: m.mode || 'reply', ...(facts && { trusted_facts: facts }), ...(write && { task: String(m.task || 'write'), intent: String(m.intent || '').slice(0, 500), lang: m.lang }),
       before: String(m.before || '').slice(-2000), after: String(m.after || '').slice(0, 500),
       field: { pkg: m.field?.pkg, app: m.field?.app, hint: m.field?.hint }, untrusted_screen_data: { source_pkg: m.field?.pkg, trusted: false, lines } });
     const timing = () => Object.entries(tm).map(([k, v]) => `${k}=${v}`).join(' '); // keyboard/LATENCY.md
-    try { reply({ items: write ? [await codex.write(input, abort.signal)] : (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal, tm, (item) => !abort.signal.aborted && send({ type: 'suggestions.first', id: m.id, item })))).slice(0, 3).map(String), ...(facts && { cache_ms: cacheMs }), timing: timing() }); }
+    try {
+      const items = write ? [await codex.write(input, abort.signal)] : (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal, tm, (item) => !abort.signal.aborted && send({ type: 'suggestions.first', id: m.id, item })))).slice(0, 3).map(String);
+      reply({ items: items.length || write || m.before || m.after || (m.mode || 'reply') !== 'reply' ? items : ['Let me check.', "I'll get back to you soon.", 'What did you have in mind?'], ...(facts && { cache_ms: cacheMs }), timing: timing() }); // never empty: an empty reply sends the keyboard to the ~10 s ask
+    }
     catch (e) { // Codex failed (offline, airplane mode): the on-phone model, if it's running, still gives replies
       const off = !abort.signal.aborted && !write && !local && (m.mode || 'reply') === 'reply' && await localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal).catch(() => null);
       reply(off ? { items: off.slice(0, 3).map(String), timing: `${timing()} local` } : { items: [], error: e.message });

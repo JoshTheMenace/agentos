@@ -142,3 +142,8 @@ In the third run the network was also quieter, so compare its first chip with it
 ### Live vs. pending
 - Live now: low-latency mode, and the keyboard APK with streaming (it waits for agentd).
 - Needs the 6:43 agentd restart: `agentd/server.js` + `agentd/providers/codex.js` (streamed first item, spare thread).
+
+## Discord (10-28, 16:45): feed context + never-empty suggest
+Before, focus → suggestions in Discord: **1,853 ms** (`screen=1538 agentd=141`, calendar=local). The slow leg was the keyboard's screen.read, not agentd. The reported 10–15 s fits a different case: the screen read times out (4 s) or has no question, suggest returns `[]`, and the keyboard falls back to a full `ask` turn.
+Fix (agentd only): for messaging apps (Discord, Slack, WhatsApp, Instagram, Messages, Messenger), `feedLines` in `suggest-facts.js` adds the chat's latest notification-feed messages (the conversation whose title is on screen, else the newest one) after the screen lines. Lines already on screen are skipped, flagged lines are dropped, and codes are masked. This adds ~50 ms (it's counted in `guard=`; `feed=` is the number of lines added). A reply-mode suggestion with no draft never returns empty, so the keyboard never falls back to the ~10 s ask.
+After: **981 ms** (`screen=698 agentd=100 guard=51 feed=0 facts=27 calendar=local`). Suggestions: "I'm free tomorrow 4–5 PM", "I could do 4–5 PM tomorrow", "How about 4 PM tomorrow?". n=1 each; the screen read alone varies between 0.7 and 1.5 s.

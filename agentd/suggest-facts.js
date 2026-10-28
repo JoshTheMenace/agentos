@@ -35,6 +35,20 @@ export function calendarReplies(facts, m, lines) {
     : ['Found it.', `${e.title}: ${e.start}.`, "I'll double-check."];
 }
 
+// Messaging apps: the chat's latest messages from the notification feed (~20 ms per read), so a slow or empty
+// screen read still gives the calendar/local fast path its question. Untrusted: flagged lines dropped, codes masked.
+const MESSAGING = new Set(['com.discord', 'com.Slack', 'com.whatsapp', 'com.instagram.android', 'com.google.android.apps.messaging', 'com.facebook.orca']);
+export async function feedLines(rpc, pkg, screen) {
+  if (!MESSAGING.has(pkg)) return [];
+  const convs = (await rpc('notifications.conversations', { pkg, n: 10 }, 300).catch(() => null))?.items || [];
+  const c = convs.find((x) => x.conversation && screen.some((l) => l.includes(x.conversation))) || convs[0];
+  if (!c) return [];
+  const items = (await rpc('notifications.conversation', { conversation_id: c.conversation_id, n: 6 }, 300).catch(() => null))?.items || [];
+  return items.slice().reverse().map((m) => String(m.text || '').slice(0, 300))
+    .filter((t) => t && !/^\[withheld/.test(t) && classify(t).label === 'benign' && !screen.some((l) => l.includes(t)))
+    .map((t) => t.replace(/(?<![\d.:])\d{4,8}(?![\d.:])/g, '[code]'));
+}
+
 export function createSuggestFacts({ db, rpc, calendar }) {
   const cache = new Map();
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
