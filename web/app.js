@@ -682,27 +682,41 @@ app.wakeState(N.wake ? JSON.parse(N.wake('state')) : { state: 'nokey', phrase: '
 if (info.wake) setTimeout(app.wake, 400); // cold start by the wake word
 
 // ---------- voice (WebRTC per agentd/voice.html; hands-free: the server hears when you stop, the orb only mutes) ----------
-let pc, mic, micTrack, cam, vad;
+let pc, mic, micTrack, cam, vad, voiceIdle, voiceEpoch = 0;
 const V = { state: (s) => ($('#vstate').textContent = s) };
 async function voiceStart() {
+  if (micTrack?.readyState === 'live') return;
+  const epoch = ++voiceEpoch; clearTimeout(voiceIdle);
   N.wake?.('voice:1'); // the wake word lets go of the mic while voice mode is open
   open('voice'); $('#voice').classList.remove('live'); $('#vu').textContent = $('#va').textContent = ''; $('#vsteps').replaceChildren(); $('#vtask').replaceChildren(); V.state('Connecting');
-  if (!wsOk) return V.state('Agent offline');
+  if (!wsOk) { N.wake?.('voice:0'); return V.state('Agent offline'); }
   try {
-    mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    if (epoch !== voiceEpoch) return stream.getTracks().forEach((t) => t.stop());
+    mic = stream; $('#spk').muted = false;
     micTrack = mic.getAudioTracks()[0]; vad = speech(mic);
-    pc = new RTCPeerConnection(); pc.addTrack(micTrack, mic);
+    if (pc?.connectionState === 'connected') { await pc.getSenders()[0].replaceTrack(micTrack); if (epoch === voiceEpoch) V.state('Listening'); return; }
+    pc?.close(); pc = new RTCPeerConnection(); pc.addTrack(micTrack, mic);
     const dc = pc.createDataChannel('oai-events'); // must exist before createOffer
-    dc.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === 'delegation.created') send({ type: 'voice.delegate', item_id: m.item.id, text: m.item.content.map((c) => c.text).join('') }); };
+    dc.onopen = () => { if (epoch === voiceEpoch) V.state('Listening'); };
+    dc.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === 'delegation.created') send({ type: 'voice.delegate', item_id: m.item.id, handoff_id: m.item.handoff_id, turn_id: m.item.user_bidi_turn_id, text: m.item.content.map((c) => c.text).join('') }); if (m.type === 'turn.done' && m.turn?.role === 'user') send({ type: 'voice.heard', turn_id: m.turn.id, text: m.turn.transcript }); };
     pc.ontrack = (e) => { $('#spk').srcObject = e.streams[0]; };
     await pc.setLocalDescription(await pc.createOffer());
     await new Promise((ok) => { setTimeout(ok, 500); pc.onicegatheringstatechange = () => pc.iceGatheringState === 'complete' && ok(); });
-    send({ type: 'voice.start', sdp: pc.localDescription.sdp });
-  } catch (e) { V.state('Mic unavailable'); }
+    if (epoch === voiceEpoch) send({ type: 'voice.start', sdp: pc.localDescription.sdp });
+  } catch (e) { if (epoch === voiceEpoch) { voiceStop(); V.state('Mic unavailable'); } }
 }
-function voiceStop() { N.wake?.('voice:0'); if (cam) camOff(); vad?.(); vad = null; attMenu.hidden = true; send({ type: 'voice.stop' }); pc?.close(); pc = null; mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; $('#wave').classList.remove('on'); }
+function voiceDrop() { clearTimeout(voiceIdle); if (pc) { send({ type: 'voice.stop' }); pc.close(); pc = null; } }
+function voiceStop() {
+  ++voiceEpoch; if (cam) camOff(); vad?.(); vad = null; attMenu.hidden = true;
+  mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; N.wake?.('voice:0'); $('#spk').muted = true; $('#wave').classList.remove('on');
+  // Release the microphone for the wake word; keep only the connection warm for a quick return.
+  clearTimeout(voiceIdle);
+  if (pc?.connectionState === 'connected') { pc.getSenders()[0].replaceTrack(null).catch(() => {}); voiceIdle = setTimeout(voiceDrop, 60000); }
+  else voiceDrop();
+}
 on('voice.answer', async (m) => { $('#vatt').hidden = !m.vision; if (pc) await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); });
-on('voice.started', () => V.state('Listening'));
+on('ws.close', () => { voiceStop(); voiceDrop(); });
 on('voice.transcript', (m) => { $('#voice').classList.add('live'); const p = $(m.role === 'user' ? '#vu' : '#va'); p.innerHTML = esc(m.text) + (m.final ? '' : '<span class="cur"></span>'); if (m.role !== 'user') V.state('Speaking'); });
 on('voice.delegation', (m) => { V.state('Working'); $('#vsteps').replaceChildren(); renderVoiceTask(); });
 function renderVoiceTask() {
@@ -712,7 +726,7 @@ function renderVoiceTask() {
 }
 on('voice.result', (m) => { V.state('Speaking'); $('#va').textContent = m.text; });
 on('voice.seen', (m) => { if (m.text && $('#voice').classList.contains('on')) $('#vsteps').append(el('li', '', `<span class="orb done sm"></span>${m.source === 'screen' ? 'Looked at your screen' : 'Looked'}`)); });
-on('voice.closed', () => V.state('Ended')); on('voice.error', (m) => V.state(short(m.message, 40)));
+on('voice.closed', () => { voiceStop(); voiceDrop(); V.state('Ended'); }); on('voice.error', (m) => { voiceStop(); voiceDrop(); V.state(short(m.message, 40)); });
 on('tool.request', (m) => { if ($('#voice').classList.contains('on')) { $('#vsteps').append(el('li', '', `<span class="orb working sm"></span>${esc(toolName(m.name))}`)); } });
 on('tool.result', (m) => { const li = $('#vsteps li:last-child'); if (li) $('.orb', li).className = 'orb sm ' + (/denied|blocked/.test(m.decision || '') ? 'alert' : 'done'); });
 const sorb = $('#sorbBtn');

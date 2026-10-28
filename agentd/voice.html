@@ -11,31 +11,44 @@ const T0 = performance.now(), now = () => Math.round(performance.now() - T0), $ 
 const out = (s) => { console.log(`${now()} ${s}`); $('out').textContent += `${now()} ${s}\n`; };
 const q = new URLSearchParams(location.search), token = new URLSearchParams(location.hash.slice(1)).get('token');
 const ws = new WebSocket(`ws://${location.host}/`, 'agentos.bearer.' + token);
-let pc, t, cam, lastShot = 0;
+let pc, mic, idle, unmeter, t, cam, lastShot = 0, lastMic = 0, doneAt = 0;
+const trace = (event, data = {}) => { if (q.has('bench')) fetch('/log', { method: 'POST', body: JSON.stringify({ at: now(), event, ...data }) + '\n' }); };
+trace('page');
 
 ws.onmessage = async (e) => {
   const m = JSON.parse(e.data);
+  if (m.type === 'task.update') { trace('task.' + m.why, { task: m.task.id, state: m.task.state, timing: m.task.timing }); if (m.why === 'done') doneAt = now(); }
+  if (m.type === 'voice.transcript' || m.type === 'voice.error') trace(m.type, { role: m.role, text: m.text || m.message });
   if (m.type === 'voice.answer') { $('cam').hidden = !m.vision; if (q.get('img')) ws.send(JSON.stringify({ type: 'voice.camera', on: true })); await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); out(`answer applied +${now() - t}ms (agentd ${m.ms}ms)`); }
   else if (m.type !== 'text.delta') out(`${m.type} ${JSON.stringify(m).slice(0, 300)}`);
 };
 
 async function start() {
-  t = now();
-  const mic = q.get('wav') ? await fileStream(q.get('wav')) : await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-  pc = new RTCPeerConnection();
+  if (mic?.getAudioTracks()[0]?.readyState === 'live') return;
+  clearTimeout(idle); t = now(); lastMic = doneAt = 0; trace('mic_on');
+  mic = q.get('wav') ? await fileStream(q.get('wav')) : await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  $('spk').muted = false;
+  if (pc?.connectionState === 'connected') {
+    await pc.getSenders()[0].replaceTrack(mic.getAudioTracks()[0]);
+    unmeter = meter(mic, $('spk').srcObject); trace('ready', { ms: now() - t, reused: true });
+    setTimeout(() => mic.play?.(), 1000); return;
+  }
+  pc?.close(); pc = new RTCPeerConnection();
   pc.addTrack(mic.getAudioTracks()[0], mic);
   const dc = pc.createDataChannel('oai-events'); // must exist before createOffer
-  dc.onopen = () => { out(`datachannel open +${now() - t}ms`); mic.play?.(); };
+  dc.onopen = () => { out(`datachannel open +${now() - t}ms`); trace('ready', { ms: now() - t }); setTimeout(() => mic.play?.(), 1000); };
   dc.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.type === 'delegation.created') // hand it to agentd at once (agentd also hears it via app-server; it dedupes)
-      ws.send(JSON.stringify({ type: 'voice.delegate', item_id: m.item.id, text: m.item.content.map((c) => c.text).join('') }));
+      ws.send(JSON.stringify({ type: 'voice.delegate', item_id: m.item.id, handoff_id: m.item.handoff_id, turn_id: m.item.user_bidi_turn_id, text: m.item.content.map((c) => c.text).join('') }));
+    if (m.type === 'turn.done' && m.turn?.role === 'user') ws.send(JSON.stringify({ type: 'voice.heard', turn_id: m.turn.id, text: m.turn.transcript }));
+    if (m.type === 'turn.done') trace('turn.done', { role: m.turn?.role, text: m.turn?.transcript });
     if (m.type === 'turn.done') out(`dc turn.done ${m.turn?.role}: ${m.turn?.transcript ?? ''}`);
     else if (/error/.test(m.type)) out(`dc ${m.type} ${JSON.stringify(m).slice(0, 1500)}`);
     else if (/^(session.started|delegation)/.test(m.type) || (q.has('wav') && !/delta|audio|usage/.test(m.type))) out(`dc ${m.type} ${JSON.stringify(m).slice(0, 240)}`);
   };
   pc.onconnectionstatechange = () => out(`pc ${pc.connectionState} +${now() - t}ms`);
-  pc.ontrack = (e) => { $('spk').srcObject = e.streams[0]; meter(mic, e.streams[0]); };
+  pc.ontrack = (e) => { $('spk').srcObject = e.streams[0]; unmeter = meter(mic, e.streams[0]); };
   await pc.setLocalDescription(await pc.createOffer());
   await new Promise((ok) => { setTimeout(ok, 500); // host candidates are enough (the answer is ice-lite); don't wait for slow interfaces
     pc.onicegatheringstatechange = () => pc.iceGatheringState === 'complete' && ok(); });
@@ -49,19 +62,21 @@ function meter(micStream, remote) {
   const an = (s) => { const a = ac.createAnalyser(); ac.createMediaStreamSource(s).connect(a); return a; };
   const lvl = (a) => { a.getFloatTimeDomainData(buf); return Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length); };
   const micA = an(micStream), spkA = an(remote);
-  let lastMic = 0, lastSpk = 0, micOn = false, spkOn = false;
-  setInterval(() => {
+  let lastSpk = 0, micOn = false, spkOn = false;
+  const timer = setInterval(() => {
     const tt = now();
     if (lvl(micA) > 0.02) { lastMic = tt; if (!micOn) { micOn = true; out('mic speech start'); snap(); } }
-    if (micOn && tt - lastMic > 400) { micOn = false; out('mic speech end'); }
-    if (lvl(spkA) > 0.01) { if (!spkOn) { spkOn = true; out(`REPLY AUDIO start, ${micOn ? 'while user talking' : tt - lastMic + 'ms after mic end'}`); } lastSpk = tt; }
+    if (micOn && tt - lastMic > 400) { micOn = false; out('mic speech end'); trace('speech_end', { end: lastMic }); }
+    if (lvl(spkA) > 0.01) { if (!spkOn) { spkOn = true; trace('audio', { sinceSpeech: tt - lastMic, sinceDone: doneAt ? tt - doneAt : null }); out(`REPLY AUDIO start, ${micOn ? 'while user talking' : tt - lastMic + 'ms after mic end'}`); } lastSpk = tt; }
     if (spkOn && tt - lastSpk > 600) { spkOn = false; out('reply audio end'); }
   }, 20);
+  return () => { clearInterval(timer); ac.close(); };
 }
 
 async function fileStream(url) { // test mode: a speech file as the "mic"
   const ac = new AudioContext(), dest = ac.createMediaStreamDestination();
   const buf = await ac.decodeAudioData(await (await fetch(url)).arrayBuffer());
+  dest.stream.dispose = () => ac.close();
   dest.stream.play = () => { const s = ac.createBufferSource(); s.buffer = buf; s.connect(dest); s.start(); out('playing ' + url); };
   return dest.stream;
 }
@@ -86,6 +101,13 @@ $('cam').onclick = async () => {
   $('view').srcObject = cam; $('view').hidden = false; await $('view').play(); ws.send(JSON.stringify({ type: 'voice.camera', on: true }));
 };
 $('go').onclick = () => start().catch((e) => out('ERR ' + e));
-$('end').onclick = () => { ws.send(JSON.stringify({ type: 'voice.stop' })); pc?.close(); out('stopped'); };
+function drop() { clearTimeout(idle); ws.send(JSON.stringify({ type: 'voice.stop' })); pc?.close(); pc = null; }
+$('end').onclick = () => {
+  mic?.getTracks().forEach((t) => t.stop()); mic?.dispose?.(); unmeter?.(); $('spk').muted = true;
+  clearTimeout(idle);
+  if (pc?.connectionState === 'connected') { pc.getSenders()[0].replaceTrack(null).catch(() => {}); idle = setTimeout(drop, 60000); }
+  else drop();
+  trace('paused', { microphone: mic?.getAudioTracks()[0]?.readyState }); out('stopped');
+};
 if (q.has('auto')) ws.onopen = $('go').onclick;
 </script>
