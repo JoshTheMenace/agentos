@@ -1,3 +1,38 @@
+# Good morning: overnight summary (06:45)
+
+**Faster**
+- Codex tasks: typical task ~30 s → ~11 s; first action ~3 s (agentd/bench/RESULTS.md).
+- Keyboard: typing-pause suggestions ~7.3 s → ~2.6 s (keyboard/LATENCY.md).
+- Voice: warm session ready in ~9 ms; a task starts ~1.7 s after you stop talking, and it says "Done, in N seconds".
+- Reviewer: 2.3 → 1.9 s.
+
+**New, fits existing beats**
+- Island and cards sit below the camera.
+- "Done · N s" stopwatch on every finish.
+- "What did I miss?" catch-up (~1.7 s).
+- Live notification conversations, plus reply and mark-read through the notification.
+- Keyboard replies that know your calendar.
+- Live tracker counter with company names.
+- Automatic offline fallback ("On device").
+- Wake word: offline "Hey Agent" works now; Porcupine "Jarvis" needs a key, and Picovoice's free tier ended (7-day trial).
+- Deep mods: Pigeon really re-themed and rows removed (our own app only).
+
+**Also**
+- 3 UI polish passes and 2 bug hunts (11 fixes).
+- 2 security reviews: 1 high and 3 medium fixed; no open highs.
+- `scripts/preflight.sh` stage check.
+- Draft deck and one-pager in `pitch/deck/` and `pitch/one-pager.pdf`.
+
+**Incidents (no harm)**
+- A benchmark tried to delete your 10:15 alarm; the approval timed out, so it was blocked.
+- A 6:17 test alarm was turned off (not deleted).
+- Wi-Fi dropped 3×. **Wi-Fi is the #1 stage risk**: run `scripts/preflight.sh --fix wifi` after joining the venue network.
+- Calendar: 1,780 events all night, untouched.
+
+**In progress:** final deploy + smoke test + STATUS.md "how to demo it", due by 9:30.
+
+**For you:** run demo-reset and turn on DND before stage. Decide the Picovoice trial. Do one fingerprint test at the phone so the deck can say "signs". Recount commits before the final deck export.
+
 # Overnight plan (10-28, 1 AM → morning)
 
 Limits: at most 3 Claude children at once. GPT-6.1 Sol children run alongside. If a provider hits its usage limit, pause that track until the limit resets. UI work goes to Fable.
@@ -30,7 +65,7 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 14 | Review all overnight commits (security + crash) | GPT-6 Astra | done (edc95bb: reviewer rechecks live flags after grading [high]; voice.heard routing [medium]; REVIEW-NIGHT.md) |
 | 16 | Stage preflight script (check + safe --fix) | GPT-6 Astra | done (3467473; `scripts/preflight.sh [--fix warm,ime,home,…]`) |
 | 12 | Keyboard replies that know your calendar (DEMO-WOW #8) | GPT-6 Astra | done (787ac15; empty-draft calendar replies 4 ms, typed +177 ms; backend in #11) |
-| 11 | Final morning deploy + smoke + STATUS summary (scheduled 6:43 AM): push all agentd changes incl. reviewer, one restart, smoke test every demo beat, update STATUS.md | Claude | queued (after others finish) |
+| 11 | Final morning deploy + smoke + STATUS "how to demo it" | Claude Opus | running (due 9:30) |
 | S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra | done (3430c2e; navy/gold + promoted rows removed, vanilla pixel-identical) |
 
 ## Oversight
