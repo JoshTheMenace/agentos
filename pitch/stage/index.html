@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>AgentOS · stage deck · 14 beats</title>
+<title>AgentOS · stage deck · 15 slides</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 /* A2 · Calm Glass iOS Dark, same tokens as pitch/deck/index.html (v3). 1600×900 slides. One beat per slide: big headline, real screenshots, one small cue for the founder. Opens in present mode; P toggles the overview grid. */
@@ -41,6 +41,8 @@ h1 em{font-style:normal;color:var(--l2)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:2px}
 .card{width:482px;height:360px;border-radius:24px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.14);background:#1c1c1e;flex:none}
 .card img{display:block;width:100%;height:100%}
+.card.strip{width:440px;height:134px}
+.cover{position:absolute;left:12px;right:12px;background:#111113;border-radius:8px}
 /* icon tile for beats with no real screenshot */
 .tile{width:306px;height:306px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;flex:none}
 .tile svg{width:120px;height:120px}
@@ -53,6 +55,14 @@ h1 em{font-style:normal;color:var(--l2)}
 .brains{display:flex;gap:14px;margin-top:44px}
 .brain{padding:18px 26px;font-size:24px;font-weight:600;letter-spacing:-.02em}
 .brain span{display:block;font-size:14px;font-weight:600;color:var(--l3);margin-top:4px;letter-spacing:0}
+/* sources slide */
+.src{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:34px}
+.src .glass{padding:22px 24px}
+.src h3{margin:0 0 12px;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--l3)}
+.src p{margin:0 0 12px;font-size:17px;line-height:1.35;color:var(--l2);letter-spacing:-.01em}
+.src p:last-child{margin-bottom:0}
+.src b{color:var(--l1);font-weight:600}
+.src .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:rgba(255,159,10,.16);color:var(--orange);margin-left:6px;vertical-align:1px}
 /* screen mode */
 @media screen{
   body{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px;background:#000}
@@ -72,163 +82,152 @@ h1 em{font-style:normal;color:var(--l2)}
 <!-- 1 · TITLE -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">AgentOS · live on a $200 Android phone</div>
   <h1 style="max-width:900px;font-size:110px">AgentOS</h1>
-  <p class="sub" style="font-size:40px;max-width:900px">The Siri we should have.</p>
+  <p class="sub" style="font-size:40px;max-width:900px">Agent-native Android · live on a $200 phone</p>
   <div class="shots"><div class="col"><div class="phone"><img src="img/voice.png" alt="Voice mode: hold the orb to talk"></div></div></div>
   <div class="cue"><b>Cue</b>Phone in hand, mirroring on. One line, then straight into the wake word.</div>
-  <div class="n">1 / 14</div>
+  <div class="n">1 / 15</div>
 </section>
 
 <!-- 2 · VOICE + WHAT DID I MISS -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Voice · proactive</div>
   <h1>"What did I miss?"</h1>
-  <p class="sub">Say the wake word. It already knows.</p>
+  <p class="sub">Voice wake word + proactive catch-up</p>
   <div class="shots">
-    <div class="col"><div class="card"><img src="img/catchup.png" alt="What did I miss? Two messages waiting, standup, a promise, 1 scam message hidden"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Messages, calendar, promises</div></div>
-    <div class="col"><div class="phone sm"><img src="img/scam.png" alt="A planted message tried to steer the agent; flagged on-device"></div><div class="cap"><span class="dot" style="background:var(--red)"></span>Suspicious message hidden</div></div>
+    <div class="col"><div class="phone"><img src="img/catchup.png" alt="What did I miss? Two messages waiting, standup, a promise, 1 scam message hidden"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Messages, calendar, promises</div></div>
   </div>
+  <div class="col" style="position:absolute;left:88px;top:470px"><div class="card strip"><img src="img/scam.png" alt="Activity log: Scam message caught in Pigeon, hidden from the agent"></div><div class="cap"><span class="dot" style="background:var(--red)"></span>Suspicious message caught, hidden from the agent</div></div>
   <div class="cue"><b>Cue</b>Wake word → "What did I miss?" · point at the hidden scam message.</div>
-  <div class="n">2 / 14</div>
+  <div class="n">2 / 15</div>
 </section>
 
 <!-- 3 · CROSS-APP + WHICH SAM -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Cross-app action · knowledge graph</div>
   <h1>Text Sam. <em>Which Sam?</em></h1>
-  <p class="sub">It knows your people. You approve the send.</p>
+  <p class="sub">Cross-app actions + knowledge graph</p>
   <div class="shots">
-    <div class="col"><div class="phone"><img src="img/memory.png" alt="Memory graph of the people it knows"></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>Knows your people</div></div>
-    <div class="col"><div class="phone"><img src="img/send-card.png" alt="Approval card: Tap Send? Running late, there in about 10 min"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Approval card · Done · N s</div></div>
+    <div class="col"><div class="phone"><img src="img/whichsam.png" alt="Which Sam? Sam Lee on Pigeon or Sam Ortiz in Messages"></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>Which Sam? It knows your people</div></div>
+    <div class="col"><div class="phone"><img src="img/send-card.png" alt="Approval card: Tap Send? Running late, there in about 10 min"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Approval card · you tap Approve</div></div>
   </div>
   <div class="cue"><b>Cue</b>"Text Sam I'm running 10 minutes late" → pick the Sam → tap Approve → read out "Done · N s".</div>
-  <div class="n">3 / 14</div>
+  <div class="n">3 / 15</div>
 </section>
 
 <!-- 4 · BUILD AN APP + KEYBOARD -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Micro-apps · smart keyboard</div>
   <h1>Build an app by asking</h1>
-  <p class="sub">While it builds, the keyboard keeps working for you.</p>
+  <p class="sub">Micro-apps + calendar-aware keyboard</p>
   <div class="shots">
-    <div class="col"><div class="phone"><img src="img/building.png" alt="Island: designing the new app"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Building in the background</div></div>
-    <div class="col"><div class="phone"><img src="img/keyboard.png" alt="Keyboard: whole replies, translate in place"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Replies, translate, in any app</div></div>
+    <div class="col"><div class="phone"><img src="img/building.png" alt="Island and Now card: designing your app"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Building in the background</div></div>
+    <div class="col"><div class="phone"><img src="img/keyboard.png" alt="Keyboard chips: Looks free, Thursday 3 PM, Would Thursday work"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Calendar-aware replies · Translate</div></div>
   </div>
   <div class="cue"><b>Cue</b>"Build me a water tracker" → open the chat → tap the field: calendar reply chip → Translate. Swipe Home when the app lands.</div>
-  <div class="n">4 / 14</div>
+  <div class="n">4 / 15</div>
 </section>
 
 <!-- 5 · MODIFY A REAL APP -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">App mods · no code runs</div>
   <h1>Change a real app. <em>Live.</em></h1>
-  <p class="sub">Your words, auto-approved. The AI never writes or runs code.</p>
+  <p class="sub">Real-time app mods + auto-approval</p>
   <div class="shots">
     <div class="col"><div class="phone"><img src="img/linkedin-before.png" alt="LinkedIn feed with a Promoted post"></div><div class="cap"><span class="dot" style="background:var(--l3)"></span>Before</div></div>
-    <div class="col"><div class="phone"><img src="img/linkedin-after.png" alt="LinkedIn with the Promoted post masked: Ad hidden"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>"Ad hidden"</div></div>
+    <div class="col"><div class="phone"><img src="img/linkedin-after.png" alt="LinkedIn with the Promoted post masked: Ad hidden, Done in 2 s"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>"Ad hidden" · Done · 2 s</div></div>
   </div>
   <div class="cue"><b>Cue</b>Open LinkedIn: "Hide promoted posts." While it works: my own words, so it auto-approves; no code runs.</div>
-  <div class="n">5 / 14</div>
+  <div class="n">5 / 15</div>
 </section>
 
 <!-- 6 · LIVE TALK SEES YOUR SCREEN -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Live talk · vision</div>
   <h1>Live talk sees your screen</h1>
-  <p class="sub">Ask about what's in front of you. It looks, then answers.</p>
+  <p class="sub">In-app assistant bar + screen vision</p>
   <div class="shots">
-    <div class="col"><div class="phone"><img src="img/live.png" alt="Voice mode: What does this sign say? Looked."></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>"Looked", then spoke</div></div>
+    <div class="col"><div class="phone"><img src="img/live.png" alt="Assistant bar over LinkedIn: What is on my screen? Help me reply. Done in 3.3 s"></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>Reads the screen, then answers</div></div>
   </div>
   <div class="cue"><b>Cue</b>Open voice on the LinkedIn screen: "What's on my screen? Help me reply."</div>
-  <div class="n">6 / 14</div>
+  <div class="n">6 / 15</div>
 </section>
 
 <!-- 7 · HEALTH FROM THE WATCH -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Galaxy Watch · visual answers</div>
   <h1>Health from your watch</h1>
-  <p class="sub">A chart, not a wall of text. The data stays on the phone.</p>
+  <p class="sub">Galaxy Watch health + visual answers</p>
   <div class="shots">
     <div class="col"><div class="phone"><img src="img/sleep.png" alt="Sleep stages per night with averages, from the Galaxy Watch"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Sleep this week</div></div>
   </div>
   <div class="cue"><b>Cue</b>"Show me my sleep this week." Let the chart land, then move on.</div>
-  <div class="n">7 / 14</div>
+  <div class="n">7 / 15</div>
 </section>
 
 <!-- 8 · SMART HOME + CLEAN POWER -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Smart home · grid-aware</div>
   <h1>Your home, on clean power</h1>
-  <p class="sub">It knows your devices and when the grid is cleanest.</p>
+  <p class="sub">Grid-aware smart home</p>
   <div class="shots">
-    <div class="col"><div class="phone sm"><img src="img/dishwasher.png" alt="When should I run the dishwasher? 3–6 PM is the cleanest window"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Knows the devices</div></div>
+    <div class="col"><div class="phone"><img src="img/devices.png" alt="Smart home devices card: plugs and lights, by room"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Knows the devices</div></div>
     <div class="col"><div class="phone"><img src="img/power.png" alt="Grid timeline: cleanest window vs peak, with carbon and price"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>Cleanest window, on a timeline</div></div>
   </div>
   <div class="cue"><b>Cue</b>"What smart home devices do I have?" → "When's the cleanest time to turn on the Christmas tree?" Torus angle. Say "knows", not "controls".</div>
-  <div class="n">8 / 14</div>
+  <div class="n">8 / 15</div>
 </section>
 
 <!-- 9 · GROK CONTROLS THE PHONE -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Remote assistants · MCP</div>
   <h1>Grok drives. <em>You approve.</em></h1>
-  <p class="sub">Any AI can ask. None can approve or unlock.</p>
+  <p class="sub">Remote assistants over MCP + leases</p>
   <div class="shots">
-    <div class="col"><div class="phone"><img src="img/remote.png" alt="Remote: pair an assistant with a one-time code, kill switch"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Paired, with a kill switch</div></div>
-    <div class="col"><div class="phone"><img src="img/lease.png" alt="Lease card: Allow agent in Pigeon for 10 min? Not now / Allow"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Only your finger says Allow</div></div>
+    <div class="col"><div class="phone"><img src="img/remote.png" alt="Remote: Grok paired, kill switch, relay connected"><i class="cover" style="top:352px;height:34px"></i></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Paired, with a kill switch</div></div>
+    <div class="col"><div class="phone"><img src="img/lease.png" alt="Lease card: Text Sam hi. Allow agent in Pigeon for 10 min? Not now / Allow"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Only your finger says Allow</div></div>
   </div>
   <div class="cue"><b>Cue</b>Laptop, Grok: "Use AgentOS: open LinkedIn." Then "…and text Sam hi": the card lands on the phone, not in Grok.</div>
-  <div class="n">9 / 14</div>
+  <div class="n">9 / 15</div>
 </section>
 
 <!-- 10 · FINGERPRINT -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Sensitive actions · Android Keystore</div>
   <h1>Fingerprint for money and installs</h1>
-  <p class="sub">Payments, installs, saved passwords. Your finger, not the AI's.</p>
+  <p class="sub">Fingerprint approvals · Android Keystore</p>
   <div class="shots">
     <div class="glass tile">
       <svg viewBox="0 0 120 120" fill="none" stroke="var(--blue)" stroke-width="4" stroke-linecap="round"><path d="M28 56a32 32 0 0 1 64 0"/><path d="M22 72c0-6 2-12 6-16"/><path d="M38 60a22 22 0 0 1 44 0v12"/><path d="M36 92c-4-8-6-16-6-24"/><path d="M60 50a10 10 0 0 0-10 10c0 18 4 30 10 40"/><path d="M60 60c6 0 10 4 10 10 0 10-2 20-6 30"/><path d="M90 76c0 10-2 18-6 24"/></svg>
       <div class="t">Fingerprint required</div>
     </div>
-    <div class="col"><div class="phone"><img src="img/fingerprint.png" alt="Native approval card with a Fingerprint required chip"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Native card, not a web view</div></div>
+    <div class="col"><div class="phone"><img src="img/fingerprint.png" alt="Native approval card: Install Firefox Focus, Fingerprint required"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Native card, not a web view</div></div>
   </div>
   <div class="cue"><b>Cue</b>"Install &lt;small free app&gt;" → Fingerprint required card. The system prompt shows black on mirroring: hold the phone up.</div>
-  <div class="n">10 / 14</div>
+  <div class="n">10 / 15</div>
 </section>
 
 <!-- 11 · LOCKED PHONE -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Scheduled tasks · auto-unlock</div>
   <h1>Locked phone. <em>Still working.</em></h1>
-  <p class="sub">It wakes, unlocks itself, does the job, locks again.</p>
+  <p class="sub">Scheduled tasks + auto-unlock</p>
   <div class="shots">
     <div class="glass tile">
       <svg viewBox="0 0 120 120" fill="none" stroke="var(--orange)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="26" y="52" width="68" height="50" rx="12"/><path d="M40 52V38a20 20 0 0 1 40 0v14"/><circle cx="60" cy="76" r="6" fill="var(--orange)" stroke="none"/><path d="M60 82v8"/></svg>
       <div class="t">Lock it. Wait a minute.</div>
     </div>
-    <div class="col"><div class="phone"><img src="img/sched.png" alt="Home: a reminder scheduled for tomorrow 11 AM"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>Scheduled, shown on Home</div></div>
+    <div class="col"><div class="phone"><img src="img/sched.png" alt="Home: Turn on the flashlight, in 1 min, scheduled"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>Scheduled, shown on Home</div></div>
   </div>
   <div class="cue"><b>Cue</b>"In one minute, turn on the flashlight" → lock it, face up. Talk security during the minute (next slide).</div>
-  <div class="n">11 / 14</div>
+  <div class="n">11 / 15</div>
 </section>
 
 <!-- 12 · SECURITY IN ONE BREATH -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Security · built into the OS</div>
   <h1 style="font-size:72px">Security in one breath</h1>
+  <p class="sub">Security built into the OS</p>
   <div class="chips">
     <div class="glass chip"><i style="background:var(--blue)"></i>AI only asks</div>
     <div class="glass chip"><i style="background:var(--blue)"></i>Approval cards</div>
@@ -249,34 +248,66 @@ h1 em{font-style:normal;color:var(--l2)}
     <div class="col"><div class="phone"><img src="img/center.png" alt="Command center: Protected today, Model, Activity log"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Command center · Protected today</div></div>
   </div>
   <div class="cue"><b>Cue</b>Swipe to Command center while the flashlight timer runs. Protected today → Activity → Permissions → Blockers.</div>
-  <div class="n">12 / 14</div>
+  <div class="n">12 / 15</div>
 </section>
 
 <!-- 13 · MULTIPLE BRAINS + AIRPLANE MODE -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Any brain · offline</div>
   <h1>Three brains. <em>Works offline.</em></h1>
+  <p class="sub">Model switch + on-device fallback</p>
   <div class="brains">
     <div class="glass brain">Codex<span>OpenAI, in the cloud</span></div>
     <div class="glass brain">Claude<span>same tools, same rules</span></div>
     <div class="glass brain" style="box-shadow:0 4px 24px rgba(10,132,255,.25)">On device<span>Qwen 0.8B, no signal</span></div>
   </div>
   <div class="shots">
-    <div class="col"><div class="phone"><img src="img/brains.png" alt="Command center: Model row, Codex / Claude / Local"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Switch brains in a tap</div></div>
-    <div class="col"><div class="phone"><img src="img/offline.png" alt="Airplane mode: the on-device model finishes the task"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Airplane mode · "On device"</div></div>
+    <div class="col"><div class="phone"><img src="img/brains.png" alt="Command center: Model row with Local selected, Qwen 0.8B on this phone"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Switch brains in a tap</div></div>
+    <div class="col"><div class="phone"><img src="img/offline.png" alt="Ask sheet: Done in 3.4 s, On device tag, battery answer"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Answered "On device"</div></div>
   </div>
   <div class="cue"><b>Cue</b>Command center › Model: tap Codex / Claude / On-device. Airplane mode on → "Turn on the flashlight" → "On device" tag.</div>
-  <div class="n">13 / 14</div>
+  <div class="n">13 / 15</div>
 </section>
 
 <!-- 14 · CLOSE -->
 <section class="slide">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">AgentOS</div>
   <h1 style="max-width:1300px;font-size:112px;margin-top:220px">The model proposes.<br><em>The OS decides.</em></h1>
   <div class="cue"><b>Cue</b>One line. Stop.</div>
-  <div class="n">14 / 14</div>
+  <div class="n">14 / 15</div>
+</section>
+
+<!-- 15 · SOURCES -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <h1 style="font-size:64px">Sources &amp; data</h1>
+  <p class="sub" style="font-size:22px">Where the demo's data and claims come from</p>
+  <div class="src">
+    <div class="glass">
+      <h3>Data in the demo</h3>
+      <p><b>Grid &amp; energy</b> · U.S. EIA Open Data, API v2: hourly demand and fuel mix for PacifiCorp East (balancing area PACE, Utah). Carbon intensity is our estimate from the generation mix. Prices: Rocky Mountain Power Utah Schedule 1 time-of-use tariff, effective Aug 10, 2026.</p>
+      <p><b>Health</b> · the founder's own Samsung Health export (Galaxy Watch4), imported with consent and stored on the phone.</p>
+      <p><b>Smart home</b> · the founder's Google Home device list (owner-provided). The agent reads it; it never switches devices.</p>
+      <p><b>Built on</b> · Moto G 5G (2023), Android 13, rooted with Magisk.</p>
+    </div>
+    <div class="glass">
+      <h3>Models</h3>
+      <p><b>OpenAI Codex</b> (gpt-6.1-terra) and <b>GPT Live</b> voice, through the founder's ChatGPT subscription.</p>
+      <p><b>Claude</b>, through Claude Code.</p>
+      <p><b>On device</b> · Qwen3.5-0.8B on llama.cpp (llama-server), no network.</p>
+      <p><b>Meta Llama Prompt Guard 2</b> (22M), on device through ONNX Runtime. Llama license.</p>
+    </div>
+    <div class="glass">
+      <h3>Research &amp; claims on earlier slides</h3>
+      <p>Open-source Android agents each fell to at least 6 of 7 published attacks: arXiv 2607.00333 (Zhang et al., Jul 2026).<span class="tag">secondary</span></p>
+      <p>Today's flagship phone agent: partner apps only, cloud-only: 9to5Google, Mar 12, 2026.<span class="tag">reported</span></p>
+      <p>About 45 s to order one ride: a single hands-on review (gimmie.ai, Aug 2026).<span class="tag">reported, unverified</span></p>
+      <p>"AI must be human-guided": Gov. Cox, Utah Pro-Human AI principles (prohumanai.utah.gov).</p>
+      <p>Frameworks we follow: Meta's Rule of Two (Oct 2025) and DeepMind's CaMeL (arXiv 2503.18813).</p>
+    </div>
+  </div>
+  <div class="cue"><b>Cue</b>Leave it up for Q&amp;A.</div>
+  <div class="n">15 / 15</div>
 </section>
 
 <script>
@@ -295,7 +326,7 @@ h1 em{font-style:normal;color:var(--l2)}
   addEventListener('resize',fit);fit();
   var q=/[?&]slide=(\d+)/.exec(location.search)||/#(\d+)/.exec(location.hash);
   if(q){b.classList.add('present');show(+q[1]-1)}else show(0);
-  if(window.matchMedia('print').matches)b.classList.remove('present');
+  if(window.matchMedia('print').matches||/[?&]grid/.test(location.search))b.classList.remove('present');
   addEventListener('beforeprint',function(){b.classList.remove('present')});
 })();
 </script>
