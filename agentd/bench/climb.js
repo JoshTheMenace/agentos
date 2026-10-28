@@ -22,6 +22,7 @@ export const VARIANTS = {
   all: { AGENTD_TOOLS: 'all' },          // tool plugins (plugins.js): every enabled tool upfront
   plugins: { AGENTD_TOOLS: 'plugins' },  // core + pre-selected plugins, the rest via load_plugin
   // Round 3 (10-28): other models in the phone's catalog (bench/RESULTS.md).
+  before: { REV: 'a36a04c', NOCOPY: '' }, after: { NOCOPY: '' }, // round-3 before/after (bench/snap.sh deploys that commit's agentd)
   reserve: { CODEX_MODEL: 'gpt-reserve' }, luna6: { CODEX_MODEL: 'gpt-6-luna' }, luna56: { CODEX_MODEL: 'gpt-5.6-luna' },
 };
 const CANDIDATES = {
