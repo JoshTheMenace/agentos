@@ -810,6 +810,8 @@ function drawGraph(g) {
     for (const e of edges) { const a = byId[e.source], b = byId[e.target], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, f = (d - (90 - Math.min(30, e.weight * 4))) * .02; a.x += dx / d * f; a.y += dy / d * f; b.x -= dx / d * f; b.y -= dy / d * f; }
     for (const n of nodes) { if (n === me) { n.x = cx; n.y = cy; continue; } n.x += (cx - n.x) * .01; n.y += (cy - n.y) * .01; n.x = Math.max(n.r + 4, Math.min(W - n.r - 4, n.x)); n.y = Math.max(n.r + 4, Math.min(H - n.r - 40, n.y)); }
   }
+  const placed = []; // strongest first: a label that would sit on another one stays quiet
+  for (const n of nodes) { if (!n.text) continue; const lx = Math.max(n.half, Math.min(W - n.half, n.x)), ly = n.y + n.r; if (placed.some((p) => Math.abs(p.y - ly) < 18 && Math.abs(p.x - lx) < p.half + n.half)) n.text = ''; else placed.push({ x: lx, y: ly, half: n.half }); }
   const ns = 'http://www.w3.org/2000/svg', mk = (t, a) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
   svg.replaceChildren(...edges.map((e) => mk('line', { x1: byId[e.source].x, y1: byId[e.source].y, x2: byId[e.target].x, y2: byId[e.target].y, 'stroke-width': 1 + Math.min(4, e.weight / 2) })),
     ...nodes.map((n) => { const gg = mk('g', { class: ['me', 'person', 'group'].includes(n.type) ? n.type : 'other' });
