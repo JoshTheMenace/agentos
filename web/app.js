@@ -294,7 +294,7 @@ function appCard(a) {
   b.dataset.id = a.id; return b;
 }
 function renderMyApps() {
-  const n = S.myapps.length; // Home shows the 4 most recent (two rows fit above the chips; a swipe up here opens the drawer, which has them all)
+  const n = S.myapps.length; // Home shows the 4 most recent (two rows fit above the ask bar; a swipe up here opens the drawer, which has them all)
   $('#myK').innerHTML = n ? `My apps${n > 4 ? `<span class="more">${n - 4} more in the drawer</span>` : ''}` : '';
   swap($('#myapps'), ...S.myapps.slice(0, 4).map(appCard));
   $('#mygrid').replaceChildren(...S.myapps.map((a) => { const b = el('button', 'app'); b.innerHTML = `<i class="ico"><span class="emo">${esc(a.icon || '✨')}</span></i><span>${esc(a.name)}</span>`; b.onclick = () => { hap(); N.openApp(a.id); setTimeout(() => close('drawer'), 250); }; return b; }));
@@ -356,16 +356,8 @@ $('#toSettings').onclick = () => { hap(); N.settings(''); };
 $('#toMemory').onclick = () => { hap(); go(2); };
 $('#cmd').onclick = (e) => { if (e.target.closest('.mic')) return; hap(); open('sheet'); setTimeout(() => $('#askIn').focus(), 350); };
 $('#micBtn').onclick = () => { hap('heavy'); voiceStart(); };
-// Try chips: each opens the ask sheet with the prompt typed and the cursor at the end (except the model switch, which flips at once).
+// Prompt chips shown in the empty ask sheet (the Home row was removed 10-28).
 const TRY = [['cal', 'At 7 PM, …', 'At 7 PM, '], ['spark', 'What did I miss?', 'What did I miss?'], ['msg', 'Reply I’m 10 min late', 'Reply that I’m 10 minutes late'], ['key', 'Sign me in', 'Sign me in to '], ['cloud', 'Local model', null]];
-function renderTry() {
-  $('#try').replaceChildren(...TRY.map(([ic, label, text], i) => {
-    const local = text === null && S.provider === 'local', b = el('button', 'chip' + (local ? ' lit' : ''), `<svg><use href="#i-${local ? 'check' : ic}"/></svg>${esc(local ? 'Local model · on' : label)}`);
-    b.style.animationDelay = .25 + i * .05 + 's';
-    b.onclick = () => { hap('tick'); if (text === null) { S.provider = localStorage.provider = S.provider === 'local' ? 'codex' : 'local'; renderCenter(); renderTry(); return; } open('sheet'); const inp = $('#askIn'); inp.value = text; setTimeout(() => { inp.focus(); inp.setSelectionRange(text.length, text.length); }, 350); };
-    return b;
-  }));
-}
 
 // ---------- command center ----------
 function renderCenter() {
@@ -420,7 +412,7 @@ function taskRow(t) {
   k.onpointerup = k.onpointercancel = k.onpointerleave = () => clearTimeout(t);
   k.onclick = async () => { if (held) { held = false; return; } if (Date.now() - S.armed > 4000) return; S.armed = 0; hap(); const r = await phone('audit.demo_reset'); if (r?.since) S.since = r.since; renderCenter(); }; }
 $('.shield').onclick = (e) => { const v = e.target.closest('[data-v]')?.dataset.v || (e.target.closest('.watch') && 'blockers'); if (!v) return; hap(); v === 'blockers' ? openBlockers() : $('#recent').closest('.mod').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
-$('#prov').onclick = (e) => { const p = e.target.dataset.p; if (!p) return; hap('tick'); S.provider = localStorage.provider = p; renderCenter(); renderTry(); };
+$('#prov').onclick = (e) => { const p = e.target.dataset.p; if (!p) return; hap('tick'); S.provider = localStorage.provider = p; renderCenter(); };
 $('#kill').onclick = async () => { hap('heavy'); S.queue.length = 0; send({ type: 'stop' }); await rpc('task.stop', {}); S.turn = false; S.pending = null; refresh(); };
 
 // ---------- permissions ----------
@@ -876,7 +868,7 @@ function renderSources(box, consents = S.consents) {
 on('memory.consent', async (m) => { if (!m.ok) hap('heavy'); graphAt = 0; await loadMemory(); renderSources($('#psources')); setTimeout(() => { graphAt = 0; loadMemory(); }, 8000); }); // a grant re-reads the source; counts land a few seconds later
 
 // ---------- boot ----------
-loadApps(); renderCalendar(); renderTry(); live(); go(0);
+loadApps(); renderCalendar(); live(); go(0);
 // Browser-only styling aid (`index.html#demo` on the Mac, never on the phone): sample feed + a running task.
 if (location.hash.startsWith('#demo')) { // styling aid: only reachable through install.sh dev <url>#demo
   emit({ type: 'suggestions', items: [{ id: 1, title: 'Reply to Sam: running late?', detail: 'Messages · 12 min ago', app: 'local.agentos.pigeon', goal: 'x' }, { id: 2, title: 'Leave for 3 PM meeting in 12 min', detail: '18 min drive · Maps', icon: 'car', goal: 'x' }, { id: 3, title: 'You promised Priya the Q3 numbers', detail: 'Due today · Messages', icon: 'spark', goal: 'x' }] });
