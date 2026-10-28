@@ -4,7 +4,7 @@
 1. ~~Add `local.agentos.home` to `AGENTD_CLIENT_PKGS`~~ done.
 2. ~~Approvals by chat~~ dropped: there is no typed yes. Approvals are the native card (tap / fingerprint), voice, or the reviewer; the sheet only shows a one-line status from `approval.shown/resolved`.
 3. ~~`rpc` passthrough~~ done (`audit.tail`, `approval.list`, `firewall.list/set`, `task.pause/resume/stop`). The launcher makes no `:7777` calls.
-4. **Memory consent from the UI:** `consent_grant/revoke` have no approval UI; the Permissions screen shows sources read-only. A `{type:"consent", source, action}` message gated by fingerprint would let the toggle work.
+4. ~~Memory consent from the UI~~ done: Memory/Permissions source toggles send `{type:"memory.consent", source, action}`; agentd accepts it only from this app's uid (owner line). Turning a source off asks twice, since it deletes that source's memory.
 5. The provider switch sends `provider:"codex"|"local"`; `local` needs llama-server running (`providers/local.js start`).
 6. **Suggestions feed (context track):** replace `agentd/home-suggest.js` with `context.js`, keeping the contract: push `{type:"suggestions", items:[{id,title,detail,app?,goal?,icon?,view?}]}` only to connections that sent `{type:"suggestions.watch"}` (the keyboard reads any `suggestions` reply during its request and has no `id` check). `goal` is sent as an `ask` on tap; "Reply to Sam: running late?" wants `goal:"Reply to Sam in Messages that I'm running late"` and `app:"<pkg>"` for the icon.
 7. **Trackers (trackers track):** `trackers.list` is in agentd's `UI_RPC` allow-list; forward `tracker.blocked {pkg, domain, company?, ts?}` in `events.FORWARD` so the Blockers view and the Activity log update live.

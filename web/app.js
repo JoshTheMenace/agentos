@@ -134,7 +134,7 @@ const live = () => { renderStatus(); renderNow(); renderCenter(); if ($('#perms'
 const alive = (t) => t && t.expires > Date.now() ? t : null;
 async function refresh() {
   const [a, l] = await Promise.all([rpc('audit.tail', { n: 500 }), rpc('approval.list')]);
-  if (a?.entries) S.audit = a.entries;
+  if (a?.entries) { S.audit = a.entries; S.since = a.since || 0; } // since = the last demo.reset line (counts start after it)
   if (l?.approvals) { S.active = alive(l.task); S.pending = l.approvals[0] || null; }
   live(); renderCalendar(); if (!S.mods) loadMods(); if (!S.vault) loadVault();
 }
@@ -142,7 +142,7 @@ on('task.state', (m) => { if (m.state === 'stopped') { if (S.active?.task_id ===
 const MOMENT = { 'notifications.reply': (e) => `Replied${e.target ? ' to ' + short(e.target, 20) : ''} · ${appName(e.pkg)}`, 'notifications.autoreply': (e) => `Auto-replied${e.target ? ' to ' + short(e.target, 20) : ''} · ${appName(e.pkg)}`, 'vault.fill': (e) => `Signed in to ${appName(e.pkg)} with your fingerprint`, 'trackers.block': (e) => `Blocked trackers · ${appName(e.pkg)}`, 'schedule.created': (e) => `Scheduled${e.when ? ' for ' + e.when : ''}`, 'app.mod.add': (e) => `Added “${short(e.label || 'a button', 20)}” to ${appName(e.pkg)}` };
 S.moments = []; // things agents just did for you (from the audit): a 45 s card on Home
 on('audit.append', (m) => {
-  S.audit = [...S.audit.slice(-599), m];
+  S.audit = [...S.audit.slice(-599), m]; if (m.tool === 'demo.reset') S.since = m.ts;
   const f = MOMENT[m.tool]; if (f && (!m.decision || m.decision === 'approved')) { const x = { text: f(m), ts: m.ts || Date.now() }; S.moments = [x, ...S.moments].slice(0, 2); hap('heavy'); setTimeout(() => { S.moments = S.moments.filter((y) => y !== x); renderNow(); }, 45000); }
   renderNow(); renderCenter();
 });
@@ -338,7 +338,7 @@ function renderCenter() {
   $('#taskCount').textContent = [running ? `${running} running` : '', S.sched.length ? `${S.sched.length} scheduled` : ''].filter(Boolean).join(' · ');
   $$('#prov button').forEach((b) => b.classList.toggle('on', b.dataset.p === S.provider));
   $('#provNote').textContent = { codex: 'OpenAI Codex in the cloud · default, fastest', claude: 'Claude Code · cloud', local: 'Qwen 0.8B running on this phone · works in airplane mode' }[S.provider] || '';
-  const today = new Date().setHours(0, 0, 0, 0);
+  const today = Math.max(new Date().setHours(0, 0, 0, 0), (S.since || 0) + 1); // after a demo reset, only what came since
   const day = S.audit.filter((e) => e.ts >= today), recent = day.slice(-60).reverse();
   $('#recentNote').textContent = day.length ? `${day.length >= 500 ? '500+' : day.length} today` : 'quiet today';
   $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Caught' : e.decision === 'blocked' ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (/^(reviewer|policy)$/.test(e.approver || e.channel) ? 'Auto' : 'Approved') : '';
@@ -354,7 +354,7 @@ function renderCenter() {
   const appr = day.filter((e) => e.decision === 'approved'), auto = appr.filter((e) => /reviewer|policy/.test(e.approver || e.channel || '')).length;
   const stat = (n, l, c) => `<div class="stat ${c}"><b>${n}</b><span>${l}</span></div>`;
   $('#stats').innerHTML = stat(nb, nb === 1 ? 'tracker blocked' : 'trackers blocked', 'g') + stat(ads, 'ads blocked', 'g') + stat(stopped, stopped === 1 ? 'action stopped' : 'actions stopped', 'g') + stat(appr.length, appr.length === 1 ? 'approval' : 'approvals' + (auto ? ` · ${auto} auto` : ''), 'b');
-  $('#shieldNote').textContent = nb + ads + stopped + appr.length ? '' : 'all quiet';
+  $('#shieldNote').textContent = Date.now() - S.armed < 4000 ? 'Tap to start fresh' : nb + ads + stopped + appr.length ? '' : 'all quiet';
 }
 async function loadTrackers() { let r = await phone('trackers.list', {}); if (!r?.apps) r = await rpc('trackers.list', {}); if (r?.apps) { S.trackers = r.apps; S.adsBlocked = r.blocked_requests; } renderCenter(); } // owner line first: works without agentd
 function taskRow(t) {
@@ -365,6 +365,12 @@ function taskRow(t) {
   r.onclick = async (e) => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; hap(); if (a === 'stop') send({ type: 'stop' }); await rpc('task.' + a, { task_id: t.task_id }); refresh(); };
   return r;
 }
+// Demo reset (owner, hidden): hold the "Protected today" title, then tap it again. The broker appends one demo.reset audit
+// line (owner line only; the chain is never edited) and Protected today + Activity count from it. Ads blocked keeps counting.
+{ const k = $('.shield .k'); let t, held = false; S.armed = 0;
+  k.onpointerdown = () => { held = false; t = setTimeout(() => { held = true; S.armed = Date.now(); hap('heavy'); renderCenter(); setTimeout(renderCenter, 4000); }, 700); };
+  k.onpointerup = k.onpointercancel = k.onpointerleave = () => clearTimeout(t);
+  k.onclick = async () => { if (held) { held = false; return; } if (Date.now() - S.armed > 4000) return; S.armed = 0; hap(); const r = await phone('audit.demo_reset'); if (r?.since) S.since = r.since; renderCenter(); }; }
 $('#prov').onclick = (e) => { const p = e.target.dataset.p; if (!p) return; hap('tick'); S.provider = localStorage.provider = p; renderCenter(); renderTry(); };
 $('#kill').onclick = async () => { hap('heavy'); send({ type: 'stop' }); await rpc('task.stop', {}); S.turn = false; S.pending = null; refresh(); };
 
@@ -556,8 +562,12 @@ function drawGraph(g) {
 function renderSources(box, consents = S.consents) {
   if (!consents) return box.replaceChildren(el('div', 'empty', 'Offline'));
   if (!consents.length) return box.replaceChildren(el('div', 'empty', 'None'));
-  box.replaceChildren(...consents.map((c) => el('div', 'rowi', `<span class="appic" style="background:var(--purple)">${esc(c.source[0].toUpperCase())}</span><div>${esc(({ calllog: 'Call log', sms: 'Texts' })[c.source] || c.source.replace(/^\w/, (ch) => ch.toUpperCase()))}<span class="s">${c.events} item${c.events === 1 ? '' : 's'} · ${esc(c.scope)}</span></div><div class="r"><span class="tag ${c.active ? 'g' : 'c'}">${c.active ? 'Allowed' : 'Off'}</span></div>`)));
+  box.replaceChildren(...consents.map((c) => { const r = el('div', 'rowi', `<span class="appic" style="background:var(--purple)">${esc(c.source[0].toUpperCase())}</span><div>${esc(({ calllog: 'Call log', sms: 'Texts' })[c.source] || c.source.replace(/^\w/, (ch) => ch.toUpperCase()))}<span class="s">${c.events} item${c.events === 1 ? '' : 's'} · ${esc(c.scope)}</span></div><div class="r"><button class="toggle${c.active ? ' on' : ''}" aria-label="${c.active ? 'Allowed' : 'Off'}"></button></div>`);
+    // The owner's toggle (agentd checks it's this app's uid). Turning a source off deletes what memory has from it, so that asks twice.
+    const t = $('button', r), s = $('.s', r); t.onclick = () => { hap(); if (c.active && !t.dataset.sure) { t.dataset.sure = 1; s.textContent = `Tap again to forget ${c.events} item${c.events === 1 ? '' : 's'}`; setTimeout(() => t.dataset.sure && renderSources(box), 3000); return; }
+      t.dataset.sure = ''; t.classList.toggle('on'); t.style.opacity = .5; if (!send({ type: 'memory.consent', source: c.source, action: c.active ? 'revoke' : 'grant', scope: c.scope })) renderSources(box); }; return r; }));
 }
+on('memory.consent', async (m) => { if (!m.ok) hap('heavy'); graphAt = 0; await loadMemory(); renderSources($('#psources')); setTimeout(() => { graphAt = 0; loadMemory(); }, 8000); }); // a grant re-reads the source; counts land a few seconds later
 
 // ---------- boot ----------
 loadApps(); renderCalendar(); renderTry(); live(); go(0);

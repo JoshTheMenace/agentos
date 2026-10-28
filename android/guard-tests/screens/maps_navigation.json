@@ -1,0 +1,205 @@
+{
+  "pkg": "com.google.android.apps.maps",
+  "activity": "com.google.android.maps.MapsActivity",
+  "secure": false,
+  "secure_reason": "",
+  "nodes": [
+    {
+      "id": 0,
+      "role": "ImageView",
+      "desc": "Back",
+      "bounds": [
+        92,
+        1516,
+        226,
+        1600
+      ],
+      "actions": [
+        "click"
+      ],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 1,
+      "role": "ImageView",
+      "desc": "Overview",
+      "bounds": [
+        494,
+        1516,
+        628,
+        1600
+      ],
+      "actions": [
+        "click"
+      ],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 2,
+      "role": "ImageView",
+      "desc": "Home",
+      "bounds": [
+        290,
+        1516,
+        430,
+        1600
+      ],
+      "actions": [
+        "click",
+        "long_click"
+      ],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 3,
+      "role": "TextView",
+      "text": "6:40",
+      "desc": "6:40 PM",
+      "bounds": [
+        25,
+        10,
+        87,
+        77
+      ],
+      "actions": [],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 4,
+      "role": "ImageView",
+      "desc": "Android System notification:",
+      "bounds": [
+        87,
+        10,
+        126,
+        77
+      ],
+      "actions": [],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 5,
+      "role": "ImageView",
+      "desc": "Moto notification: Fast Flashlight",
+      "bounds": [
+        126,
+        10,
+        165,
+        77
+      ],
+      "actions": [],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 6,
+      "role": "ImageView",
+      "desc": "Settings notification: Charging complete",
+      "bounds": [
+        165,
+        10,
+        204,
+        77
+      ],
+      "actions": [],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 7,
+      "role": "ImageView",
+      "desc": "Google notification: The New Stack",
+      "bounds": [
+        204,
+        10,
+        243,
+        77
+      ],
+      "actions": [],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 8,
+      "role": "FrameLayout",
+      "desc": "Wifi three bars.",
+      "bounds": [
+        643,
+        24,
+        673,
+        63
+      ],
+      "actions": [],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 9,
+      "role": "LinearLayout",
+      "desc": "Battery charging, 100 percent.",
+      "bounds": [
+        681,
+        10,
+        695,
+        77
+      ],
+      "actions": [],
+      "src": "SYSTEM"
+    },
+    {
+      "id": 10,
+      "role": "TextView",
+      "text": "Welcome to Google Maps navigation",
+      "bounds": [
+        70,
+        878,
+        650,
+        926
+      ],
+      "actions": [],
+      "src": "APP:com.google.android.apps.maps"
+    },
+    {
+      "id": 11,
+      "role": "TextView",
+      "text": "Don’t forget to pay attention to your surroundings and always obey the law  Google Maps Terms",
+      "bounds": [
+        70,
+        933,
+        650,
+        1116
+      ],
+      "actions": [
+        "click"
+      ],
+      "src": "APP:com.google.android.apps.maps",
+      "guard": 0.773
+    },
+    {
+      "id": 12,
+      "role": "Button",
+      "text": "OK",
+      "bounds": [
+        545,
+        1141,
+        657,
+        1225
+      ],
+      "actions": [
+        "click"
+      ],
+      "src": "APP:com.google.android.apps.maps"
+    }
+  ],
+  "truncated": false,
+  "source_pkg": "com.google.android.apps.maps",
+  "focused_id": null,
+  "untrusted": true,
+  "guard": {
+    "score": 0.773,
+    "label": "MALICIOUS",
+    "flagged_node_ids": [
+      11
+    ],
+    "screen_score": 0.103,
+    "scored_nodes": 1,
+    "ms": 592
+  },
+  "ok": true
+}

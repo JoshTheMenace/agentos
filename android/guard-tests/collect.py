@@ -26,6 +26,7 @@ CASES = {
     "weather": [launch("com.inmobi.weather")],
     "youtube": [launch("com.google.android.youtube")],
     "maps": [launch("com.google.android.apps.maps")],
+    "maps_navigation": ["am start -a android.intent.action.VIEW -d 'google.navigation:q=Costco&mode=d' com.google.android.apps.maps"],  # safety banner
     "clock_timer": ["am start -a android.intent.action.SHOW_TIMERS"],
     "settings_security": ["am start -a android.settings.SECURITY_SETTINGS"],
     "settings_wifi": ["am start -a android.settings.WIFI_SETTINGS"],
@@ -71,6 +72,7 @@ def main():
                 time.sleep(6 if "chrome" in name else 4)
                 s = tc.call(tok, "screen.read")
                 if name.startswith("pigeon"): sh(CLEAN)  # no injection left behind in Pigeon
+                if name == "maps_navigation": sh("am force-stop com.google.android.apps.maps")  # ends navigation
                 if name == "clock_volume_low": sh("cmd media_session volume --stream 4 --set 6")
                 return s
             s = locked(run)

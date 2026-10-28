@@ -152,6 +152,12 @@ final class Broker {
             case "audit.mark_breaks": // adb only: names today's chain breaks in one new line; history is never rewritten
                 if (uid != 2000) return ok(false).put("reason", "audit.mark_breaks only over adb, not from " + who(uid));
                 return audit.markBreaks(p.optString("reason", "marked by the operator over adb"));
+            case "audit.demo_reset": { // owner (long-press "Protected today") or adb: one demo.reset line; the launcher counts from it, the chain stays whole
+                if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", "audit.demo_reset only from the launcher or adb, not from " + who(uid));
+                JSONObject e = new JSONObject().put("task", "").put("tool", "demo.reset").put("decision", "auto").put("reason", uid == 2000 ? "operator over adb" : "owner (command center)");
+                audit.log(e);
+                return ok(true).put("since", e.getLong("ts"));
+            }
             case "firewall.list": return Firewall.list(svc);
             case "trackers.scan": return Trackers.scan(svc, p);
             case "trackers.list": return Trackers.list(svc);

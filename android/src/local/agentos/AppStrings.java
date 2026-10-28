@@ -27,12 +27,13 @@ final class AppStrings {
 
     static void init(Context c) { ctx = c; }
 
-    /** True when the text, or each of its sentences/lines ("Having trouble?" + "Reset your password"), ships in pkg's APK. */
+    /** True when the text, or each of its pieces, ships in pkg's APK. Pieces are sentences/lines ("Having trouble?" +
+     *  "Reset your password") or strings the app glued with 2+ spaces (Maps: "…always obey the law" + "  " + "Google Maps Terms"). */
     static boolean own(String pkg, String text) {
         long[] h = hashes(pkg);
         if (h == null) return false;
         if (Arrays.binarySearch(h, hash(text.trim())) >= 0) return true;
-        for (String s : text.split("(?<=[.?!:])\\s+|\\n"))
+        for (String s : text.split("(?<=[.?!:])\\s+|\\n|\\s{2,}"))
             if (!s.trim().isEmpty() && Arrays.binarySearch(h, hash(s.trim())) < 0) return false;
         return true;
     }

@@ -7,6 +7,7 @@ to Mac port $AGENTOS_PORT, default 17777).
                                                       Pigeon chat task (P3 block, fingerprint Send) + Beacon firewall
   tools-client.py audit [N]                            last N audit entries + offline check of the whole chain (exit 1 if broken)
   tools-client.py audit mark REASON                    adb only: append one audit.break line naming today's link breaks (never rewrites)
+  tools-client.py demo-reset                           adb only: the launcher's Protected today + Activity count from now (one demo.reset line)
   tools-client.py events [SECONDS]                     print the GET /events stream (server-sent events)
   tools-client.py settings ['{"require_user_lease":false}']
                                                       write (as root) or, with no JSON, delete files/settings.json
@@ -417,6 +418,8 @@ def main():
         vault([a for a in sys.argv[2:] if a != "--press-approve"])
     elif cmd == "audit" and sys.argv[2:3] == ["mark"]:  # adb only: one audit.break line naming the current breaks
         print(json.dumps(call(token(), "audit.mark_breaks", {"reason": " ".join(sys.argv[3:]) or "marked by the operator over adb"}), indent=2))
+    elif cmd == "demo-reset":  # adb only: the command center counts from now (one demo.reset audit line; nothing deleted)
+        print(json.dumps(call(token(), "audit.demo_reset"), indent=2))
     elif cmd == "audit":
         audit(token(), int(sys.argv[2]) if len(sys.argv) > 2 else 20)
     elif cmd == "call":

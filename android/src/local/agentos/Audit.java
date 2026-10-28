@@ -53,8 +53,10 @@ final class Audit {
             List<String> lines = lines();
             JSONObject v = verify(lines);
             JSONArray out = new JSONArray();
+            long since = 0; // the last demo.reset line: the launcher counts "today" from there (a view filter; nothing is removed)
+            for (int i = lines.size() - 1; i >= 0 && since == 0; i--) if (lines.get(i).contains("\"tool\":\"demo.reset\"")) since = new JSONObject(lines.get(i)).getLong("ts");
             for (int i = Math.max(0, lines.size() - n); i < lines.size(); i++) out.put(new JSONObject(lines.get(i)));
-            return v.put("ok", true).put("entries", out).put("count", lines.size()).put("head", head());
+            return v.put("ok", true).put("entries", out).put("count", lines.size()).put("head", head()).put("since", since);
         }
     }
 
