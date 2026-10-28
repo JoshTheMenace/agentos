@@ -33,6 +33,13 @@ export function upsertEvent(db, e, who) {
   return S.addEvent(db, e, who);
 }
 
+// Texts, calls and photos can be deleted on the phone. Once an hour, diff our copies against the provider's live ids
+// (one id-only query each) and drop the gone ones. Returns {removed, wm} to merge into the connector's result.
+export function pruneHourly(db, source, wm, ids) {
+  if (wm.pruned && Date.now() - wm.pruned < 60 * 60e3) return { removed: 0, wm: { pruned: wm.pruned } };
+  return { removed: S.prune(db, source, ids()), wm: { pruned: Date.now() } };
+}
+
 const onPhone = process.platform === 'android';
 // Raw bytes from a root command (for copying another app's SQLite file). adb exec-out keeps binary intact; adb shell wouldn't.
 export const rootBytes = (cmd, fixture) => process.env.MEMORY_FIXTURES ? readFileSync(join(process.env.MEMORY_FIXTURES, fixture)) : onPhone ? execFileSync('su', ['-c', cmd], { maxBuffer: 256 << 20, timeout: 60_000 })
@@ -56,7 +63,7 @@ export function sync(db, source, { force = false, ...opts } = {}) {
     S.rebuildRelations(db);
     return r;
   });
-  return { source, rows: r.rows, added: r.added, ms: Date.now() - t0 };
+  return { source, rows: r.rows, added: r.added, ...(r.removed && { removed: r.removed }), ms: Date.now() - t0 };
 }
 
 // Every granted connector that is due (or all of them). Errors are reported per source, never thrown.

@@ -11,3 +11,4 @@
 {"label":"brain-codex-final","provider":"codex","correct":"50/50","median_s":2.9,"avg_tool_calls":0.12,"avg_model_calls":1.12,"at":"2026-10-28T00:11:08.274Z"}
 {"label":"brain-claude","provider":"claude","correct":"7/8","median_s":3.2,"avg_tool_calls":0.25,"avg_model_calls":0,"at":"2026-10-28T00:11:34.937Z"}
 {"label":"brain-codex-final2","provider":"codex","correct":"50/50","median_s":2.8,"avg_tool_calls":0.16,"avg_model_calls":1.16,"at":"2026-10-28T00:25:05.755Z"}
+{"label":"sync-deletes","provider":"codex","correct":"50/50","median_s":2.8,"avg_tool_calls":0.12,"avg_model_calls":1.12,"at":"2026-10-28T00:43:23.845Z"}

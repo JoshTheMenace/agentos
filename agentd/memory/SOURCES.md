@@ -7,6 +7,18 @@ due (each source has its own interval below), skips when the battery is under 15
 node awake. On demand: `node memory/cli.js sync [source] [--force]` or the WebSocket message `{type:"memory.sync"}`.
 Incremental: each source keeps a watermark in `meta` (`wm:<source>`), reset when the source is re-granted.
 
+**Deletes and edits (10-27 night).** Memory follows the phone, not just its additions. Calendar: every run replaces edited
+events (`store.putEvent`: same ext_id, new time/title/attendees → one row, not two; unchanged rows keep their id) and
+drops events the provider no longer has or flags `deleted=1` (`store.prune` against an id-only `content query`, ~0.3 s).
+CalendarContract has no public last-modified column, so edits beyond the 14-day window land with the 6-hourly full read.
+SMS, call log, photos: the same id diff, hourly (`pruneHourly`). Chrome: diff against the History copy's visit ids each run.
+Contacts: a number/email no longer on any contact loses its contacts alias (the card goes if nothing else knows it); a
+renamed contact renames its card unless two contacts share that number. Alarms: one row that follows the next alarm, or
+none. A failed id query throws (it can never look like "everything was deleted"). agentd's own `add_event` /
+`update_event` / `delete_event` / `delete_alarm` / `set_alarm` are mirrored at once (`memory.noteApi`, from tools.js).
+Verified on the phone: the first forced calendar run removed 3 stale events; a test event inserted then deleted by id
+appeared and disappeared; a repeat run changed nothing.
+
 ## Schema notes for Memory B (all additive, store.js)
 - `SOURCES` gained `photos`, `usage`, `chrome`, `media`, `alarms`.
 - `redact()` also replaces `password|passwd|passcode|pwd|pass <is|:|=> xxx` with `[PASSWORD]` (on top of OTP, card, SSN, email, phone, URL query).

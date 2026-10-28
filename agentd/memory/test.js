@@ -121,3 +121,57 @@ test('whatsapp parser: 12 AM, narrow no-break space, continuation lines', async 
   assert.equal(new Date(m[1].ts).getHours(), 12);
   assert.equal(m[0].text, 'hi\nsecond line');
 });
+
+test('deletes and edits on the phone reach memory (calendar, contacts, sms, alarms, direct API writes)', async () => {
+  const fs = await import('node:fs'), { join } = await import('node:path'), C = await import('./connectors/index.js'), { liveIds } = await import('./ingest.js');
+  const dir = fs.mkdtempSync(join((await import('node:os')).tmpdir(), 'agentos-fx-')), orig = process.env.MEMORY_FIXTURES;
+  fs.cpSync(orig, dir, { recursive: true });
+  process.env.MEMORY_FIXTURES = dir;
+  const edit = (f, fn) => fs.writeFileSync(join(dir, `${f}.txt`), fn(fs.readFileSync(join(dir, `${f}.txt`), 'utf8')));
+  const d = S.open(':memory:'), ctx = { db: d, actor: 'user:test' }, cal = () => d.prepare(`SELECT id, ext_id, title FROM event WHERE source='calendar' ORDER BY ext_id`).all();
+  try {
+    for (const s of ['contacts', 'calendar', 'sms', 'alarms']) S.grant(d, s, { actor: 'user:test' });
+    M.ingest('contacts', {}, ctx); M.ingest('calendar', {}, ctx);
+    const before = cal();
+    assert.deepEqual(before.map((e) => e.ext_id), ['10', '11', '12']);
+    assert.equal(M.ingest('calendar', {}, ctx).added, 0, 'unchanged events are left alone');
+    assert.deepEqual(cal(), before, 'and keep their ids');
+    // Edit 10's title, flag 11 deleted=1 (waiting for sync), remove 12 entirely (purged).
+    edit('calendar_events', (t) => t.replace('Moab trip planning', 'Moab trip planning (moved)').replace(/(_id=11,.*)deleted=0/, '$1deleted=1').replace(/^Row: 2 _id=12.*\n/m, ''));
+    const r = M.ingest('calendar', {}, ctx);
+    assert.deepEqual([r.added, r.removed], [1, 2]);
+    assert.deepEqual(cal().map((e) => [e.ext_id, e.title]), [['10', 'Moab trip planning (moved)']], 'edited in place of a duplicate; deleted ones gone');
+    assert.equal((await M.call('memory_search', { q: 'judging' }, ctx)).results.length, 0, 'search no longer finds the deleted event');
+    // Direct API writes (tools.js -> memory.noteApi) show up before any sync.
+    M.noteApi('calendar.add', { attendees: ['priya.shah@example.com'] }, { ok: true, event: { id: 77, title: 'AgentOS test lunch', start_ms: 1792500000000, end_ms: 1792503600000 } }, ctx);
+    const priya = d.prepare(`SELECT id FROM entity WHERE name='Priya Shah'`).get().id;
+    assert.ok(d.prepare(`SELECT 1 FROM event e JOIN event_entity ee ON ee.event_id=e.id WHERE e.ext_id='77' AND ee.entity_id=?`).get(priya), 'attendee linked by email');
+    M.noteApi('calendar.update', { id: 77, title: 'AgentOS test lunch v2' }, { ok: true, event: { id: 77, title: 'AgentOS test lunch v2', start_ms: 1792500000000, end_ms: 1792503600000 } }, ctx);
+    assert.equal(d.prepare(`SELECT count(*) n FROM event WHERE source='calendar' AND ext_id='77' AND title='AgentOS test lunch v2'`).get().n, 1);
+    assert.ok(d.prepare(`SELECT 1 FROM event e JOIN event_entity ee ON ee.event_id=e.id WHERE e.ext_id='77' AND ee.entity_id=?`).get(priya), 'update keeps attendees');
+    M.noteApi('calendar.delete', { id: 77 }, { ok: false }, ctx);
+    assert.ok(d.prepare(`SELECT 1 FROM event WHERE ext_id='77'`).get(), 'a failed delete changes nothing');
+    M.noteApi('calendar.delete', { id: 77 }, { ok: true, deleted: true }, ctx);
+    assert.ok(!d.prepare(`SELECT 1 FROM event WHERE ext_id='77'`).get());
+    // Contacts: Sam's number removed, Mom renamed.
+    edit('contacts_phones', (t) => t.replace(/^Row: 2 .*\n/m, '').replace('display_name=Mom', 'display_name=Mom Gimenes'));
+    assert.equal(M.ingest('contacts', {}, ctx).removed, 1);
+    assert.ok(!d.prepare(`SELECT 1 FROM entity WHERE name='Sam Lee'`).get(), 'a contact with no number left is gone');
+    assert.ok(d.prepare(`SELECT 1 FROM entity e JOIN alias a ON a.entity_id=e.id WHERE e.name='Mom Gimenes' AND a.value='+18015550102'`).get(), 'renamed, same card');
+    // SMS (hourly id diff) and alarms (one row that follows the phone).
+    assert.equal(C.sync(d, 'sms').added, 5);
+    edit('sms', (t) => t.replace(/^Row: 4 _id=5.*\n/m, ''));
+    assert.equal(C.sync(d, 'sms', { force: true }).removed, 1);
+    assert.equal(C.sync(d, 'alarms').added, 1);
+    edit('next_alarm', () => 'Wed 7:30 AM\n');
+    C.sync(d, 'alarms');
+    assert.deepEqual(d.prepare(`SELECT title FROM event WHERE source='alarms'`).all().map((e) => e.title), ['Next alarm: Wed 7:30 AM']);
+    edit('next_alarm', () => 'null\n');
+    assert.equal(C.sync(d, 'alarms').removed, 1);
+    assert.equal(d.prepare(`SELECT count(*) n FROM event WHERE source='alarms'`).get().n, 0);
+    edit('calendar_events', () => 'Error while accessing provider\n');
+    assert.throws(() => M.ingest('calendar', {}, ctx));
+    assert.throws(() => liveIds('content://com.android.calendar/events', 'calendar_events'), /failed/);
+    assert.equal(cal().length, 1, 'a failed query never looks like "everything was deleted"');
+  } finally { process.env.MEMORY_FIXTURES = orig; fs.rmSync(dir, { recursive: true }); }
+});

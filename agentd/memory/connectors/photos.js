@@ -1,7 +1,8 @@
 // MediaStore images + videos: when a photo/video was taken and which album (Camera, Screenshots, WhatsApp Images...).
 // Never the pixels, never the file name. Location: MediaStore redacts it on Android 10+, and we don't ask for it.
-import { contentQuery } from '../ingest.js';
+import { contentQuery, liveIds } from '../ingest.js';
 import { addEvent, entity } from '../store.js';
+import { pruneHourly } from './index.js';
 
 const KIND = { images: 'Photo', video: 'Video' };
 // MediaStore rejects LIMIT in --sort, so the watermark is date_added (seconds; datetaken is often NULL).
@@ -17,5 +18,6 @@ export default { source: 'photos', every: 10 * 60e3, sync(db, wm) {
       ts = Math.max(ts, +r.date_added || 0);
     }
   }
-  return { rows, added, wm: { ts } };
+  const p = pruneHourly(db, 'photos', wm, () => Object.keys(KIND).flatMap((t) => liveIds(`content://media/external/${t}/media`, `photos_${t}`).map((id) => `${t[0]}${id}`))); // deleted photos
+  return { rows, added, removed: p.removed, wm: { ts, ...p.wm } };
 } };

@@ -5,6 +5,7 @@
 import * as S from './store.js';
 import { ingest as runIngest, INGESTORS } from './ingest.js';
 import * as brain from './brain.js';
+import * as connectors from './connectors/index.js';
 
 let shared;
 const dbOf = (ctx = {}) => ctx.db || (shared ??= S.open());
@@ -210,6 +211,31 @@ export function noteMessage(m, ctx = {}) {
     if (id) S.rebuildRelations(db);
     return id;
   });
+}
+
+// agentd's direct API tools just changed the phone (tools.js, after a successful call): mirror it now, so the next
+// request doesn't hear "already on your calendar" about an event that was just deleted. Never throws.
+// method: the :7777 method ('calendar.add' | 'calendar.update' | 'calendar.delete' | 'alarms.delete' | 'intent' kind alarm).
+export function noteApi(method, args = {}, r = {}, ctx = {}) {
+  const db = dbOf(ctx);
+  try {
+    if (r.ok === false) return;
+    if (/^calendar\.(add|update|delete)$/.test(method) && S.active(db, 'calendar')) S.tx(db, () => {
+      if (method === 'calendar.delete') { if (r.deleted) db.prepare(`DELETE FROM event WHERE source='calendar' AND ext_id=?`).run(String(args.id)); }
+      else if (r.event?.id) {
+        const e = r.event, cur = db.prepare(`SELECT id FROM event WHERE source='calendar' AND ext_id=?`).get(String(e.id))?.id;
+        const who = [...(cur ? db.prepare(`SELECT entity_id, role FROM event_entity WHERE event_id=? AND role='attendee'`).all(cur).map((x) => [x.entity_id, x.role])
+          : (args.attendees || []).map((m) => [S.person(db, 'calendar', String(m).split('@')[0], [{ kind: 'email', value: String(m) }]), 'attendee'])),
+          ...(e.location ? [[S.entity(db, 'place', e.location.trim().slice(0, 80)), 'place']] : [])];
+        S.putEvent(db, { source: 'calendar', kind: 'calendar', ts: e.start_ms, ts_end: e.end_ms ?? null, title: e.title, ext_id: String(e.id) }, who);
+      }
+      S.gcEntities(db); S.rebuildRelations(db);
+    });
+    if ((method === 'alarms.delete' || (method === 'intent' && args.kind === 'alarm')) && S.active(db, 'alarms')) {
+      const sync = () => { try { connectors.sync(db, 'alarms'); } catch {} };
+      sync(); setTimeout(sync, 4000).unref(); // Clock re-arms (and Android republishes the next alarm) a moment later
+    }
+  } catch {}
 }
 
 // People you've messaged recently: [{name, apps:[...], last, text}], newest first (redacted for cloud models).

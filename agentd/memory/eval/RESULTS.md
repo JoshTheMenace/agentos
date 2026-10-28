@@ -22,6 +22,8 @@
 | Model calls per question | 2.6 / 2.5 | 1.2 / 1.1 |
 | End-to-end, Claude (CLI), 8-question subset | – | 8/8 |
 
+Re-run after the deletes/edits sync (10-27 night, label `sync-deletes`): retrieval 37/37 and 12/12, end-to-end Codex 50/50 (median 2.8 s). No regression.
+
 Honest notes:
 - The held-out set shows the brain mostly buys **speed** (one model call instead of 2–3) on easy fact questions. The baseline model gets those right too, just slower. The correctness gains are on cross-app inference: which thread "reply back" means, who "the person I was talking to about X" is, free slots, "this morning" vs last night, counts, most-used, the unknown number, and pseudonymous numbers.
 - The e2e harness's "(Eval: just say who…)" suffix: the brain ignores a trailing parenthetical when recalling (`brain.context`), because otherwise those words drown the request.

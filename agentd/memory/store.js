@@ -194,6 +194,29 @@ export function addEvent(db, e, who = []) {
   return Number(r.lastInsertRowid);
 }
 
+// Like addEvent, but a source row that changed (an edited calendar event: new time, title or attendees) replaces our copy
+// instead of being ignored. Unchanged rows are left alone and keep their id. Returns the new id, or null if unchanged.
+export function putEvent(db, e, who = []) {
+  const cur = db.prepare('SELECT id, ts, ts_end, title, body FROM event WHERE source=? AND ext_id=?').get(e.source, String(e.ext_id));
+  if (cur) {
+    const links = (id) => db.prepare('SELECT entity_id, role FROM event_entity WHERE event_id=?').all(id).map((r) => `${r.entity_id}:${r.role}`).sort().join();
+    const want = [...new Set(who.filter(([id]) => id).map(([id, role]) => `${id}:${role}`))].sort().join();
+    if (cur.ts === e.ts && cur.ts_end === (e.ts_end ?? null) && cur.title === redact(db, e.title) && cur.body === (e.body ?? null) && links(cur.id) === want) return null;
+    db.prepare('DELETE FROM event WHERE id=?').run(cur.id);
+  }
+  return addEvent(db, e, who);
+}
+
+// The phone deleted some rows: drop our copies of `source` whose ext_id isn't in `live` (the source's current ids).
+// Think of it as checking the catalogue against the shelf: a card whose book is gone is thrown away. Returns how many.
+export function prune(db, source, live) {
+  const ids = new Set([...live].map(String)), del = db.prepare('DELETE FROM event WHERE id=?');
+  let n = 0;
+  for (const r of db.prepare('SELECT id, ext_id FROM event WHERE source=?').all(source)) if (!ids.has(r.ext_id)) n += del.run(r.id).changes;
+  if (n) gcEntities(db);
+  return n;
+}
+
 // Relations are derived: wipe and recompute from events, so revoked data can't leave edges behind.
 const EDGE = `CASE WHEN ee.role='place' THEN 'visits' WHEN ee.role='app' THEN 'notified_by' ELSE
   CASE e.kind WHEN 'message' THEN 'messages' WHEN 'media' THEN 'messages' WHEN 'call' THEN 'calls' WHEN 'calendar' THEN 'meets' WHEN 'note' THEN 'noted' ELSE e.kind END END`;

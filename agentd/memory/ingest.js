@@ -4,7 +4,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { addEvent, gcEntities, normPhone, person, entity, rebuildRelations, requireGrant, tx } from './store.js';
+import { addEvent, gcEntities, normPhone, person, prune, putEvent, entity, rebuildRelations, requireGrant, tx } from './store.js';
 
 const onPhone = process.platform === 'android';
 const opt = { encoding: 'utf8', maxBuffer: 64 << 20, timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] };
@@ -31,15 +31,38 @@ export function contentQuery(uri, cols, sort, fixture, where) {
   });
 }
 
+// Every _id the provider has now, for spotting deletes (rows flagged deleted=1 count as gone). Throws unless the output is
+// rows or "No result found", so a failed query can never look like "everything was deleted".
+export function liveIds(uri, fixture, cols = '_id') {
+  const out = root(`content query --uri ${uri} --projection ${cols}`, fixture);
+  if (!/^(Row: |No result found)/.test(out)) throw new Error(`content query ${uri} failed: ${out.split('\n')[0]}`);
+  return out.split(/^Row: \d+ /m).slice(1).filter((r) => !/\bdeleted=1\b/.test(r)).map((r) => r.match(/^_id=(\d+)/)?.[1]).filter(Boolean);
+}
+
 const n = (x) => Number(x) || 0;
 
+// A full read, so it also mirrors edits: a number/email no longer on any contact loses its contacts alias (the card goes
+// if nothing else knows it), and a renamed contact renames its card (unless two contacts share that number).
 function contacts(db) {
-  let rows = 0;
-  for (const r of contentQuery('content://com.android.contacts/data/phones', ['contact_id', 'display_name', 'data1', 'data4'], null, 'contacts_phones'))
-    rows++, person(db, 'contacts', r.display_name, [{ kind: 'phone', value: r.data4 || r.data1 }]);
-  for (const r of contentQuery('content://com.android.contacts/data/emails', ['contact_id', 'display_name', 'data1'], null, 'contacts_emails'))
-    rows++, person(db, 'contacts', r.display_name, [{ kind: 'email', value: r.data1 }]);
-  return { rows };
+  const live = new Set(), names = new Map(); // entity id -> display names that point at it
+  const add = (r, a) => {
+    const id = person(db, 'contacts', r.display_name, [a]);
+    live.add(`${a.kind}|${a.kind === 'phone' ? normPhone(a.value) : a.value?.toLowerCase()}`);
+    if (r.display_name) (names.get(id) ?? names.set(id, new Set()).get(id)).add(r.display_name);
+  };
+  const phones = contentQuery('content://com.android.contacts/data/phones', ['contact_id', 'display_name', 'data1', 'data4'], null, 'contacts_phones');
+  const emails = contentQuery('content://com.android.contacts/data/emails', ['contact_id', 'display_name', 'data1'], null, 'contacts_emails');
+  for (const r of phones) add(r, { kind: 'phone', value: r.data4 || r.data1 });
+  for (const r of emails) add(r, { kind: 'email', value: r.data1 });
+  let removed = 0;
+  for (const a of db.prepare(`SELECT rowid, kind, value FROM alias WHERE source='contacts'`).all())
+    if (!live.has(`${a.kind}|${a.value}`)) removed += db.prepare('DELETE FROM alias WHERE rowid=?').run(a.rowid).changes;
+  for (const [id, ns] of names) {
+    const [name] = ns;
+    if (ns.size === 1 && !db.prepare(`SELECT 1 FROM entity WHERE type='person' AND name=?`).get(name)) db.prepare('UPDATE entity SET name=? WHERE id=?').run(name, id);
+  }
+  gcEntities(db);
+  return { rows: phones.length + emails.length, removed };
 }
 
 function calendar(db, { limit = 1000, days_ahead = 90, since } = {}) { // newest `limit` events starting in (since, now + days_ahead)
@@ -56,11 +79,13 @@ function calendar(db, { limit = 1000, days_ahead = 90, since } = {}) { // newest
   let added = 0;
   for (const e of events) {
     const place = e.eventLocation?.trim() ? [[entity(db, 'place', e.eventLocation.trim().slice(0, 80)), 'place']] : [];
-    if (addEvent(db, { source: 'calendar', kind: 'calendar', ts: n(e.dtstart), ts_end: n(e.dtend) || null, title: e.title, ext_id: e._id },
+    if (putEvent(db, { source: 'calendar', kind: 'calendar', ts: n(e.dtstart), ts_end: n(e.dtend) || null, title: e.title, ext_id: e._id }, // an edit replaces our copy
       [...(who[e._id] || []), ...place])) added++;
   }
+  // Deleted on the phone (flagged deleted=1 until the sync adapter purges it, then gone): drop our copy. One id-only query.
+  const removed = prune(db, 'calendar', liveIds('content://com.android.calendar/events', 'calendar_events', '_id:deleted'));
   gcEntities(db); // attendees of events past the limit
-  return { rows: events.length, added };
+  return { rows: events.length, added, removed };
 }
 
 const CALL = { 1: 'Incoming call', 2: 'Outgoing call', 3: 'Missed call', 4: 'Voicemail', 5: 'Rejected call', 6: 'Blocked call' };
