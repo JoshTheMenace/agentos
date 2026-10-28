@@ -90,18 +90,28 @@ final class ApprovalCard {
         open(f, RED);
     }
 
-    /** ScamWatch: a scam or hidden AI orders in a chat the owner opened (no task). Calm amber: headline, one-line why, OK; snippet and score behind a tap. */
+    /** ScamWatch: a scam or hidden AI orders in a chat the owner opened (no task). Compact, calm amber: one row (shield,
+     *  "Possible scam message" + the why, OK) so the message stays readable below; chat name, snippet and score behind a tap. */
     void scam(String app, String sender, String why, String snippet, double score, Runnable ok) {
-        LinearLayout f = face(glyphIcon("shield", AMBER), appLabel(app) + (sender.isEmpty() ? "" : " · " + sender), "Possible scam message", AMBER, false);
-        f.addView(text(Character.toUpperCase(why.charAt(0)) + why.substring(1), 13, 500, L2), margin(0, dp(6)));
+        LinearLayout f = col();
+        f.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout hd = row();
+        hd.addView(glyphIcon("shield", AMBER), new LinearLayout.LayoutParams(dp(32), dp(32)));
+        LinearLayout tt = col();
+        tt.addView(text("Possible scam message", 15, 600, L1));
+        tt.addView(text(Character.toUpperCase(why.charAt(0)) + why.substring(1) + " · " + appLabel(app), 12, 500, L2));
+        hd.addView(tt, new LinearLayout.LayoutParams(0, -2, 1) {{ leftMargin = dp(10); }});
+        TextView okBtn = button("OK", AMBER, 0xFF1C1C1E, ok);
+        okBtn.setPadding(dp(14), 0, dp(14), 0);
+        hd.addView(okBtn, new LinearLayout.LayoutParams(-2, dp(32)) {{ leftMargin = dp(10); }});
+        f.addView(hd);
         LinearLayout details = col();
         details.setVisibility(View.GONE);
-        TextView q = text("“" + snippet + "”", 12.5f, 400, L2);
+        TextView q = text((sender.isEmpty() ? "" : sender + ": ") + "“" + snippet + "”", 12.5f, 400, L2);
         q.setMaxLines(4); q.setEllipsize(android.text.TextUtils.TruncateAt.END);
         details.addView(q, margin(0, dp(10)));
         details.addView(text((score >= 0 ? "Prompt Guard " + String.format(Locale.US, "%.2f", score) + " · " : "") + "logged in Activity · the agent won't act on it", 11, 500, L3), margin(0, dp(6)));
         f.addView(details);
-        f.addView(acts(text("Details", 12, 600, L3), button("OK", AMBER, 0xFF1C1C1E, ok)));
         disclose(f, details);
         svc.island.set("alert", "Possible scam", -1);
         open(f, AMBER);
