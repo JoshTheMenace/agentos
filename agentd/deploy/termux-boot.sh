@@ -7,6 +7,7 @@ mkdir "$L" 2>/dev/null || { kill -0 "$(cat "$L/pid" 2>/dev/null)" 2>/dev/null &&
 echo $$ > "$L/pid"
 [ -n "$AGENTOS_NATIVE" ] || termux-wake-lock 2>/dev/null   # under Magisk the boot script holds a kernel wake lock
 export LD_PRELOAD="$PREFIX/lib/libtermux-exec.so" # Termux:Boot leaves it out; without it "#!/usr/bin/env node" (the claude CLI) can't start
+export TZ="${TZ:-$(/system/bin/getprop persist.sys.timezone)}" # started outside the Termux app, node would run on UTC ("7 PM" schedules 6 h off)
 cd "$HOME/agentos/agentd" || exit 1
 if codex login status >/dev/null 2>&1; then
   export CODEX_BIN=codex                 # preferred: Termux's own Codex (non-root, no DNS proxy needed)
