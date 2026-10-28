@@ -27,6 +27,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // allowed it), agentd shows that reply and ends the turn: the "tell the user it's done" model call (~2.5 s) is skipped.
 const FINISH = new Set(['set_alarm', 'set_timer', 'web_search', 'notifications_reply', 'act', 'build_app', // + one-shot actions (speed r3: "turn on the flashlight" in 1 call)
   'phone_settings', 'media', 'play_music', 'navigate', 'open_url', 'add_event', 'schedule_task']);
+// A request with more than one part ("turn on the flashlight, then tell me ...") never ends early on a `done`: the model sometimes
+// put it on the first action (1 of 3 runs, bench/RESULTS.md round 3). The user's own words only, never screen text.
+const MULTI = /\b(then|and|also|after|plus)\b|[,;]/i;
 const DONE = { type: 'string', description: 'Only if this call completes the whole request and nothing is left to read or report: your final short reply to the user, e.g. "Alarm set for 7:00 AM." It is shown only if the call succeeds, and your turn ends there.' };
 const DONE_HINT = '- Finish in the same call: when an action call completes the request (set_alarm, set_timer, web_search, notifications_reply, phone_settings, media, play_music, navigate, open_url, add_event, schedule_task, or an act that ends with the result on screen), put your final reply in its `done` field. Then you are finished; don\'t send another message.';
 const tier = () => cfg.codexTier && { serviceTier: cfg.codexTier };
@@ -130,7 +133,7 @@ export class Codex {
       if (!t) return { result: { success: false, contentItems: [{ type: 'inputText', text: 'No active turn' }] } };
       t.tools++;
       const r = await runTool(tool, args, t.ctx).finally(() => { t.tools--; t.last = Date.now(); });
-      if (cfg.codexFinish && FINISH.has(tool) && typeof done === 'string' && done.trim() && r.success) { t.finish = done.trim(); t.ctx.emit({ type: 'text.delta', text: t.finish }); }
+      if (cfg.codexFinish && FINISH.has(tool) && typeof done === 'string' && done.trim() && r.success && !MULTI.test(t.ctx.turn?.goal || '')) { t.finish = done.trim(); t.ctx.emit({ type: 'text.delta', text: t.finish }); }
       return { result: { success: r.success, contentItems: [{ type: 'inputText', text: r.text }] } };
     }
     if (DECLINE[m.method]) { log(`declined codex ${m.method}`); return { result: DECLINE[m.method] }; }

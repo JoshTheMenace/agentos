@@ -50,10 +50,13 @@ export const TASKS = {
   torch: { text: 'Turn on the flashlight.', cleanup: () => api(['device'], 'device.set', { torch: false }),
     check: async () => (await api(['device'], 'device.status')).status?.torch === true },
   calendar: { text: 'When is the hackathon judging?', check: async (r) => /\b5(:00)?\s*(PM|p\.m\.)|17:00/i.test(r.answer) },
+  // Cross-app: an API action that must NOT end the turn early (finishing tools' `done`) plus a UI read in our app.
+  cross: { text: 'Turn on the flashlight, then tell me Alex\'s last message in Pigeon.', setup: () => PIGEON(), cleanup: () => api(['device'], 'device.set', { torch: false }),
+    check: async (r) => /wild ending/i.test(r.answer) && (await api(['device'], 'device.status')).status?.torch === true },
   notifs: { text: 'Summarize my notifications in one sentence.', private: true, check: async (r) => r.answer.length > 20 },
 };
 
-export const R3 = 'pigeon,beacon,torch,calendar,notifs,calc'; // round-3 set (--tasks r3)
+export const R3 = 'pigeon,beacon,torch,calendar,notifs,calc,cross'; // round-3 set (--tasks r3)
 
 // Held per task only, and released for YIELD_MS between tasks so other agents' withphone (2 s polls) get their turn.
 // lockWait > 0 means someone else used the phone just before this run (noted in RESULTS.md as "overlapped").
