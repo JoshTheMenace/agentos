@@ -25,8 +25,8 @@ import org.json.JSONObject;
  */
 final class Plugins {
     static final List<String> IDS = Collections.unmodifiableList(Arrays.asList(
-            "calendar", "messages", "clock", "device", "media", "web", "vault", "memory", "rules", "schedule", "mods", "apps",
-            "linkedin", "x", "slack", "instagram", "discord", "whatsapp", "gmail", "spotify", "youtube")); // apps (micro-apps) runs in agentd only
+            "calendar", "messages", "clock", "device", "media", "web", "vault", "memory", "rules", "schedule", "mods", "apps", "energy",
+            "linkedin", "x", "slack", "instagram", "discord", "whatsapp", "gmail", "spotify", "youtube")); // apps (micro-apps) and energy run in agentd only
     /** Broker method (or "intent:kind": one method serves several plugins) -> plugin. memory, rules, schedule run in agentd only. */
     private static final Map<String, String> MAP = new HashMap<>();
     static {

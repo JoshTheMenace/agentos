@@ -12,6 +12,7 @@
 | Offline fallback | Airplane mode (keep the local model warm), ask something simple | Answers with "On device" in ~2–5 s |
 | Queued asks | Send a second ask while one runs | It waits, then runs (no error) |
 | Scheduled task | "In 2 minutes, set an alarm for 6:15", lock the phone | Fires on time, unlocks, sets it, re-locks |
+| Grid-aware agent (Energy) | Ask bar or voice: "When should I run the dishwasher?", then "Yes" | ~4 s: window (e.g. 3–6 PM), "4.5× cheaper on the time-of-use rate", estimated g CO₂ from yesterday's mix, "Remind you?"; "Yes" books a reminder (cancel it in Home/`cancel_scheduled`). Weekday 6–10 PM it says "peak until 10 PM" |
 | Notifications + replies | "Reply back that I'm 10 min late" | Reply goes through the app's own notification Reply (not re-tested today) |
 | Deep mods (Pigeon only, not on stage) | "Open Pigeon and preview a navy and gold theme" | Native preview, auto-restored (~9 s) |
 
@@ -90,6 +91,7 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 - Watch: founder to enable Wi-Fi debugging on the Watch4 and send IP:port + pairing code (watch/README.md).
 - Fingerprint e2e test at the phone: `python3 android/tools-client.py e2e --press-approve`.
 - Smart plug brand.
+- EIA key for the Energy plugin (2 min): register free at https://www.eia.gov/opendata/register.php, then on the phone `~/.agentos/eia.key` (one line, `chmod 600`). Until then it uses `DEMO_KEY` (cached hourly, so ~2 requests/h).
 
 ## Rehearsal (10-27, pitch/rehearsal/)
 All beats ran on the phone; shots, timings and the presenter checklist are in `pitch/rehearsal/RUN.md`, open issues in `ISSUES.md`. Pass: home, ask sheet, keyboard, Pigeon task + lease tap, auto-approve ✓, trap → alert, P3 block, fingerprint card + system prompt, firewall card + root fallback, local model in airplane mode, audit chain. Needs the presenter: speaking (voice), the finger (fingerprint, firewall). Order matters: a guard flag makes every send need a fingerprint for 10 min, so auto-approve runs before the canary is staged (`--es scenario clean`).

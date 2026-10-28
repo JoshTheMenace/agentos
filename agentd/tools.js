@@ -11,6 +11,7 @@ import * as microapps from './apps.js';
 import { tools as notificationTools } from './notification-tools.js';
 import { TOOLS as DEEPMOD_TOOLS, redactSummary } from './deepmod-tools.js';
 import * as catchup from './catchup.js';
+import * as grid from './grid.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -135,6 +136,7 @@ for (const m of memory.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, de
 for (const m of context.ruleTools()) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true }; // reply rules
 for (const m of schedule.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, sched: true }; // schedule.js
 TOOLS.catch_up = { ...catchup.tool(), method: 'catch_up', run: catchup.call }; // catchup.js: "what did I miss?" in one local read
+TOOLS.grid_outlook = { ...grid.tool, method: 'grid_outlook', run: grid.call }; // grid.js: cheap + clean power windows (Energy plugin)
 for (const m of microapps.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, apps: true }; // apps.js (micro-apps)
 
 // Memory results: any text from other people (trusted:false) goes through the guard like screen text.

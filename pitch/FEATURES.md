@@ -107,6 +107,7 @@ Key stage rules: say **"open <app>"** for message reads. Keep deletes out. Run a
 | Feature | What it does | Trigger | Entry | Time (source) | Status | Wow |
 |---|---|---|---|---|---|---|
 | Scheduled task | Runs later, even from deep sleep | "In 2 minutes, set an alarm for 6:15" | V A | fired on time; alarm set 3.8 s (DF) | Ready | Works while nobody touches it |
+| Grid-aware agent (Energy plugin) | Says when to run the dishwasher/laundry or charge the car: Rocky Mountain Power TOU price (4.5× peak/off-peak) + live U.S. EIA data for Utah's grid (PACE demand + fuel mix, carbon is our labeled estimate); "Yes" books a real reminder | "When should I run the dishwasher?" → "Yes" | V A | 3.7–8.0 s (tool 10–25 ms cached), "Yes" → booked in 1.7 s (agentd/grid.js) | Ready (DEMO_KEY until the founder's EIA key; fuel mix ~13 h old) | Torus bounty: Rush Hour for Electrons + Compute Follows the Sun |
 | Unlocks itself | A locked phone opens, does your task, re-locks | Lock the phone after scheduling | – | – | Ready (refuses if a guard flagged anything earlier) | House sitter with a lockbox |
 | Recurring | Daily, weekdays, weekly | "Every weekday at 8, read me my notifications" | V A | – | Ready (not shown on stage yet) | – |
 | Manage | List and cancel; Home shows the next two | "What's scheduled?" · Command center › Tasks › x | V A | – | Ready | – |
