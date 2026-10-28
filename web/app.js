@@ -65,7 +65,7 @@ app.rpcDone = (id, r) => { pend[id]?.(r); delete pend[id]; };
 on('rpc.result', (m) => app.rpcDone(m.id, m.result));
 
 // ---------- state ----------
-const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [], sugg: [], step: null, home: null, trackers: null, tasks: new Map(), mods: null, vault: null, sched: [] }; // tasks = agentd background workers (task.update) // active = latest task.state; home = a turn started from a home suggestion
+const S = { active: null, turn: false, pending: null, apps: [], names: {}, provider: localStorage.provider || 'codex', audit: [], sugg: [], step: null, home: null, trackers: null, tasks: new Map(), mods: null, vault: null, sched: [], queue: [] }; // tasks = agentd background workers (task.update) // active = latest task.state; home = a turn started from a home suggestion
 const appName = (pkg) => S.names[pkg] || (pkg || '').split('.').pop().replace(/^\w/, (c) => c.toUpperCase());
 const fmtT = (ts, sec) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}) }).replace(/\s?[AP]M/i, '');
 const TOOLN = { act: 'Acting', open_app: 'Opening an app', tap: 'Tapping', type: 'Typing', swipe: 'Scrolling', back: 'Going back', screen: 'Reading the screen', wait: 'Waiting', 'notifications.reply': 'Replying', 'notifications.list': 'Reading notifications', notifications_reply: 'Replying', schedule_task: 'Scheduling', list_scheduled: 'Checking the schedule', cancel_scheduled: 'Cancelling a schedule', 'vault.fill': 'Signing in', vault_fill: 'Signing in', 'trackers.block': 'Blocking trackers', 'trackers.list': 'Scanning for trackers', 'firewall.set': 'Setting the firewall', 'app.mod.add': 'Adding a button', memory_search: 'Remembering', memory_recall: 'Remembering', 'task.start': 'Starting', phone_unlock: 'Unlocking', 'phone.unlock': 'Unlocking', build_app: 'Designing your app', list_my_apps: 'Checking your apps', remove_app: 'Removing an app' };
@@ -649,9 +649,12 @@ function sheetEmpty() {
   for (const [ic, label, text] of TRY) if (text !== null) { const b = el('button', 'chip', `<svg><use href="#i-${ic}"/></svg>${esc(label)}`); b.onclick = () => { hap('tick'); const inp = $('#askIn'); inp.value = text; inp.focus(); inp.setSelectionRange(text.length, text.length); }; row.append(b); }
   body.before(row);
 }
-function sendUser(text) {
-  const p = pic; if (!text && !p) return;
-  setPic(null); body.append(el('div', 'msg me', (p ? `<img src="${p.url}">` : '') + esc(text))); aiMsg = null; S.home = null; askAt = Date.now(); sheetEmpty();
+function sendUser(text, p = pic, me) {
+  if (!text && !p) return;
+  if (!me) { setPic(null); me = el('div', 'msg me', (p ? `<img src="${p.url}">` : '') + esc(text)); }
+  body.append(me); sheetEmpty(); scrollDown(); // re-appending moves a queued bubble below the answer it waited for
+  if (S.turn) return S.queue.push([text, p, me]); // one turn at a time: a second ask goes when this one ends (agentd would refuse it as busy)
+  aiMsg = null; S.home = null; askAt = Date.now();
   if (!send({ type: 'ask', text, provider: S.provider, ...(p && { images: [p.url], image_source: p.kind }) })) body.append(el('div', 'msg err', 'Agent offline'));
   else { S.turn = true; setSheet('Thinking', 'working'); think(); renderStatus(); renderNow(); }
   scrollDown();
@@ -672,7 +675,7 @@ app.picked = (url, kind) => {
   send({ type: 'voice.image', image: url, source: kind }); $('#vsteps').append(el('li', '', `<img src="${url}">Shared a photo`)); V.state('Ask me about it');
 };
 $('#askForm').onsubmit = (e) => { e.preventDefault(); const t = $('#askIn').value.trim(); $('#askIn').value = ''; hap('tick'); sendUser(t); };
-$('#shstop').onclick = () => { hap(); send({ type: 'stop' }); };
+$('#shstop').onclick = () => { hap(); S.queue.length = 0; send({ type: 'stop' }); };
 on('text.delta', (m) => { dots?.remove(); dots = null; if (!aiMsg) body.append(aiMsg = el('div', 'msg ai')); aiMsg.textContent += m.text; if (S.home) S.home.text = aiMsg.textContent; scrollDown(); });
 on('catchup', (m) => { dots?.remove(); dots = null; aiMsg = null; const ICO = { chat: 'msg', cal: 'cal', spark: 'spark', shield: 'shield' }, list = el('div', 'catch'); // "What did I miss?" rows land before the spoken answer
   list.append(...(m.cards || []).slice(0, 8).map((c) => { const r = el(c.goal ? 'button' : 'div', 'crow', `${ICO[c.icon] ? `<svg width="14" height="14"><use href="#i-${ICO[c.icon]}"/></svg>` : '<i></i>'}<b>${esc(c.title)}</b>${c.detail ? `<span class="s">${esc(c.detail)}</span>` : ''}`); if (c.goal) r.onclick = () => { hap('tick'); sendUser(c.goal); }; return r; }));
@@ -701,8 +704,8 @@ on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" 
 on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; }
   if (m.retryable && m.code !== 'turn_failed') return setSheet('Reconnecting…', 'working'); // codex/agentd retries: one calm state, not a line per attempt
   body.append(el('div', 'msg err', esc(/proxy|websocket|network|connect|dns|stream|exited|timed? ?out/i.test(m.message) ? 'Couldn’t reach the AI. Check the connection and try again.' : short(m.message, 160)))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
-on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done', m.ms); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
-on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
+on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done', m.ms); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); const q = S.queue.shift(); if (q) sendUser(...q); });
+on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.queue.length = 0; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- wake word (launcher Wake.java): a toggle in the command center, a small mic on the home status line ----------
 const WHY = { voice: 'Paused · voice open', call: 'Paused · call', mic: 'Paused · mic in use', screen: 'Paused · screen off' };
