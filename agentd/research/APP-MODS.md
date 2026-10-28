@@ -62,3 +62,35 @@ The isolated renderer tests do not constitute owner approval to activate a persi
 5. Ask **List my mods** / **Remove the LinkedIn mod**, or **Disable all mods**. A volume-down hold of at least one second disables all mods immediately and persists that state. Re-enabling requires preview and approval again.
 
 Limits: visual masking, no layout collapse/reorder, no removal from the accessibility tree/network, and possible brief exposure while content changes or a marker leaves the tree. Banking/security exclusions use the existing Guard lists plus package-name exclusions; this is not a complete classification of every app in the Play Store. No Frida/LSPosed compatibility, battery benchmark, voice-to-visible timing, or live LinkedIn apply should be claimed without its corresponding run/owner tap.
+
+## Verified on ZY22J3TK8S
+
+Final isolated suite: **PASS** (`INSTRUMENTATION_CODE: 0`), raw results in `android/mod-tests/results.json`.
+
+| Check | Result |
+| --- | --- |
+| Ten apply/remove cycles | 10/10, exact mask pixel verified every cycle |
+| Apply request → next-frame callback | median 59 ms; range 41–325 ms |
+| Screenshot-confirmed visibility | median 552.5 ms; range 521–1026 ms, including the 350 ms sampling delay and capture/PNG time |
+| Bad spec with code field | Rejected before rendering |
+| Forced renderer exception | Overlay removed, mod disabled; target PID stayed 28666 |
+| Target app restart | Mod reappeared without reapply |
+| Per-app and global disable | Both passed |
+| Genuine fixture Java FATAL | Matching mod automatically disabled, persisted reason `target crash/ANR` |
+| Production apply without preview | Blocked before any approval card |
+| Calculator Double button | Rendered in 130 ms; screenshot captured; no account/data action |
+| LinkedIn | Installed; exact Promoted marker and containing card preview verified; persistent activation awaits the owner |
+
+The request/voice-to-visible interval remains unmeasured because activation requires an owner tap. Do not count preview-only LinkedIn inspection or isolated renderer calls as an approved live apply. ANR/native-crash parser paths are implemented but were not deliberately induced. Test APKs and their phone-side screenshot files are removed after copying the two proof screenshots.
+
+Final normal agentd user turn: exact LinkedIn preview succeeded at 6,805 ms; native HUMAN approval card shown at 6,857 ms from request start. Screenshot: `launcher/shots/mods-owner-approval.png`. This is request-to-card timing, not request-to-applied-mask timing. No owner tap was synthesized.
+
+## Approval touch failure (owner report, 10-28)
+
+Two distinct failures were found. First, the reviewer treated the summary's unsolicited "hold volume down to disable mods" help text as an unrequested instruction. The action summary now describes only the matching mask; the physical kill switch remains unchanged. A subsequent normal user turn was graded `tap`, not blocked.
+
+The owner then reported an Approve tap that left the card open until timeout. The original logs did not record a click/rejection reason, so the exact physical event could not be reconstructed. A deterministic no-touch reproduction did confirm a window-lifetime bug: `WindowManager.addView` had registered a view before its first attachment; `ModMask.clear` skipped it because `isAttachedToWindow()` was false, then discarded the reference. Baseline: `attached=false parentBefore=true parentAfterClear=true`. This can leave untracked mod/preview windows above later UI.
+
+Fix: remove every tracked window through WindowManager even before attachment (idempotently catch an already-removed view). Apply the same cleanup to buttons/chips. Island card expansion now holds mods, clears previews and removes their windows; refresh/preview cannot recreate them while the card is open. The hold releases when the card actually finishes collapsing or hides, rather than when its approval wait ends. No touch-security policy or allowed approval channel was relaxed.
+
+`WindowTests` now reports `attached=false parentBefore=true parentAfterClear=false`, `card hold=true previewParent=null highlights=0`, and successful hold release after collapse. Direct predicate checks accept a settled finger event and reject early, obscured, partially obscured and accessibility-flagged events. They dispatch no touch and never invoke an approval click. Logs: `android/mod-tests/window-results.txt`. `ApprovalTouch` logs contain only event flags/source/tool/age and listener acceptance, for the next physical owner tap. The owner tap remains the final end-to-end confirmation.

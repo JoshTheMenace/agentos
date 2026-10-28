@@ -1,0 +1,61 @@
+{
+  "mask_apply_remove_ms": [
+    325,
+    85,
+    94,
+    61,
+    41,
+    45,
+    118,
+    52,
+    46,
+    57
+  ],
+  "screenshot_verified_ms": [
+    1026,
+    554,
+    580,
+    544,
+    537,
+    521,
+    585,
+    570,
+    529,
+    551
+  ],
+  "production_preview_gate": "pass",
+  "bad_spec": "rejected",
+  "target_pid_before_after_fault": "28666",
+  "render_exception": [
+    {
+      "id": "mod-test",
+      "package": "com.agentos.modfixture",
+      "app": "Mod feed fixture",
+      "label": "Mask test",
+      "shown": false,
+      "disabled": "render exception: IllegalArgumentException",
+      "created": 1793166328576,
+      "by": "test"
+    }
+  ],
+  "target_restart_and_kill_switches": "pass",
+  "real_fixture_crash": [
+    {
+      "id": "mod-test",
+      "package": "com.agentos.modfixture",
+      "app": "Mod feed fixture",
+      "label": "Hide promoted",
+      "shown": false,
+      "disabled": "target crash/ANR",
+      "created": 1793166330861,
+      "by": "test fixture"
+    }
+  ],
+  "button": {
+    "id": "mod-button-test",
+    "shown": true,
+    "ms": 130
+  },
+  "apk_sha256": "1ad81c2890debaba981802a9d75e2332cecb3495b843445baeed279b9ffa0c45",
+  "measurement": "mask apply request to next-frame callback; screenshot verification includes 350ms deliberate sampling wait and capture/PNG time, excludes model/voice/owner wait"
+}

@@ -70,7 +70,7 @@ final class ModMask {
     }
 
     static void clear(WindowManager wm, List<View> views) {
-        for (View v : views) try { if (v.isAttachedToWindow()) wm.removeViewImmediate(v); } catch (RuntimeException ignored) {}
+        for (View v : views) try { wm.removeViewImmediate(v); } catch (RuntimeException ignored) {}
         views.clear();
     }
 }

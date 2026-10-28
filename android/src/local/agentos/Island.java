@@ -149,6 +149,7 @@ final class Island extends FrameLayout {
     /** Spring the pill open into this view (CARD_W wide, measured height). */
     void expand(View f, int acc) {
         if (!shown) show();
+        modsHold(true);
         removeCallbacks(autoHide);
         closing = false;
         if (face != null) removeView(face);
@@ -181,6 +182,7 @@ final class Island extends FrameLayout {
         if (face != null) removeView(face);
         face = null;
         window(dp(WIN_PILL_W), dp(PILL_H + 4));
+        modsHold(false);
         if (!active) postDelayed(autoHide, "done".equals(state) ? 3000 : 1500);
     }
 
@@ -254,10 +256,16 @@ final class Island extends FrameLayout {
         sw = pillW; sh = dp(PILL_H); sr = sh / 2;
         lp.width = dp(WIN_PILL_W); lp.height = dp(PILL_H + 4);
         wm.updateViewLayout(this, lp);
+        modsHold(false);
         animate().alpha(0).scaleX(.6f).scaleY(.6f).setDuration(260).setInterpolator(EASE).withEndAction(() -> {
             if (shown) return; // shown again during the fade
             try { wm.removeView(this); } catch (Exception ignored) {}
         }).start();
+    }
+
+    private void modsHold(boolean on) {
+        Broker b = ((AgentA11y) getContext()).broker;
+        if (b != null) b.mods.holdForApproval(on);
     }
 
     private void window(int w, int h) {
@@ -283,6 +291,7 @@ final class Island extends FrameLayout {
     }
 
     @Override public boolean dispatchTouchEvent(MotionEvent e) {
+        if (open && e.getActionMasked() == MotionEvent.ACTION_DOWN) android.util.Log.i("ApprovalTouch", "root flags=" + e.getFlags() + " source=" + e.getSource() + " tool=" + e.getToolType(0) + " inside=" + box.contains(e.getX(), e.getY()));
         if ((e.getFlags() & FLAG_FROM_ACCESSIBILITY) != 0) return true; // agent-made touch: swallow
         if (e.getAction() == MotionEvent.ACTION_DOWN && !box.contains(e.getX(), e.getY())) return false;
         return super.dispatchTouchEvent(e);

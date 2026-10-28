@@ -555,7 +555,9 @@ final class Broker {
         ApprovalCard.Listener ui = new ApprovalCard.Listener() {
             @Override public void approve() {
                 if (!HumanTouch.settled(shownAt[0])) return; // a tap already in flight when the card appeared isn't a decision
-                if (a.confirm("tap", "")) return;             // ordinary action: the real tap is the approval
+                boolean accepted = a.confirm("tap", "");
+                android.util.Log.i("ApprovalTouch", "listener accepted=" + accepted + " channels=" + a.channels);
+                if (accepted) return; // ordinary action: the real tap is the approval
                 svc.card.hide(); // the fingerprint prompt must not be covered by our overlay
                 svc.startActivity(new Intent(svc, ApproveActivity.class).putExtra("id", a.id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             }

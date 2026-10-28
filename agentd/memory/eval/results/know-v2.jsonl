@@ -1,0 +1,12 @@
+{"id":"h_priya_where","ok":true,"status":"completed","ms":2833,"calls":1,"tools":[],"answer":"You’re meeting Priya at Blue Copper Coffee, 179 W 900 S."}
+{"id":"h_trad","ok":true,"status":"completed","ms":2982,"calls":1,"tools":[],"answer":"Jordan told you to bring the trad rack."}
+{"id":"h_lunch_place","ok":true,"status":"completed","ms":3641,"calls":1,"tools":[],"answer":"Lunch with Nina is at Pago, 878 S 900 E, tomorrow at noon."}
+{"id":"h_rr_dates","ok":true,"status":"completed","ms":3803,"calls":1,"tools":[],"answer":"The Red Rock trip is November 14–16."}
+{"id":"h_kai_bring","ok":true,"status":"completed","ms":2743,"calls":1,"tools":[],"answer":"Kai is bringing the crash pads."}
+{"id":"h_dad_called","ok":true,"status":"completed","ms":2590,"calls":1,"tools":[],"answer":"Yes, you called Dad yesterday, Monday, and talked for 22 minutes."}
+{"id":"h_mom_pie","ok":true,"status":"completed","ms":3608,"calls":1,"tools":[],"answer":"A pie, for Thanksgiving at Aunt Rosa’s."}
+{"id":"h_bike_close","ok":true,"status":"completed","ms":3047,"calls":1,"tools":[],"answer":"The bike shop closes at 6 PM."}
+{"id":"h_lastnight_song","ok":true,"status":"completed","ms":3699,"calls":1,"tools":[],"answer":"You were listening to “Redbone” by Childish Gambino."}
+{"id":"h_gift_idea","ok":true,"status":"completed","ms":3104,"calls":1,"tools":[],"answer":"Sam wants a green Patagonia Nano Puff in size M for his birthday."}
+{"id":"h_pr_who","ok":true,"status":"completed","ms":2827,"calls":1,"tools":[],"answer":"Alex C asked for a review of PR #482 in Slack."}
+{"id":"h_group_who","ok":true,"status":"completed","ms":4828,"calls":2,"tools":["memory_ask"],"answer":"Sam Lee and Priya Shah are in the Climbing Club chat; there may be others I can’t see."}

@@ -74,7 +74,7 @@ final class Mods {
     private final Screen probe = new Screen(); // our own FLAG_SECURE referee (doesn't disturb the agent's screen state)
     private final WindowManager wm;
     private final float dp;
-    private boolean sampling;
+    private boolean sampling, approving;
     private final Map<String, Long> previews = new java.util.concurrent.ConcurrentHashMap<>();
     private int checkedWindow = -1, windowEpoch; private boolean checkingWindow, windowSafe;
     private final List<View> highlights = new ArrayList<>();
@@ -131,6 +131,11 @@ final class Mods {
     }
     void onConfig() { fgSince = SystemClock.uptimeMillis(); svc.main.postDelayed(refreshR, 50); }
     void hideAll() { for (Mod m : mods.values()) try { hide(m); } catch (RuntimeException ignored) {} }
+    void holdForApproval(boolean on) {
+        approving = on; clearPreview(); hideAll();
+        Log.i(TAG, "approval overlay hold=" + on);
+        if (!on) refresh();
+    }
     void close() { closed = true; watching = false; if (watcher != null) watcher.destroy(); svc.main.removeCallbacks(refreshR); clearPreview(); hideAll(); }
     private void clearPreview() { ModMask.clear(wm, highlights); }
 
@@ -179,6 +184,7 @@ final class Mods {
         CompletableFuture<JSONObject> f = new CompletableFuture<>();
         svc.main.post(() -> {
             try {
+                need(!approving, "finish the open card before previewing a mod");
                 clearPreview();
                 AccessibilityNodeInfo root = svc.getRootInActiveWindow();
                 need(root != null && spec.optString("package").contentEquals(root.getPackageName()), "open the target app first");
@@ -288,7 +294,7 @@ final class Mods {
     String describe(JSONObject spec) {
         AccessibilityNodeInfo root = svc.getRootInActiveWindow();
         String pkg = spec.optString("package");
-        if (ModMask.is(spec)) return "Covers matching " + spec.optJSONObject("action").optJSONObject("match") + " · hold volume down to disable mods";
+        if (ModMask.is(spec)) return "Covers matching " + spec.optJSONObject("action").optJSONObject("match");
         if (root != null && !pkg.contentEquals(root.getPackageName())) root = null;
         JSONObject a = spec.optJSONObject("action");
         boolean press = "press".equals(a.optString("type"));
@@ -519,7 +525,7 @@ final class Mods {
         if (!pkg.equals(fgPkg)) { fgPkg = pkg; fgSince = SystemClock.uptimeMillis(); }
         List<Rect> keys = null;
         for (Mod m : mods.values()) try {
-            if (!watching || !m.disabled.isEmpty() || !pkg.equals(m.pkg) || !whenOk(root, m)) { hide(m); continue; }
+            if (approving || !watching || !m.disabled.isEmpty() || !pkg.equals(m.pkg) || !whenOk(root, m)) { hide(m); continue; }
             prefs().edit().putString("rendering", m.id).commit();
             if (ModMask.is(m.spec)) {
                 if (!safeWindow(root)) { hide(m); continue; }
@@ -668,7 +674,7 @@ final class Mods {
     private void hide(Mod m) {
         ModMask.clear(wm, m.masks);
         hideChips(m);
-        if (m.btn != null && m.btn.isAttachedToWindow()) wm.removeViewImmediate(m.btn);
+        if (m.btn != null) try { wm.removeViewImmediate(m.btn); } catch (RuntimeException ignored) {}
         m.shown = false;
     }
 
@@ -805,7 +811,7 @@ final class Mods {
     }
 
     private void hideChips(Mod m) {
-        if (m.chips != null && m.chips.isAttachedToWindow()) wm.removeViewImmediate(m.chips);
+        if (m.chips != null) try { wm.removeViewImmediate(m.chips); } catch (RuntimeException ignored) {}
         m.chips = null; m.chipViews.clear(); m.value = Double.NaN;
     }
 

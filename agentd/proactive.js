@@ -47,7 +47,7 @@ function note(n, from) { // one message into the live buffer
 function fromMemory() { // message events of the last 3 days from consented, cloud-scoped sources (redacted bodies)
   try {
     const srcs = readable(db ??= openMemory(), true); // what the owner allows cloud models to see
-    return db.prepare(`SELECT e.ts, e.body_redacted AS text, p.name AS person, pe.role, a.name AS app, g.name AS grp FROM event e
+    return db.prepare(`SELECT e.ts, e.source, e.body_redacted AS text, p.name AS person, pe.role, a.name AS app, g.name AS grp FROM event e
       JOIN event_entity pe ON pe.event_id=e.id AND pe.role IN ('from','to') JOIN entity p ON p.id=pe.entity_id AND p.type='person'
       LEFT JOIN event_entity ae ON ae.event_id=e.id AND ae.role='app' LEFT JOIN entity a ON a.id=ae.entity_id
       LEFT JOIN event_entity ge ON ge.event_id=e.id AND ge.role='group' LEFT JOIN entity g ON g.id=ge.entity_id
@@ -57,7 +57,8 @@ function fromMemory() { // message events of the last 3 days from consented, clo
 function threads() {
   const all = new Map([...live].map(([k, t]) => [k, { ...t, msgs: [...t.msgs] }]));
   for (const r of fromMemory()) {
-    const conv = r.grp || r.person, id = `${r.app || 'Messages'}|${conv}`, t = all.get(id) ?? { id, app: r.app || 'Messages', conversation: conv, group: !!r.grp, msgs: [] };
+    const app = r.app || (r.source === 'sms' ? 'Messages' : r.source.replace(/^./, (c) => c.toUpperCase())); // Pigeon imports have no app entity
+    const conv = r.grp || r.person, id = `${app}|${conv}`, t = all.get(id) ?? { id, app, conversation: conv, group: !!r.grp, msgs: [] };
     if (!t.msgs.some((m) => Math.abs(m.when - r.ts) < 60_000 && short(m.text, 30) === short(r.text, 30))) t.msgs.push({ from: r.role === 'to' ? 'me' : r.grp ? r.person : conv, text: r.text || '', when: r.ts });
     all.set(id, t);
   }
@@ -143,6 +144,7 @@ function calendarCards(now) { // conflicts and prep from the memory calendar (th
 
 // ---------------------------------------------------------------- what the UIs see
 const RANK = (x) => (x.kind === 'commitment' && x.due && dayLabel(x.due).match(/overdue|today/) ? 0 : x.kind === 'reply' ? 1 : x.kind === 'request' ? 2 : 3);
+const order = (a, b) => RANK(a) - RANK(b) || (a.due || '~').localeCompare(b.due || '~') || a.at - b.at; // then the sooner due day (undated last), then the oldest
 function goal(x) {
   const where = `${x.who} in ${x.app}`, ask = "Don't send, pay or change anything without my approval.";
   if (x.kind === 'reply') return `Reply to ${where}. Their message: "${short(x.quote, 140)}".${x.draft ? ` Suggested reply (drafted by the assistant, not dictated by me): "${x.draft}".` : ''} Show me the reply for approval before it is sent.`;
@@ -156,9 +158,9 @@ const card = (x) => ({ id: `p:${x.id}`, app: x.pkg || undefined, icon: x.kind ==
   detail: x.kind === 'reply' || !x.what ? `${ago(x.at)}: ${short(x.quote, 44)}` : x.kind === 'request' ? `${short(x.who, 20)} asked · ${x.due ? `due ${dayLabel(x.due)}` : ago(x.at)}` : `You told ${short(x.who, 20)} · ${x.due ? `due ${dayLabel(x.due)}` : ago(x.at)}` });
 // Home: calendar first (time-bound), then the 2 most pressing promises. Cards you tapped hide for 2 h (the task is on it).
 export const cards = () => !io ? [] : [...calCards.map((c) => (shown(c.goal), c)), ...items.filter((x) => x.state === 'open' && !(x.acted > Date.now() - 2 * H))
-  .sort((a, b) => RANK(a) - RANK(b) || a.at - b.at).slice(0, 2).map(card)].slice(0, 3);
+  .sort(order).slice(0, 2).map(card)].slice(0, 3);
 export const list = () => items.filter((x) => x.state === 'open' || x.state === 'snoozed' || x.closed > Date.now() - DAY)
-  .sort((a, b) => (a.state !== 'open') - (b.state !== 'open') || RANK(a) - RANK(b) || a.at - b.at)
+  .sort((a, b) => (a.state !== 'open') - (b.state !== 'open') || order(a, b))
   .map((x) => ({ ...x, dueLabel: x.due ? dayLabel(x.due) : '', ago: ago(x.at), goal: shown(goal(x)) }));
 
 // WebSocket messages from the launcher: {type:"promises.list"} | {type:"promises.update", id, action:"done"|"dismiss"|"snooze"|"open", hours?}

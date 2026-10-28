@@ -19,8 +19,10 @@ final class HumanTouch {
     /** shownAt = SystemClock.uptimeMillis() when the card appeared. */
     static boolean real(MotionEvent e, long shownAt) {
         int bad = FLAG_FROM_ACCESSIBILITY | MotionEvent.FLAG_WINDOW_IS_OBSCURED | MotionEvent.FLAG_WINDOW_IS_PARTIALLY_OBSCURED;
-        return (e.getFlags() & bad) == 0 && e.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)
+        boolean real = (e.getFlags() & bad) == 0 && e.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)
                 && e.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER && e.getEventTime() - shownAt >= MIN_DELAY_MS;
+        if (e.getActionMasked() == MotionEvent.ACTION_DOWN) android.util.Log.i("ApprovalTouch", "filter accepted=" + real + " flags=" + e.getFlags() + " source=" + e.getSource() + " tool=" + e.getToolType(0) + " age=" + (e.getEventTime() - shownAt));
+        return real;
     }
 
     static boolean settled(long shownAt) { return SystemClock.uptimeMillis() - shownAt >= MIN_DELAY_MS; }

@@ -33,13 +33,11 @@ or `[]`.
 ## Model tools (index.js `tools`, same shape as agentd TOOLS)
 `memory_person`, `memory_facts`, `memory_identity {name?}`, read tier; `memory_correct`, `memory_confirm_identity`, outward tier (need the owner's confirmation).
 
-## One-tap identity card (UI spec, no red pop-ups)
-Poll `memory.identity.pending()` (or `node memory/cli.js pending`) and render each as a quiet card in the command center / Memory screen:
-```
-Is "Joe" on Discord the same person as Joe Smith (your cousin)?
-  why: first name "Joe" only                                   [Same person]  [Different]  [Later]
-```
-Tap → `memory.identity.confirm(a.id, b.id, true|false, { actor: 'user:owner' })`. Suggested WebSocket wiring in agentd (owner uid only, like
-`memory.consent`): `{type:"memory.identity", a, b, same}` → `{type:"memory.identity", ok, link}`; `{type:"memory.identity.list"}` → `{pending}`.
-"What I remember" screen: `memory.facts({ history: true })` grouped by `name`, each row with its `text`, the source event (`memory_timeline`/`event_id`)
-and two actions: edit (`memory.correct(id, {obj})`) and forget (`memory.correct(id, {retract:true})`).
+## Launcher wiring (built 10-28: Command center › "What I know", web/app.js)
+agentd WebSocket, **owner only** (`fromOwner`: the launcher's uid; the token alone, a model or the keyboard get `{ok:false, error}`):
+- `{type:"memory.about"}` → `{type:"memory.about", v2, lines, facts: [...memory.facts({history:true}) + source, at], people: memory.knownPeople()}`
+- `{type:"memory.identity"}` → `{type:"memory.identity", pending: [{a:{id,name,apps,rel}, b:{…}, score, why, question}]}`
+- `{type:"memory.identity.confirm", a, b, same}` → `{ok, link}`, then fresh `memory.identity` + `memory.about`
+- `{type:"memory.correct", id, obj}` or `{…, id, retract:true}` → `{ok}`, then a fresh `memory.about`
+- pushed `{type:"memory.asked", names, goal}` when a send hit two people with one name (context.js): Home "For you" shows the matching
+  "Same person?" cards for 30 minutes. Cards are calm (Yes / No / Not sure), each fact row shows its source app and day with Fix (inline) and x (forget).

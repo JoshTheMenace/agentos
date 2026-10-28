@@ -1,0 +1,17 @@
+INSTRUMENTATION_RESULT: card_and_policy=PASS; no touch dispatched
+INSTRUMENTATION_RESULT: window=attached=false parentBefore=true parentAfterClear=false
+INSTRUMENTATION_CODE: 0
+--------- beginning of main
+I/ModWindowTest(26470): attached=false parentBefore=true parentAfterClear=false
+I/AppMod  (26470): approval overlay hold=true
+I/ModWindowTest(26470): card hold=true previewParent=null highlights=0
+I/AppMod  (26470): approval overlay hold=false
+I/ApprovalTouch(26470): filter accepted=true flags=0 source=4098 tool=1 age=1000
+I/ApprovalTouch(26470): filter accepted=false flags=0 source=4098 tool=1 age=0
+I/ApprovalTouch(26470): filter accepted=false flags=1 source=4098 tool=1 age=1000
+I/ApprovalTouch(26470): filter accepted=false flags=1 source=4098 tool=1 age=0
+I/ApprovalTouch(26470): filter accepted=false flags=2 source=4098 tool=1 age=1000
+I/ApprovalTouch(26470): filter accepted=false flags=2 source=4098 tool=1 age=0
+I/ApprovalTouch(26470): filter accepted=false flags=2048 source=4098 tool=1 age=1000
+I/ApprovalTouch(26470): filter accepted=false flags=2048 source=4098 tool=1 age=0
+I/ModWindowTest(26470): PASS card hold/resume; finger accepted; obscured, partial, accessibility and early events rejected; no touch dispatched

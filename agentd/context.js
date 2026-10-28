@@ -194,7 +194,7 @@ export function start(p, c) {
     if (e.type === 'hello') refresh().catch(() => {});
     if (e.type === 'notification.posted') {
       keep(e);
-      if (e.message && !e.from_me) memory.noteMessage({ ...e, dir: 'in' }); // our own replies are saved from the audit line below
+      if (e.message) memory.noteMessage({ ...e, dir: e.from_me ? 'out' : 'in' }); // from_me: the owner answered from the shade (or the app re-posted our reply); agent replies are also saved from the audit line below
       if (e.message && !e.from_me) onMessage(e).catch((x) => log(`rule failed: ${x.message}`));
     }
     if (e.type === 'audit.append' && e.tool === 'notifications.reply' && e.ok) { // a sent reply: remember who we talk to, where

@@ -14,3 +14,4 @@
 {"label":"sync-deletes","provider":"codex","correct":"50/50","median_s":2.8,"avg_tool_calls":0.12,"avg_model_calls":1.12,"at":"2026-10-28T00:43:23.845Z"}
 {"label":"v2-codex-all","provider":"codex","correct":"50/50","median_s":3.2,"avg_tool_calls":0.12,"avg_model_calls":1.12,"at":"2026-10-28T05:28:36.755Z"}
 {"label":"v2-codex-q2","provider":"codex","correct":"60/62","median_s":3.3,"avg_tool_calls":0.08,"avg_model_calls":1.08,"at":"2026-10-28T05:29:37.496Z"}
+{"label":"know-v2","provider":"codex","correct":"12/12","median_s":3,"avg_tool_calls":0.08,"avg_model_calls":1.08,"at":"2026-10-28T05:46:45.930Z"}

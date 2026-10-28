@@ -30,7 +30,7 @@ public class ModTests extends Instrumentation {
         for (int i = 0; i < 80; i++) {
             android.view.accessibility.AccessibilityNodeInfo root = ((android.accessibilityservice.AccessibilityService) svc).getRootInActiveWindow();
             current = root == null ? "" : String.valueOf(root.getPackageName());
-            if (pkg.equals(current)) return;
+            if (pkg.equals(current)) { SystemClock.sleep(400); return; }
             SystemClock.sleep(100);
         }
         throw new AssertionError("expected " + pkg + ", foreground " + current);
@@ -119,7 +119,12 @@ public class ModTests extends Instrumentation {
             call(mods, "apply", spec("mod-test"), "restart test", 2500L);
             call(rootClass, "run", "am force-stop com.agentos.modfixture");
             runOnMainSync(() -> svc.startActivity(fixture)); front(svc, "com.agentos.modfixture");
-            check(((JSONArray) call(mods, "list")).getJSONObject(0).getBoolean("shown"), "mod did not survive target restart");
+            boolean restored = false;
+            for (int i = 0; i < 40 && !restored; i++) {
+                restored = ((JSONArray) call(mods, "list")).getJSONObject(0).getBoolean("shown");
+                if (!restored) SystemClock.sleep(100);
+            }
+            check(restored, "mod did not survive target restart: " + call(mods, "list"));
             call(mods, "disable", "", "global kill test");
             check(((JSONArray) call(mods, "list")).getJSONObject(0).optString("disabled").equals("global kill test"), "global kill failed");
             call(mods, "remove", "mod-test", "restart cleanup");

@@ -501,7 +501,7 @@ $('#promisesBack').onclick = () => close('promises');
 // (fromOwner), so a model can't settle an identity or edit a fact through here; its own tools need a card.
 const SRC = (s) => ({ calllog: 'Call log', sms: 'Texts', user: 'You told me', notifications: 'Notifications', contacts: 'Contacts' })[s] || String(s || '').replace(/^\w/, (c) => c.toUpperCase());
 const day = (ts) => ts ? new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
-const GROUP = (f) => f.name !== 'you' ? 'People' : /^(favorite|likes|dislikes|prefers|diet|allergic)/.test(f.pred) ? 'Favorites' : /^(plan|wants|project)$/.test(f.pred) ? 'Plans' : 'Routines & life';
+const GROUP = (f) => f.name !== 'you' || f.pred === 'relationship' ? 'People' : /^(favorite|likes|dislikes|prefers|diet|allergic)/.test(f.pred) ? 'Favorites' : /^(plan|wants|project)$/.test(f.pred) ? 'Plans' : 'Routines & life';
 const sameQ = (c) => `Is ${c.a.name}${c.a.apps?.[0] ? ` on ${c.a.apps[0]}` : ''} the same as ${c.b.name}${c.b.rel ? ` (your ${c.b.rel})` : c.b.apps?.[0] ? ` in ${c.b.apps[0]}` : ''}?`;
 const later = new Set(); // "Not sure": hidden until the launcher restarts
 function sameCard(c, cls = 'glass pw same') {
@@ -512,12 +512,15 @@ function sameCard(c, cls = 'glass pw same') {
   return r;
 }
 function factRow(f) {
-  const old = f.status !== 'active', r = el('div', 'rowi fact' + (old ? ' old' : ''), `<div>${esc(f.text)}<span class="s">${esc(SRC(f.source))} · ${day(f.at)}${f.by === 'owner' ? ' · you fixed it' : ''}</span></div>` + (old ? '' : `<div class="r"><button class="tag" data-a="fix">Fix</button><button class="ib" data-a="forget" aria-label="Forget"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`));
+  const old = f.status !== 'active', ed = S.edit?.id === f.id, r = el('div', 'rowi fact' + (old ? ' old' : ''));
+  r.innerHTML = ed ? `<div><input value="${esc(S.edit.value)}" autocomplete="off"><span class="s">${esc(f.name === 'you' ? 'You' : f.name)} · ${esc(f.pred.replace(/^favorite:/, 'favorite ').replace(/_/g, ' '))}</span></div><div class="r"><button class="tag b" data-a="save">Save</button><button class="ib" data-a="cancel"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`
+    : `<div>${esc(f.text.replace(/ \(since [^)]*\)$/, ''))}<span class="s">${esc(SRC(f.source))} · ${day(f.at)}${f.by === 'owner' ? ' · you fixed it' : ''}</span></div>` + (old ? '' : `<div class="r"><button class="tag" data-a="fix">Fix</button><button class="ib" data-a="forget" aria-label="Forget"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`);
+  if (ed) { const i = $('input', r); i.oninput = () => { S.edit.value = i.value; }; i.onkeydown = (k) => k.key === 'Enter' && $('[data-a=save]', r).click(); setTimeout(() => i.focus(), 0); }
   r.onclick = (e) => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; hap();
     if (a === 'forget') { r.classList.add('gone'); return send({ type: 'memory.correct', id: f.id, retract: true }); }
-    if (a === 'save') { const v = $('input', r).value.trim(); if (v && v !== f.obj) send({ type: 'memory.correct', id: f.id, obj: v }); else renderKnow(); return; }
-    $('div', r).innerHTML = `<input value="${esc(f.obj)}" autocomplete="off"><span class="s">${esc(f.name === 'you' ? 'You' : f.name)} · ${esc(f.pred.replace(/^favorite:/, 'favorite ').replace(/_/g, ' '))}</span>`;
-    $('.r', r).innerHTML = '<button class="tag b" data-a="save">Save</button>'; const i = $('input', r); i.focus(); i.onkeydown = (k) => k.key === 'Enter' && $('[data-a=save]', r).click(); };
+    if (a === 'fix') { S.edit = { id: f.id, value: f.obj }; return renderKnow(); }
+    const v = (S.edit?.value || '').trim(); S.edit = null; // save / cancel: the edit state lives in S so a redraw (agentd reconnect) keeps it
+    if (a === 'save' && v && v !== f.obj) send({ type: 'memory.correct', id: f.id, obj: v }); else renderKnow(); };
   return r;
 }
 function renderKnow() {
@@ -534,7 +537,7 @@ function renderKnow() {
   parts.push(about);
   const people = el('div', 'mod', `<div class="k">People<span>${k.people.length ? 'linked cards per person' : ''}</span></div>`);
   people.append(...k.people.map((p) => { const why = (p.linked || []).map((l) => l.replace(/^(same person|possibly the same person): /, '').replace(/ \(\d+%\)$/, '')).join(' · ');
-    return el('div', 'rowi', `<span class="appic" style="background:var(--${p.relationship ? 'purple' : 'blue'})">${esc(p.name[0])}</span><div>${esc(p.name)}${p.relationship ? ` <span class="tag">your ${esc(p.relationship)}</span>` : ''}<span class="s">${esc([p.apps.slice(0, 3).join(' + '), p.also?.length ? `also "${p.also.slice(0, 2).join('", "')}"` : '', p.maybe?.length ? `maybe "${p.maybe.slice(0, 2).join('", "')}"` : '', why].filter(Boolean).join(' · '))}</span></div>`); }));
+    return el('div', 'rowi', `<span class="appic" style="background:var(--${p.relationship ? 'purple' : 'blue'})">${esc(p.name[0])}</span><div>${esc(p.name)}${p.relationship ? ` <span class="tag">your ${esc(p.relationship)}</span>` : ''}<span class="s">${esc([p.apps.slice(0, 3).join(' + '), (p.also || []).filter((n) => !p.maybe?.includes(n)).length ? `also "${p.also.filter((n) => !p.maybe?.includes(n)).slice(0, 2).join('", "')}"` : '', p.maybe?.length ? `maybe "${p.maybe.slice(0, 2).join('", "')}"` : '', why].filter(Boolean).join(' · '))}</span></div>`); }));
   if (!k.people.length) people.append(el('div', 'empty', 'No one yet'));
   parts.push(people);
   box.replaceChildren(...parts);
