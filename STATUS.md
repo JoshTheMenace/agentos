@@ -8,7 +8,7 @@
 | What did I miss? | Ask bar or voice: "What did I miss?" | Cards (unanswered messages, next events) + one-line answer in ~2 s |
 | Voice | Tap the mic, **wait for "Listening"**, then "What's my battery?" | "On it", then "Done, in N seconds…" (~6 s task; first start can take ~7 s) |
 | Calendar-aware keyboard | In a chat that asks "Are you free Thursday at 3?", tap the text field | Chips in ~1 s, e.g. "Thursday 3 PM to 5 PM looks free." Typing a word: new chips in ~2–3 s |
-| Tracker counter | Open a real app with trackers (Weather), then Command center › Protected today › "N apps sent data to trackers" | Blockers lists each domain with its company; counts tick live |
+| Tracker counter (owner setting, not an ask) | Open a real app with trackers (Weather), then Command center › Protected today › "N apps sent data to trackers"; tap Block | Blockers lists each domain with its company; counts tick live. Asking the agent about trackers just points you to Blockers |
 | Offline fallback | Airplane mode (keep the local model warm), ask something simple | Answers with "On device" in ~2–5 s |
 | Queued asks | Send a second ask while one runs | It waits, then runs (no error) |
 | Scheduled task | "In 2 minutes, set an alarm for 6:15", lock the phone | Fires on time, unlocks, sets it, re-locks |
@@ -39,7 +39,8 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 - **Voice is the main way to start tasks.** GPT Live doesn't do the task; it starts a background Codex thread (with a task system prompt), gets its status ("how's it going?"), and says when it's done.
 - **Memory + notifications:** agents know recent notifications and cross-app context, so "reply back that I'm 10 min late" works without naming the person or app. Users can tell agents to handle notifications/replies for them.
 - **Home screen:** no dummy data (no lamp, no heart rate, no "no active grants"). Show what agents are doing now and proactive suggestions.
-- **Firewall demo:** in a real app, ask by voice "any trackers?", it finds them, "block them", it does; a blockers view lists what's blocked per app.
+- **Trackers/firewall are owner settings, not agent tools (10-28, supersedes the voice "any trackers?" demo):** the 7 tracker/firewall tools are gone from every model (Codex, Claude, local, reviewer, remote MCP). The owner scans, blocks and unblocks with one tap in Command center › Blockers (launcher uid → broker); the broker refuses `firewall.set/clear` and `trackers.block/unblock` from agentd. Reads (`trackers.list`, `firewall.list`) stay for the Command center.
+- **Leaner tool list (10-28):** per-app reader tools removed (LinkedIn, X, Slack, Instagram, Discord, WhatsApp, Gmail incl. `email_draft`, Spotify, YouTube); live notification tools + "What did I miss?" cover messages, `media` covers "what's playing". Mods use one name per action (`mod_*`; the `app_mod_*` aliases are gone). 74 tools now (pitch/TOOLS.md).
 - **Speed is a top priority:** hill-climb task latency (screen format, fewer round trips, Codex computer-use ideas, faster models e.g. GPT-6.1 Terra if available).
 - **Explore:** Claude Code on the phone as a provider (like Codex app-server), the Galaxy Watch, live-modifying a real app (e.g. calculator/camera: add a button), password vault + fingerprint fill (stretch).
 - UI: **A2 · Calm Glass iOS Dark** (design/mockups/A2-calm-glass-ios-dark.html, tokens in design/A2-tokens.md). Minimal text, progressive disclosure. Say "Fingerprint", never "Touch ID". **All UI work goes to Fable agents** (model: fable).
@@ -95,7 +96,7 @@ All beats ran on the phone; shots, timings and the presenter checklist are in `p
 ## Vault + one-tap blocks (10-27 evening, Fable; android/README.md "Password vault", launcher/README.md)
 - Fresh vault (old `test` entry wiped). Passwords view in the launcher (command center › Passwords): list, Delete, "Add password" → native A2 screen in local.agentos (password never touches the WebView/agentd/model), Save with fingerprint.
 - Sign-in offer: open an app with a saved login → card "Sign in as <user>?" → fingerprint → filled, Continue tapped. Agent "log me into Slack" → `vault_fill` → the same prompt. Accessibility path (not Autofill Framework), reasons in android/README.md.
-- Blockers: Block / Block all / Unblock are one tap (owner line: launcher uid → :7777, no card). Agent trackers.block: no card (protective). Agent trackers.unblock: human card.
+- Blockers: Block / Block all / Unblock are one tap (owner line: launcher uid → :7777, no card). Since 10-28 agents can't block or unblock at all (broker refuses agentd).
 - agentd edits (events.js FORWARD `tracker.blocked`, `vault.changed`; tools.js descriptions) need an agentd restart to take effect; the launcher works without it.
 
 ## Next up

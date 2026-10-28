@@ -2,6 +2,8 @@
 
 Generated from agentd/tools.js + plugins.js on 2026-10-28. **core** = always loaded; plugins can be switched off in Command center › Plugins. Tier: read = looks only, act = changes something on the phone (the broker still gates every call: auto / tap / fingerprint).
 
+Not agent tools (founder, 10-28): trackers, ads and the firewall are owner settings (Command center › Blockers, one tap); the broker refuses those changes from agentd. Per-app readers (LinkedIn, X, Slack, …) are gone: the live notification tools and catch_up cover messages.
+
 ## Core (always on) — 21
 
 | Tool | Tier | What it does |
@@ -14,75 +16,26 @@ Generated from agentd/tools.js + plugins.js on 2026-10-28. **core** = always loa
 | `press` | act | Press a system key. |
 | `open_app` | act | Launch an app by package name (see list_apps). |
 | `list_apps` | read | List launchable apps {pkg, label}. |
-| `set_alarm` | act | Set an alarm in Clock directly (24 h time). |
-| `set_timer` | act | Start a countdown timer in Clock directly. |
-| `web_search` | act | Open a Google search for the query in Chrome and return the results screen. |
 | `act` | act | Do several steps in one call when the current screen already shows what to do, e.g. |
 | `wait` | read | Wait for the UI to settle (max 5000 ms); returns the new screen. |
+| `memory_ask` | read | Ask the user's personal memory a question in plain words ("what did Sam want for his birthday?", "when am I free to see Mom this week?", "who was I talking to a |
 | `notifications_list` | read | Recent notifications, newest first: {key, app, pkg, conversation, sender, text, when, from_me, can_reply}, plus the foreground app. |
 | `notifications_reply` | outward | Reply in a message thread straight from its notification (fast, no app opening). |
 | `notifications_conversations` | read | List recent live message conversations, latest text, sender, timestamps, updated_at, conversation_id and available reply/mark-read keys. |
 | `notifications_conversation` | read | Read a conversation’s recent messages, newest first, merged from Android MessagingStyle current and historic messages; keeps history after removal. |
 | `notifications_changes` | read | What changed since time T: posted/removed notifications and newly observed messages, oldest first. |
 | `notifications_mark_read` | outward | Use the app’s own notification mark-as-read action without opening it. |
-| `memory_ask` | read | Ask the user's personal memory a question in plain words ("what did Sam want for his birthday?", "when am I free to see Mom this week?", "who was I talking to a |
+| `set_alarm` | act | Set an alarm in Clock directly (24 h time). |
+| `set_timer` | act | Start a countdown timer in Clock directly. |
+| `web_search` | act | Open a Google search for the query in Chrome and return the results screen. |
 | `catch_up` | read | What the user missed, in one fast local call: unanswered messages by person and app (live notification feed, most important first, with reply keys), the next 12 |
 
-## Plugin: LinkedIn — 2
+## Plugin: Samsung Health — 2
 
 | Tool | Tier | What it does |
 |---|---|---|
-| `linkedin_notifications` | read | Delivered notifications; linkedin_unread also checks unread conversations in the local cache. |
-| `linkedin_unread` | read | Unread LinkedIn conversations from a read-only local cache copy, plus delivered notifications. |
-
-## Plugin: X — 1
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `x_mentions` | read | Delivered X notifications (possible mentions and DMs); not a complete mentions timeline. |
-
-## Plugin: Slack — 1
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `slack_unread` | read | Delivered Slack messages and mentions; not a complete workspace unread count. |
-
-## Plugin: Instagram — 1
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `instagram_dms_summary` | read | Delivered Instagram notifications, with messages ranked first; not a full DM inbox. |
-
-## Plugin: Discord — 1
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `discord_mentions` | read | Delivered Discord messages and mentions; not a full server or DM history. |
-
-## Plugin: WhatsApp — 1
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `whatsapp_unread` | read | Delivered WhatsApp message previews; not a complete unread count. |
-
-## Plugin: Gmail — 2
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `gmail_important` | read | Delivered Gmail previews ranked for attention; not Gmail importance labels or a full inbox. |
-| `email_draft` | act | Open a Gmail draft; nothing is sent until Send is tapped (approval). |
-
-## Plugin: Spotify — 1
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `spotify_status` | read | Spotify now playing from its media session, plus delivered notifications; no listening history. |
-
-## Plugin: YouTube — 1
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `youtube_updates` | read | Delivered YouTube updates and current media session; not subscription or watch history. |
+| `health_summary` | read | Read imported Samsung Health sleep averages, trend vs previous period, last night, daily HR and steps. |
+| `health_query` | read | Read Samsung Health sleep sessions, daily heart_rate (explicit resting/avg/max), steps, exercise, hrv (SDNN/RMSSD), or stress by inclusive local calendar dates. |
 
 ## Plugin: Calendar — 4
 
@@ -130,18 +83,6 @@ Generated from agentd/tools.js + plugins.js on 2026-10-28. **core** = always loa
 |---|---|---|
 | `navigate` | act | Start Google Maps navigation to a place. |
 | `open_url` | act | Open an http(s) link in Chrome. |
-
-## Plugin: Trackers & firewall — 7
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `firewall_list` | read | List per-app network rules. |
-| `firewall_set` | outward | Allow or block network access for an app (optionally only some domains). |
-| `firewall_clear` | outward | Remove every AgentOS firewall rule. |
-| `trackers_scan` | read | Which tracker companies an app talks to. |
-| `trackers_list` | read | Every app seen talking to trackers, and what is blocked: {apps:[{pkg, label, trackers}]}. |
-| `trackers_block` | outward | Block an app's trackers (tracker-list domains only; the app keeps working). |
-| `trackers_unblock` | outward | Undo trackers_block for an app (default: all its blocked trackers). |
 
 ## Plugin: Passwords — 2
 
@@ -193,10 +134,10 @@ Generated from agentd/tools.js + plugins.js on 2026-10-28. **core** = always loa
 | Tool | Tier | What it does |
 |---|---|---|
 | `mod_inspect` | read | For writing a mod: the app on screen's elements that have a view id, as "vid role \"text\" [left,top,right,bottom px] flags". |
+| `mod_preview` | read | Dry-run a mod in the foreground app: highlight matched rectangles for 3 seconds. |
+| `mod_apply` | act | Apply the exact spec after mod_preview with visible matches. |
 | `mod_list` | read | List the mods on this phone: {mods:[{id, package, app, label, shown}]}. |
 | `mod_remove` | act | Remove a mod by id (no approval needed). |
-| `mod_preview` | read | Dry-run a mod in the foreground app: highlight matched rectangles for 3 seconds. |
-| `mod_apply` | act | Apply the exact spec after mod_preview with visible matches; Clean owner-requested masks go through the low-risk reviewer automatically; remote/tainted/unbound  |
 | `mod_disable` | act | Kill switch: disable every mod, or all mods for package. |
 | `deepmod_style` | act | Preferred for "theme Pigeon navy and gold and remove the promoted rows": one call inspects, builds a strict signed spec, previews, screenshots, reviews and comm |
 | `deepmod_inspect` | read | Inspect the running owned Pigeon cooperative runtime: exact build, revision, current spec, screen and supported tokens/targets. |
@@ -207,16 +148,7 @@ Generated from agentd/tools.js + plugins.js on 2026-10-28. **core** = always loa
 | `deepmod_rollback` | act | Restore the previous successfully committed Pigeon appearance with a fresh higher signed revision; no chat data changes. |
 | `deepmod_disable` | act | Durable Pigeon deep-mod kill switch: increase epoch, cancel previews and restore defaults. |
 
-## Other (not in a plugin) — 4
-
-| Tool | Tier | What it does |
-|---|---|---|
-| `app_mod_apply` | act | Add a button to an app (a "mod"): it sits next to one of the app's buttons, looks native, and when tapped presses the app's own buttons. |
-| `app_mod_targets` | read | For writing a mod: the app on screen's elements that have a view id, as "vid role \"text\" [left,top,right,bottom px] flags". |
-| `app_mod_list` | read | List the mods on this phone: {mods:[{id, package, app, label, shown}]}. |
-| `app_mod_remove` | act | Remove a mod by id (no approval needed). |
-
-Total: 94 tools.
+Total: 74 tools.
 
 ## Memory v2 tools (also offered when MEMORY_V2=1)
 | Tool | Tier | What it does |

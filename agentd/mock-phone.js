@@ -23,9 +23,8 @@ const screen = () => ({
 const ok = (extra = {}) => ({ ok: true, decision: 'auto', ...extra });
 const calls = [], plugins = { off: new Set((process.env.MOCK_PLUGINS_OFF || '').split(',').filter(Boolean)) };
 const PLUGIN = { 'calendar.add': 'calendar', 'calendar.find': 'calendar', 'calendar.update': 'calendar', 'calendar.delete': 'calendar', 'contacts.find': 'messages',
-  'sms.send': 'messages', 'sms.list': 'messages', 'calls.list': 'messages', 'call.place': 'messages', 'intent:email': 'messages', 'alarms.list': 'clock', 'alarms.delete': 'clock',
+  'sms.send': 'messages', 'sms.list': 'messages', 'calls.list': 'messages', 'call.place': 'messages', 'alarms.list': 'clock', 'alarms.delete': 'clock',
   'device.set': 'device', 'device.status': 'device', 'media.control': 'media', 'intent:play': 'media', 'intent:navigate': 'web', 'intent:url': 'web',
-  'trackers.scan': 'privacy', 'trackers.list': 'privacy', 'trackers.block': 'privacy', 'trackers.unblock': 'privacy', 'firewall.list': 'privacy', 'firewall.set': 'privacy', 'firewall.clear': 'privacy',
   'vault.list': 'vault', 'vault.fill': 'vault', 'app.mod.apply': 'mods', 'app.mod.targets': 'mods', 'app.mod.list': 'mods', 'app.mod.remove': 'mods' };
 // Stub of the broker's approval API, same shapes as android/ Broker.java + Events.java: GET /events (hello first),
 // approval.list/confirm/deny; confirm only by "voice" (utterance) or "reviewer" (rationale).

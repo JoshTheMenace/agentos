@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Tiny agentd client. Usage: node cli.js [--provider codex|claude|local] "your request"
-//   follow-ups in the same conversation: node cli.js "Open Spotify. Any trackers?" --then "Block them."
+//   follow-ups in the same conversation: node cli.js "Open Pigeon. Who messaged last?" --then "Reply that I'm on my way."
 //   keyboard test: node cli.js --suggest reply|rewrite|fix [--screen "line 1|line 2"] "text before the cursor"
 // Prints streamed text; tool/guard/approval events go to stderr with timings.
 import WebSocket from 'ws';

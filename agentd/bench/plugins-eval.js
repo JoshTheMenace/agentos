@@ -32,8 +32,8 @@ const LABELED = [
   ['When am I free to see Mom this week?', 'calendar'],
   // messages
   ['Text Mom I\'m on my way', 'messages'], ['call Dad', 'messages'], ['what\'s Sam\'s number', 'messages'], ['read my last texts', 'messages'],
-  ['email my boss that I\'m sick', 'gmail'], ['send a message to Jo saying thanks', 'messages'], ['who called?', 'messages'],
-  ['any missed calls', 'messages'], ['send an email to dana@x.com', 'gmail'], ['look up Jo in my contacts', 'messages'],
+  ['email my boss that I\'m sick', ''], ['send a message to Jo saying thanks', 'messages'], ['who called?', 'messages'],
+  ['any missed calls', 'messages'], ['send an email to dana@x.com', ''], ['look up Jo in my contacts', 'messages'],
   // clock
   ['Delete my 7 AM alarm', 'clock'], ['what alarms do I have', 'clock'], ['turn off my 6:15 alarm', 'clock'], ['which alarms are set?', 'clock'],
   ['cancel tomorrow\'s alarm', 'clock'], ['remove all my alarms', 'clock'],
@@ -47,10 +47,10 @@ const LABELED = [
   // web
   ['navigate to costco', 'web'], ['directions to the airport', 'web'], ['open nytimes.com', 'web'], ['take me home', 'web'],
   ['open https://example.com/x', 'web'], ['how far is Park City', 'web'], ['open that link in chrome', 'web'],
-  // privacy
-  ['Which trackers does Chrome talk to?', 'privacy'], ['any trackers in this app? block them', 'privacy'], ['block trackers in Beacon', 'privacy'],
-  ['unblock Beacon', 'privacy'], ['block internet access for Pigeon', 'privacy'], ['what is spying on me', 'privacy'], ['show my firewall rules', 'privacy'],
-  ['Any trackers in Chrome? Block them', 'privacy'],
+  // trackers/firewall: owner settings (Blockers), no plugin
+  ['Which trackers does Chrome talk to?', ''], ['any trackers in this app? block them', ''], ['block trackers in Beacon', ''],
+  ['unblock Beacon', ''], ['block internet access for Pigeon', ''], ['what is spying on me', ''], ['show my firewall rules', ''],
+  ['Any trackers in Chrome? Block them', ''],
   // vault
   ['Log me into Slack', 'vault'], ['sign me in to Chrome', 'vault'], ['fill my password', 'vault'], ['what passwords do I have saved', 'vault'],
   ['I got logged out of Discord, sign me back in', 'vault'],
@@ -68,7 +68,7 @@ const LABELED = [
   ['add a tip button to my calculator', 'mods'], ['add a focus 25 minute button to my timer', 'mods'], ['remove the tip mod', 'mods'], ['what mods do I have', 'mods'],
   // tricky
   ['what\'s playing on my calendar today', 'calendar'], ['block my calendar Friday afternoon', 'calendar'], ['play the video Sam texted me', 'messages'],
-  ['text me when my timer is done', 'messages'], ['turn off the alarm and play music', 'clock,media'], ['email the trackers report to Jo', 'gmail'],
+  ['text me when my timer is done', 'messages'], ['turn off the alarm and play music', 'clock,media'], ['email the trackers report to Jo', ''],
 ];
 
 // Held out: written after the routes, never tuned on. Phrasings the route words don't cover on purpose.
@@ -76,7 +76,7 @@ const HELD_OUT = [
   ['shut the music off', 'media'], ['next track', 'media'], ['how loud is my ringer', 'device'], ['make the screen brighter', 'device'],
   ['I\'m about to drive, don\'t let calls interrupt me', 'device'], ['ping Sam that I\'ll be late', 'messages'], ['ring my wife', 'messages'],
   ['what\'s my schedule look like Tuesday', 'calendar'], ['book a haircut for Thursday 10am', 'calendar'], ['get me to the nearest gas station', 'web'],
-  ['go to wikipedia.org', 'web'], ['is this app sending my data to anyone?', 'privacy'], ['stop Beacon from phoning home', 'privacy'],
+  ['go to wikipedia.org', 'web'], ['is this app sending my data to anyone?', ''], ['stop Beacon from phoning home', ''],
   ['put in my Netflix login', 'vault'], ['nuke my 5:30 alarm', 'clock'], ['do I have an alarm tomorrow', 'clock'], ['every night at 10 turn on dnd', 'schedule,device'],
   ['tomorrow at 9 send Jo the address', 'schedule,messages'], ['if Dana texts, say I\'m busy', 'rules'], ['add a 5 minute button to the timer app', 'mods'],
   ['what did my mom text me yesterday', ''], ['open spotify', ''], ['open settings', ''], ['turn on airplane mode', 'device'], ['mute', 'device'],
@@ -107,7 +107,6 @@ const TASKS = {
   messages: { text: 'Text Mom I\'m on my way.', want: ['sms.send'] },
   device: { text: 'Turn on Do Not Disturb.', want: ['device.set'] },
   media: { text: 'Pause the music.', want: ['media.control'] },
-  privacy: { text: 'Which trackers does Chrome talk to?', want: ['trackers.scan'] },
   schedule: { text: 'Every weekday at 8 remind me to stretch.', want: ['schedule_task'] },
   clock: { text: 'Delete my 7 AM alarm.', want: ['alarms.delete'] },
   miss: { text: 'Am I running low on juice?', want: ['device.status'] }, // router miss on purpose: tests the fallback

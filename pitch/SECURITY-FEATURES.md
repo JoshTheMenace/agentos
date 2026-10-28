@@ -64,9 +64,9 @@ Stage rule: any trap or flag beat goes **last** (a flag holds every send for a p
 | Protection | Protects against | How it works | Demo in < 20 s | Status |
 |---|---|---|---|---|
 | Tracker radar | Apps sending data to ad companies unseen | Root copies each app's first HTTPS packet (server name) with its uid; 476 domains → company | Open Weather, then Blockers lists companies | Ready |
-| Name-based blocks | Trackers dodging IP blocks | Per-app kernel rule matches the server name, holds through IP changes; QUIC cut while blocking | "Block them" in Spotify → counter climbs, music plays | Ready (rules lost on reboot: Gap) |
+| Name-based blocks | Trackers dodging IP blocks | Per-app kernel rule matches the server name, holds through IP changes; QUIC cut while blocking | Blockers › Block on Spotify → counter climbs, music plays | Ready (rules lost on reboot: Gap) |
 | Safe root commands | Shell injection via a domain | Domains must match a strict pattern; the root command is a fixed template | Not demoable | Ready |
-| Unblock needs a person | An agent re-opening trackers | Agent block: no card (protective). Agent unblock: a person's card, never the reviewer | Not demoable | Ready |
+| Owner-only privacy settings | A model changing trackers or the firewall | Not agent tools (founder, 10-28). The broker refuses `firewall.set/clear` and `trackers.block/unblock` from agentd's uid (audited "refused"); only the launcher's owner line or adb. Reads stay for the Command center | Not demoable | Ready |
 | Per-app network cut | An app phoning home at all | Permissions › Network toggle (uid rule) | Toggle Beacon off → rows go red (own app) | Ready |
 | Loopback never filtered | Locking ourselves out | `-o lo` returns first | Not demoable | Ready |
 

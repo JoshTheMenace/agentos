@@ -7,7 +7,6 @@
 //   - AGENTD_TOOLS=all (default): every enabled tool upfront, as before. AGENTD_TOOLS=plugins: core + the 0-2 plugins
 //     pick() reads in the user's own words; the other enabled plugins are deferred (one-line summaries, load on demand).
 import { cfg } from './config.js';
-import { plugins as appPlugins } from './app-reads.js';
 import { tools as notificationTools } from './notification-tools.js';
 import { names as deepmodNames } from './deepmod-tools.js';
 
@@ -18,7 +17,6 @@ export const CORE = ['task_start', 'screen_read', 'tap', 'type', 'scroll', 'pres
 // route: the pre-selector's words (the user's request only; never screen or notification text, so planted text can't
 // widen the tool set). prompt: the system-prompt lines that only matter when the plugin's tools are visible.
 export const PLUGINS = [
-  ...appPlugins,
   { id: 'calendar', name: 'Calendar', on: true, summary: 'Find, add, move and delete calendar events directly (no Calendar screen).',
     tools: ['add_event', 'find_events', 'update_event', 'delete_event'],
     route: /\b(calendars?|meetings?|events?|appointments?|agenda|invites?|free|busy|lunch|dinner|breakfast|dentist|doctor)\b/,
@@ -43,10 +41,6 @@ export const PLUGINS = [
     tools: ['navigate', 'open_url'],
     route: /\b(navigate|navigation|directions|route|drive to|take me|maps?|how far|links?|urls?|websites?|site)\b|https?:\/\/|\.(com|org|net|io|dev)\b/,
     prompt: '- Maps & links: navigate; open_url.' },
-  { id: 'privacy', name: 'Trackers & firewall', on: true, summary: 'Which tracker companies an app talks to, block or unblock them, per-app network rules.',
-    tools: ['trackers_scan', 'trackers_list', 'trackers_block', 'trackers_unblock', 'firewall_list', 'firewall_set', 'firewall_clear'],
-    route: /\b(trackers?|tracking|firewall|block|blocked|unblock|ads|privacy|spying|internet access|network access)\b/,
-    prompt: '' },
   { id: 'vault', name: 'Passwords', on: true, summary: 'Fill a saved password into a login screen (fingerprint; you never see it).',
     tools: ['vault_list', 'vault_fill'],
     route: /\b(passwords?|log (me )?in(to)?|logged out|sign (me )?in(to)?|signed out|login|credentials|vault)\b/,

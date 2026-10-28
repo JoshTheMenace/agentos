@@ -121,8 +121,8 @@ const app = (pkg) => String(pkg || '').split('.').pop().replace(/^\w/, (c) => c.
 function label({ name, args = {} }, turn) {
   if (name === 'tap') { const n = turn.nodes?.get(args.id); return `Tapping ${n?.text || n?.desc ? `"${String(n.text || n.desc).slice(0, 30)}"` : 'a button'}`; }
   return ({ 'task.start': 'Asking for access', 'screen.read': 'Reading the screen', type: 'Typing', scroll: 'Scrolling', press: `Pressing ${args.key}`,
-    open_app: `Opening ${app(args.pkg)}`, list_apps: 'Finding the app', wait: 'Waiting for the app', 'firewall.list': 'Checking the firewall',
-    'firewall.set': `Changing the firewall for ${app(args.pkg)}`, 'firewall.clear': 'Clearing the firewall', build_app: args.update ? 'Updating your app' : 'Designing your app', list_my_apps: 'Checking your apps', remove_app: 'Removing an app' })[name] || (/memory|consent/.test(name) ? 'Checking memory' : /notification/.test(name) ? 'Checking notifications' : name);
+    open_app: `Opening ${app(args.pkg)}`, list_apps: 'Finding the app', wait: 'Waiting for the app',
+    build_app: args.update ? 'Updating your app' : 'Designing your app', list_my_apps: 'Checking your apps', remove_app: 'Removing an app' })[name] || (/memory|consent/.test(name) ? 'Checking memory' : /notification/.test(name) ? 'Checking notifications' : name);
 }
 
 // Broker events: approval cards and pauses belong to the running worker (it holds the only lease).

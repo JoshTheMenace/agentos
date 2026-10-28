@@ -357,7 +357,7 @@ $('#toMemory').onclick = () => { hap(); go(2); };
 $('#cmd').onclick = (e) => { if (e.target.closest('.mic')) return; hap(); open('sheet'); setTimeout(() => $('#askIn').focus(), 350); };
 $('#micBtn').onclick = () => { hap('heavy'); voiceStart(); };
 // Try chips: each opens the ask sheet with the prompt typed and the cursor at the end (except the model switch, which flips at once).
-const TRY = [['cal', 'At 7 PM, …', 'At 7 PM, '], ['shield', 'Any trackers in Chrome?', 'Any trackers in Chrome? Block them'], ['msg', 'Reply I’m 10 min late', 'Reply that I’m 10 minutes late'], ['key', 'Sign me in', 'Sign me in to '], ['cloud', 'Local model', null]];
+const TRY = [['cal', 'At 7 PM, …', 'At 7 PM, '], ['spark', 'What did I miss?', 'What did I miss?'], ['msg', 'Reply I’m 10 min late', 'Reply that I’m 10 minutes late'], ['key', 'Sign me in', 'Sign me in to '], ['cloud', 'Local model', null]];
 function renderTry() {
   $('#try').replaceChildren(...TRY.map(([ic, label, text], i) => {
     const local = text === null && S.provider === 'local', b = el('button', 'chip' + (local ? ' lit' : ''), `<svg><use href="#i-${local ? 'check' : ic}"/></svg>${esc(local ? 'Local model · on' : label)}`);
@@ -469,7 +469,7 @@ function renderBlockers() {
   $('#blockersNote').innerHTML = nb ? `${N('all', S.adsBlocked)} blocked` : ns ? `${ns} open` : '';
   $('#blegend').hidden = !apps.length;
   const all = $('#blockAll'); all.hidden = nb >= ns; all.onclick = async () => { hap('heavy'); all.textContent = 'Blocking…'; for (const a of apps) if (a.trackers.some((t) => !t.blocked)) await phone('trackers.block', { pkg: a.pkg }); all.textContent = 'Block all'; openBlockers(); };
-  if (!apps.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring"><svg width="30" height="30"><use href="#i-shield"/></svg></span>No trackers seen<small>Ask “any trackers?” in any app</small>`));
+  if (!apps.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring"><svg width="30" height="30"><use href="#i-shield"/></svg></span>No trackers seen<small>Apps show up here when they call a tracker</small>`));
   box.replaceChildren(...apps.map((a) => {
     const open_ = a.trackers.filter((t) => !t.blocked), bk = a.trackers.filter((t) => t.blocked), m = el('div', 'mod bk');
     const sub = bk.length ? `${N(a.pkg, refused(a))} blocked · ${esc(who(bk))}${open_.length ? ` · ${open_.length} open` : ''}` : `${open_.length} open · ${esc(who(open_))}`; // the companies behind the domains

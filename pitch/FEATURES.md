@@ -29,7 +29,7 @@ Key stage rules: say **"open <app>"** for message reads. Keep deletes out. Run a
 | Contacts, SMS, calls | Find people, read texts and calls, send a text, place a call | "Text Sam I'm on my way" | V A G | – | Ready (a person approves every text/call). Don't text real contacts on stage | – |
 | Phone settings | DND, ringer, volume, brightness, torch, Wi-Fi, Bluetooth, airplane | "Turn on Do Not Disturb" · "Brightness to 50%" | V A G | one call (BR r3) | Ready (never toggle Wi-Fi on stage) | – |
 | Media | Play, pause, next on any player | "Pause the music" · "Play lo-fi on Spotify" | V A G | – | Ready | – |
-| Maps, links, email draft | Navigate, open a URL, draft a Gmail | "Navigate to the airport" · "Draft an email to Sam about Friday" | V A G | – | Ready (email is a draft only) | – |
+| Maps and links | Navigate, open a URL | "Navigate to the airport" | V A G | – | Ready | – |
 | Your request = permission | Your own ask needs no "allow app" card (except money, install, password apps) | Any own ask | V A | – | Ready | No permission nagging |
 | Queued asks | A second ask waits its turn, no error | Send two asks quickly | A | – | Ready | – |
 
@@ -70,7 +70,7 @@ Key stage rules: say **"open <app>"** for message reads. Keep deletes out. Run a
 | Auto-reply rule | Fixed reply for N minutes, after one approval | "Tell people I'm driving for the next 30 minutes" | V A | rule 4.8 s; each reply 0.7 s, no card | Ready on the test chat. Never on real contacts | Driving mode in one sentence |
 | Handle replies for me | Each new message from a person starts a task (sends still approved) | "Handle replies from Sam for me" | V A | – | Needs setup: a teammate | – |
 | Mark as read | Uses the app's own Mark as read | "Mark Alex's messages as read" | V A | 10 s turn (APP-APIS.md) | Ready (may send read receipts) | – |
-| Background app reads | Reads Slack, Instagram, Discord, Gmail, LinkedIn, Spotify, YouTube without opening them | "Any new Slack messages?" | V A G | reads ~20 ms; LinkedIn inbox 386 ms | Ready (only what notifications show) | – |
+| Any app's messages | Live notification tools + "What did I miss?" cover Slack, Instagram, Discord, Gmail, LinkedIn… without opening them (no per-app reader tools since 10-28) | "Any new Slack messages?" | V A G | reads ~20 ms | Ready (only what notifications show) | – |
 
 ## 7. Vision and camera
 | Feature | What it does | Trigger | Entry | Time (source) | Status | Wow |
@@ -94,13 +94,12 @@ Key stage rules: say **"open <app>"** for message reads. Keep deletes out. Run a
 | Manage mods | List, remove, disable all | "List my mods" · "Remove the LinkedIn mod" · Command center › Mods | V A | – | Ready | – |
 | Deep mods (Pigeon only) | Signed native re-theme of our own app, previewed, auto-restored | "Open Pigeon and preview a navy and gold theme" | V A | 8.7 s (DF) | Not on stage (own app only; first try can fail after a broker reinstall) | Real view changes, no hacks |
 
-## 10. Trackers and firewall
+## 10. Trackers and firewall (owner settings, not agent tools, since 10-28)
 | Feature | What it does | Trigger | Entry | Time (source) | Status | Wow |
 |---|---|---|---|---|---|---|
 | Tracker radar | Sees which tracker companies each app talks to | Open Weather or Spotify, then Home › "N apps sent data to trackers" | – | lists in 10–50 ms (android README) | Ready | iPhone shows trackers; this also blocks them |
-| Block by voice | Finds and blocks an app's trackers | In Spotify: "Any trackers?" then "Block them" | V A | ~4 s (android README) | Ready (needs root rules; lost on reboot) | Per app, by company name, at the kernel |
 | Live counter | Blocked counts tick live; island "Blocked · Facebook +5" | Blockers view open | – | refresh every 2 s | Ready | Number climbs while the app still works |
-| One-tap blocks | Block / Block all / Unblock | Blockers view | – | – | Ready | – |
+| One-tap blocks | Block / Block all / Unblock; only the owner can (the broker refuses agentd) | Blockers view | – | – | Ready | The AI can't touch your privacy settings |
 | Cut an app off | Per-app network switch | Permissions › Network | A | – | Ready | – |
 | Protected today | Trackers blocked, scams caught, actions stopped, approvals | Command center | – | – | Ready (run demo reset first) | – |
 

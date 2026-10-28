@@ -25,7 +25,7 @@ import org.json.JSONObject;
  */
 final class Plugins {
     static final List<String> IDS = Collections.unmodifiableList(Arrays.asList(
-            "calendar", "messages", "clock", "device", "media", "web", "privacy", "vault", "memory", "rules", "schedule", "mods", "apps",
+            "calendar", "messages", "clock", "device", "media", "web", "vault", "memory", "rules", "schedule", "mods", "apps",
             "linkedin", "x", "slack", "instagram", "discord", "whatsapp", "gmail", "spotify", "youtube")); // apps (micro-apps) runs in agentd only
     /** Broker method (or "intent:kind": one method serves several plugins) -> plugin. memory, rules, schedule run in agentd only. */
     private static final Map<String, String> MAP = new HashMap<>();
@@ -40,7 +40,7 @@ final class Plugins {
         for (String m : new String[]{"device.set", "device.status"}) MAP.put(m, "device");
         for (String m : new String[]{"media.control", "intent:play"}) MAP.put(m, "media");
         for (String m : new String[]{"intent:navigate", "intent:url"}) MAP.put(m, "web"); // intent:search is core
-        for (String m : new String[]{"trackers.scan", "trackers.list", "trackers.block", "trackers.unblock", "firewall.list", "firewall.set", "firewall.clear"}) MAP.put(m, "privacy");
+        // trackers.* / firewall.*: owner settings (Blockers), not a plugin; Broker.call() refuses changes from anyone but the owner or adb
         for (String m : new String[]{"vault.list", "vault.fill"}) MAP.put(m, "vault");
         for (String m : new String[]{"app.mod.apply", "app.mod.targets", "app.mod.list", "app.mod.remove", "app.mod.preview", "app.mod.disable"}) MAP.put(m, "mods");
     }

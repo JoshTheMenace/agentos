@@ -219,8 +219,14 @@ final class Broker {
                 return ok(true);
             }
             case "approval.escalate": return escalate(p, uid);
-            case "tap": case "type": case "scroll": case "press": case "open_app": case "intent": case "firewall.set": case "firewall.clear":
-            case "trackers.block": case "trackers.unblock": case "notifications.reply": case "notifications.mark_read":
+            case "firewall.set": case "firewall.clear": case "trackers.block": case "trackers.unblock": // owner settings (Blockers taps) or adb; never agentd or a model (founder 10-28)
+                if (uid != 2000 && !callerIn(uid, "owner_callers")) {
+                    String why = m + " only from the owner's Blockers screen or adb, not from " + who(uid);
+                    audit.log(entry(m, lease).put("caller", who(uid)).put("decision", "refused").put("reason", why));
+                    return ok(false).put("decision", "refused").put("reason", why);
+                }
+                synchronized (actLock) { return act(m, p, uid); }
+            case "tap": case "type": case "scroll": case "press": case "open_app": case "intent": case "notifications.reply": case "notifications.mark_read":
                 synchronized (actLock) { return act(m, p, uid); } // one action at a time; nothing else acts while a card is up
             case "notifications.autoreply":
                 if (p.optInt("minutes", 60) > 0) synchronized (actLock) { return act(m, p, uid); }
@@ -360,8 +366,8 @@ final class Broker {
         Lease l = lease;
         Api.Spec api = Api.SPECS.get(tool);
         boolean fw = tool.startsWith("firewall.") || tool.startsWith("trackers."), reply = tool.equals("notifications.reply"), free = fw || tool.startsWith("notifications.");
-        // Tracker blocks: the owner's tap in Blockers (launcher uid) is the approval; an agent's block is protective (tracker-list names only,
-        // the app keeps working) so it needs no card either. Unblocking from an agent still needs a person (channels()).
+        // Tracker blocks: the owner's tap in Blockers (launcher uid) is the approval. Agents can't reach these (call()); over adb a block is
+        // protective (tracker-list names only, the app keeps working) so it needs no card, an unblock needs a person (channels()).
         boolean owner = tool.startsWith("trackers.") && callerIn(uid, "owner_callers"), protective = tool.equals("trackers.block");
         boolean scoped = !free && !tool.equals("press"); // free: the card itself is the gate (no lease needed)
         AccessibilityNodeInfo node = api == null && p.has("id") ? svc.screen.node(p.getInt("id")) : null; // an API id is an event/alarm id
