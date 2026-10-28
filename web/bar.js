@@ -70,7 +70,7 @@ inp.oninput = () => { row.classList.toggle('typed', !!inp.value); touch(); };
 row.onsubmit = (e) => { e.preventDefault(); const t = inp.value.trim(); if (!t) return; inp.value = ''; row.classList.remove('typed'); inp.blur(); hap('tick'); ask(t); };
 function ask(t) {
   U.textContent = t; A.textContent = '';
-  if (!send({ type: 'ask', text: t })) return state('Agent offline', 'alert');
+  if (!send({ type: 'ask', text: t, in_app: true })) return state('Agent offline', 'alert'); // in_app: agentd leases the app on screen first
   turn = true; state('Thinking', 'working');
 }
 $('#stop').onclick = () => { hap(); send({ type: 'stop' }); };

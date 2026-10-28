@@ -17,6 +17,7 @@ import { recent as caughtUp } from './catchup.js';
 const RULES = join(process.env.AGENTOS_HOME || join(homedir(), '.agentos'), 'rules.json');
 const notes = new Map(); // key -> latest notification (Notifs json), oldest first
 let foreground = null, provider = null, codex = null;
+export const onScreen = () => foreground; // {pkg, app} from the last block (the assistant bar leases it)
 export const state = { untrusted: false }; // the last block showed message text: tools.js marks the lease untrusted (Rule of Two)
 let rules = existsSync(RULES) ? JSON.parse(readFileSync(RULES, 'utf8')) : [];
 const saveRules = () => { mkdirSync(dirname(RULES), { recursive: true }); writeFileSync(RULES, JSON.stringify(rules, null, 1)); };

@@ -179,7 +179,7 @@ export async function rpc(method, params = {}, ms = ACT_MS) {
 // The broker carries the task's taint over when a lease is replaced.
 export const tasks = new Map(); // task_id -> the turn that holds it (the reviewer reads its goal and log)
 
-async function lease(ctx, apps) {
+export async function lease(ctx, apps) { // also server.js: the assistant bar leases the app on screen before the model runs
   const turn = ctx.turn, l = turn.lease;
   if (l && apps.every((a) => l.apps.includes(a) || l.refused_apps?.includes(a))) return l;
   const r = await rpc('task.start', { goal: turn.goal.slice(0, 200), apps: [...new Set([...(l?.apps || []), ...apps])], approval_timeout_s: APPROVAL_S,

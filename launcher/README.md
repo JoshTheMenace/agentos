@@ -108,8 +108,11 @@ card with a mic, a text field, a two-line transcript and ×. The app underneath 
   the wake word while in another app (`Wake.wake()` opens the bar listening instead of jumping Home; on Home it still opens voice
   mode). From the Mac: `adb shell su -c "am start-foreground-service -n local.agentos.home/.Bar -a local.agentos.home.BAR_OPEN [--ez listen true]"`.
   **Close:** ×, swipe the card down, 30 s idle (45 s while the mic is open), or Home coming to the front.
-- **Asks** are plain agentd `ask`s on the bar's own WebSocket: "Thinking · 4 s" → tool steps ("Opening Chrome") → "Done · 6.8 s"
-  and the answer (two lines, clamped). A voice delegation shows the task's step and result. Approvals are never here: the line reads
+- **Asks** are agentd `ask`s with `in_app: true` on the bar's own WebSocket. For those, agentd (`server.js ask()`) leases the app
+  on screen (`context.onScreen()`, from the broker's `notifications.list` foreground) before the model runs, reads its screen once
+  (`runTool('screen_read')`) and puts both into the request: "you are in Chrome, it is already leased, act on this screen; 'this',
+  'here' or no app named means Chrome". So "scroll down" or "what's this page about?" need no app name, no open_app and no
+  first read. The bar shows "Thinking · 4 s" → tool steps → "Done · 6.8 s" and the answer (two lines, clamped). A voice delegation shows the task's step and result. Approvals are never here: the line reads
   "Waiting for your approval" and the native card stays the only gate. The island keeps showing progress at the top.
 - **Voice** is the same GPT Live session as voice mode (`voice.start` over WebRTC, one session per socket), the same echo gate
   (`voice-audio.js`) and the same tap: the orb breathes while listening, tap = mute, tap while it speaks = interrupt.
@@ -123,7 +126,11 @@ card with a mic, a text field, a two-line transcript and ×. The app underneath 
   flips the flag (`Native.focus(true)`), the keyboard (AgentOS keys) comes up under the bar (`ADJUST_RESIZE` lifts the card),
   and sending or tapping the app underneath (`FLAG_WATCH_OUTSIDE_TOUCH`) flips it back. Verified 4/4 after moving the IME request
   into `onWindowFocusChanged` (a ViewTreeObserver listener is lost when the view is re-added to the window manager).
-- Tested on the phone over Chrome: typed "what percent battery do I have" (Done · 4.5 s), "In Chrome, scroll down the page"
-  (the agent took a Chrome lease and scrolled the page under the bar, Done · 14.5 s), voice "Listening" with GPT Live connected.
+- **Timings in Chrome (`measure.mjs`, 10-28 noon):** "scroll down" was 14.5 s with "In Chrome, …" (open_app on an app already in
+  front) and failed plain ("Chrome isn't in this task's lease", 5.3 s); now 9.8–10.6 s plain: lease 0.3 s, pre-read 0.5 s, model
+  → act 2.7–3.1 s, the broker's `scroll` 5.0–6.4 s (Actions.scroll + settle ≤ 2 s + the guard-scored re-read of a 90-node page:
+  the next thing to cut, in android/). "what is this page about?" 3.3 s → 3.5 s with zero tool calls (answered from the
+  pre-read screen). Voice "Listening" with GPT Live connected.
   `shots/assistant-bar/`: `listening.png`, `working.png` (island + bar), `done.png`, `open-type-done.mp4` + frames.
-  `drive.mjs` evaluates JS inside the bar's WebView (DevTools) for review scripts.
+  `drive.mjs` evaluates JS inside the bar's WebView (DevTools) for review scripts; `measure.mjs "<ask>"` prints the event
+  timeline of one bar ask from the Mac.

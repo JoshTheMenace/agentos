@@ -9,7 +9,7 @@ import { networkInterfaces } from 'node:os';
 import { WebSocketServer } from 'ws';
 import { agentdToken, cfg, log, provisionClients } from './config.js';
 import { classify } from './guard.js';
-import { endTurn, guardMemory, rpc, tasks } from './tools.js';
+import { endTurn, guardMemory, lease, rpc, runTool, tasks } from './tools.js';
 import * as plugins from './plugins.js';
 import * as memory from './memory/index.js';
 import * as connectors from './memory/connectors/index.js';
@@ -126,7 +126,7 @@ wss.on('connection', (ws, req) => {
   const offEvents = events.onEvent((e) => events.FORWARD.has(e.type) && send(e));
 
   // One model turn (typed, or a voice delegation). Resolves with the final text, or null if busy/unavailable.
-  async function ask(text, provider, emit = send, images = [], source = 'photos') {
+  async function ask(text, provider, emit = send, images = [], source = 'photos', inApp = false) { // inApp: the assistant bar, over the app the user is in
     if (active) return void send({ type: 'error', code: 'busy', message: 'a turn is already running; send stop first' });
     let p = providers[provider || cfg.provider];
     if (!p?.available()) return void send({ type: 'error', code: 'provider_unavailable', message: `provider ${provider || cfg.provider} is not available` });
@@ -147,6 +147,16 @@ wss.on('connection', (ws, req) => {
     const quick = !images.length && catchup.asked(turn.goal); // "what did I miss?": local facts + one short model call, no agent loop (catchup.js)
     const c = p.id === 'local' || quick ? null : await context.block({ goal: turn.goal }); // "what's going on" (untrusted notifications etc.)
     if (c) turn.log = c.log; // the reviewer sees which message "reply back" answers
+    // Assistant bar (launcher Bar.java): the user is inside an app. Lease that app now, so the model needs no open_app or
+    // task_start for it, and say so; "this", "here" or no app named means that app. Scoped to bar asks only.
+    const fg = inApp && c ? context.onScreen() : null;
+    if (fg?.pkg) {
+      try {
+        await lease(ctx, [fg.pkg]);
+        const scr = await runTool('screen_read', {}, ctx); // one round trip saved: the model's first call can be the action
+        note += `\n\n[Asked from the assistant bar while in ${fg.app} (${fg.pkg}). That app is already open on screen and already in this task's lease: do not call open_app, task_start or screen_read first; act on the screen below (its ids are valid now). "this", "here", "the page" or no app named means ${fg.app}.]\nScreen now: ${scr.text}`;
+      } catch (e) { log(`bar lease ${fg.pkg}: ${e.message}`); }
+    }
     const prep = Date.now() - t0; // agentd time before the model sees the request (context block); the bench reads it
     try { r = quick ? await catchup.run({ codex: p.id === 'local' ? null : codex, emit: ctx.emit, signal: abort.signal }) : images.length && p.id === 'local' ? { status: 'failed', error: 'Photos need an internet connection.' } : await p.run(session, (c ? `${c.text}\n\n${turn.goal}` : turn.goal) + note, ctx); }
     catch (e) { r = { status: abort.signal.aborted ? 'interrupted' : 'failed', error: e.message }; }
@@ -196,7 +206,7 @@ wss.on('connection', (ws, req) => {
   ws.on('message', async (raw) => {
     let msg; try { msg = JSON.parse(raw); } catch { return send({ type: 'error', code: 'bad_json' }); }
     switch (msg.type) {
-      case 'ask': return ask(msg.text, msg.provider, send, [msg.images?.[0]].filter((u) => /^data:image\/jpeg;base64,/.test(u)), msg.image_source === 'camera' ? 'camera' : 'photos'); // typed text never answers an approval (taps happen on the card)
+      case 'ask': return ask(msg.text, msg.provider, send, [msg.images?.[0]].filter((u) => /^data:image\/jpeg;base64,/.test(u)), msg.image_source === 'camera' ? 'camera' : 'photos', !!msg.in_app); // typed text never answers an approval (taps happen on the card)
       case 'stop':
         if (!active) return;
         active.abort.abort();

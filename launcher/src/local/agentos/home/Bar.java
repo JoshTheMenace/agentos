@@ -87,7 +87,7 @@ public class Bar extends Service {
   int px(float dp) { return Math.round(dp * density); }
   void js(String code) { ui.post(() -> { if (web != null) web.evaluateJavascript(code, null); }); }
 
-  // ---- the edge handle: a 4 dp pill inside a thumb-sized touch target, right edge, above the thumb's resting spot ----
+  // ---- the edge handle: a 5 dp pill inside an invisible 22x72 dp touch target, mid-right ----
   void makeHandle() {
     FrameLayout box = new FrameLayout(this);
     View pill = new View(this);
@@ -103,7 +103,7 @@ public class Bar extends Service {
     });
     hp = new WindowManager.LayoutParams(px(22), px(72), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, PixelFormat.TRANSLUCENT);
-    hp.gravity = Gravity.END | Gravity.BOTTOM; hp.y = px(150); hp.setTitle("AgentOS handle");
+    hp.gravity = Gravity.END | Gravity.CENTER_VERTICAL; hp.y = 0; // mid-right: clear of chat send buttons (bottom) and toolbars (top) hp.setTitle("AgentOS handle");
     handle = box;
     showHandle();
   }

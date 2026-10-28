@@ -3,7 +3,7 @@
 // usage: node drive.mjs '<expression>' [...more]   (run inside scripts/withphone)
 import { execSync } from 'node:child_process';
 const S = process.env.ANDROID_SERIAL || 'ZY22J3TK8S';
-const pid = execSync(`adb -s ${S} shell pidof local.agentos.home`).toString().trim();
+const pid = execSync(`adb -s ${S} shell pidof local.agentos.home`).toString().trim().split(/\s+/).pop();
 execSync(`adb -s ${S} forward tcp:9224 localabstract:webview_devtools_remote_${pid}`);
 const pages = await (await fetch('http://127.0.0.1:9224/json')).json();
 const page = pages.find((p) => /bar\.html/.test(p.url) && p.type === 'page');
