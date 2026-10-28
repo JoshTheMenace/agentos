@@ -7,7 +7,7 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 ## Running / queue (top = next)
 | # | Track | Who | State |
 |---|---|---|---|
-| 1 | Codex action speed hill-climb (cross-app tasks, screen format, round trips, tools-first) | Claude Opus | running |
+| 1 | Codex action speed hill-climb | Claude Opus | done (rounds 1–3: median task ~30 s → ~11 s, first action 3.1–3.6 s; r3 success 20/21 → 21/21, calculator act 5.5 → 1.4 s, one-call settings/media; GPT-6.1 Terra + Fast tier; agentd/bench/RESULTS.md; r3 commits need the final restart) |
 | 2 | Island below the camera hole, then UI polish pass 1 | Claude Fable | done (8e56541) |
 | 3 | Keyboard autocomplete latency hill-climb | Claude Opus | done (fd5fb1b; typing pause median 7.3 s → 3.5 s) |
 | S1 | Live notifications + reply actions + official APIs | GPT-6.1 Sol | done (6928905, 660377b; reads ~20 ms, reply turn 32 s → handed to speed track) |
