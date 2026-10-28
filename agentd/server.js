@@ -126,7 +126,7 @@ wss.on('connection', (ws, req) => {
   const offEvents = events.onEvent((e) => events.FORWARD.has(e.type) && send(e));
 
   // One model turn (typed, or a voice delegation). Resolves with the final text, or null if busy/unavailable.
-  async function ask(text, provider, emit = send, images = [], source = 'photos', inApp = false) { // inApp: the assistant bar, over the app the user is in
+  async function ask(text, provider, emit = send, images = [], source = 'photos', inApp = false, app = null) { // inApp: the assistant bar, over the app the user is in; app: {pkg, label} it reports
     if (active) return void send({ type: 'error', code: 'busy', message: 'a turn is already running; send stop first' });
     let p = providers[provider || cfg.provider];
     if (!p?.available()) return void send({ type: 'error', code: 'provider_unavailable', message: `provider ${provider || cfg.provider} is not available` });
@@ -149,7 +149,7 @@ wss.on('connection', (ws, req) => {
     if (c) turn.log = c.log; // the reviewer sees which message "reply back" answers
     // Assistant bar (launcher Bar.java): the user is inside an app. Lease that app now, so the model needs no open_app or
     // task_start for it, and say so; "this", "here" or no app named means that app. Scoped to bar asks only.
-    const fg = inApp && c ? context.onScreen() : null;
+    const fg = !inApp ? null : app?.pkg ? { pkg: String(app.pkg), app: String(app.label || app.pkg) } : c ? context.onScreen() : null; // the bar's own report first (no context block needed)
     if (fg?.pkg) {
       try {
         await lease(ctx, [fg.pkg]);
@@ -206,7 +206,7 @@ wss.on('connection', (ws, req) => {
   ws.on('message', async (raw) => {
     let msg; try { msg = JSON.parse(raw); } catch { return send({ type: 'error', code: 'bad_json' }); }
     switch (msg.type) {
-      case 'ask': return ask(msg.text, msg.provider, send, [msg.images?.[0]].filter((u) => /^data:image\/jpeg;base64,/.test(u)), msg.image_source === 'camera' ? 'camera' : 'photos', !!msg.in_app); // typed text never answers an approval (taps happen on the card)
+      case 'ask': return ask(msg.text, msg.provider, send, [msg.images?.[0]].filter((u) => /^data:image\/jpeg;base64,/.test(u)), msg.image_source === 'camera' ? 'camera' : 'photos', !!msg.in_app, msg.app); // typed text never answers an approval (taps happen on the card)
       case 'stop':
         if (!active) return;
         active.abort.abort();

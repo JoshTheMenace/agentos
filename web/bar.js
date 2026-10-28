@@ -53,6 +53,7 @@ bar.close = (fromShell) => {
   if (fromShell) { card.classList.remove('on'); return; }
   card.classList.add('out'); card.classList.remove('on'); setTimeout(() => N.close(), 300);
 };
+let appNow = null; bar.app = (a) => { appNow = a; }; // the app underneath, from the shell (Bar.foreground) each time the bar opens
 bar.refocus = () => inp.focus(); // the shell made the window focusable: ask for the keyboard again
 bar.blur = () => inp.blur();     // a tap on the app underneath
 $('#x').onclick = () => { hap(); bar.close(); };
@@ -70,7 +71,7 @@ inp.oninput = () => { row.classList.toggle('typed', !!inp.value); touch(); };
 row.onsubmit = (e) => { e.preventDefault(); const t = inp.value.trim(); if (!t) return; inp.value = ''; row.classList.remove('typed'); inp.blur(); hap('tick'); ask(t); };
 function ask(t) {
   U.textContent = t; A.textContent = '';
-  if (!send({ type: 'ask', text: t, in_app: true })) return state('Agent offline', 'alert'); // in_app: agentd leases the app on screen first
+  if (!send({ type: 'ask', text: t, in_app: true, app: appNow })) return state('Agent offline', 'alert'); // in_app + app {pkg,label}: agentd leases the app on screen first
   turn = true; state('Thinking', 'working');
 }
 $('#stop').onclick = () => { hap(); send({ type: 'stop' }); };

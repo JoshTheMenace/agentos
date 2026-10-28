@@ -127,6 +127,25 @@ public class Bar extends Service {
       try { wm.addView(web, lp); } catch (Exception e) { Log.w(TAG, "add: " + e); open = false; showHandle(); return; }
     }
     if (ready) js("bar.open(" + listen + ")"); else pendingListen = listen ? 1 : 0;
+    foreground();
+  }
+  /** The app the user is in, from the broker over the owner line (notifications.list {n:0} -> foreground {pkg, app}); the page
+   *  sends it with every ask ({app: {pkg, label}}) so agentd can act on that app without naming it. */
+  void foreground() {
+    new Thread(() -> {
+      try {
+        String tok = Home.readFile(this, "phone.token");
+        java.net.HttpURLConnection h = (java.net.HttpURLConnection) new java.net.URL("http://127.0.0.1:7777/rpc").openConnection();
+        h.setConnectTimeout(1500); h.setReadTimeout(3000); h.setRequestMethod("POST"); h.setDoOutput(true);
+        h.setRequestProperty("Authorization", "Bearer " + tok); h.setRequestProperty("Content-Type", "application/json");
+        h.getOutputStream().write("{\"method\":\"notifications.list\",\"params\":{\"n\":0}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); byte[] buf = new byte[4096]; int n;
+        try (java.io.InputStream in = h.getInputStream()) { while ((n = in.read(buf)) > 0) bo.write(buf, 0, n); }
+        JSONObject r = new JSONObject(bo.toString("UTF-8"));
+        JSONObject fg = r.optJSONObject("foreground");
+        if (fg != null && !fg.optString("pkg").isEmpty()) js("bar.app(" + new JSONObject().put("pkg", fg.optString("pkg")).put("label", fg.optString("app")) + ")");
+      } catch (Exception e) { Log.w(TAG, "foreground: " + e); }
+    }, "bar-fg").start();
   }
   int pendingListen = -1;
   void hide() {
