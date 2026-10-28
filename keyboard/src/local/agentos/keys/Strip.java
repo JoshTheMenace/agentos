@@ -22,14 +22,18 @@ import java.util.List;
  * for a moment; tap the pill to cycle Reply → Rewrite → Fix. Skeleton bars shimmer while loading.
  */
 final class Strip extends View {
-    interface Listener { void onSuggestion(String text); void onMode(int mode); }
+    interface Listener { void onSuggestion(String text); void onMode(int mode); void onWrite(); void onDetailAction(String action); }
+    static final String ACT_TRANSLATE = "Translate", ACT_CATCH_UP = "Catch up";
     static final String[] MODES = {"Reply", "Rewrite", "Fix"};
 
     private final Listener listener;
     private final float d;
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint text = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    private final RectF tmp = new RectF(), dot = new RectF(), pill = new RectF();
+    private final RectF tmp = new RectF(), dot = new RectF(), pill = new RectF(), wand = new RectF();
+    private final RectF[] actRects = {new RectF(), new RectF()};
+    private final String[] acts = {null, null}; // detail-line actions (Translate, Catch up), set by Keys
+    private String notice; // send-safety line; replaces the suggestions while set
     private final RectF[] cells = {new RectF(), new RectF(), new RectF()};
     private final List<String> items = new ArrayList<>();
     private String detail = "";
@@ -51,6 +55,11 @@ final class Strip extends View {
     /** detail: what was used, shown only on request. orbColor: idle / working / ready / blocked. */
     void setContext(String detail, int orbColor) { this.detail = detail; orb = orbColor; invalidate(); }
     void setMode(int m) { mode = m; invalidate(); }
+    /** Calm send-safety warning (null = none). While set, nothing else is shown in the row and nothing is requested. */
+    void setNotice(String n) { notice = n; invalidate(); }
+    boolean hasNotice() { return notice != null; }
+    /** Actions offered on the detail line (null = hidden): translate the last incoming message, catch me up. */
+    void setActions(String translate, String catchUp) { acts[0] = translate; acts[1] = catchUp; }
     void setLoading() { loading = true; items.clear(); invalidate(); }
     /** Replace the suggestions; tappable=false shows a plain message (e.g. "Type a draft to rewrite"). */
     void setItems(List<String> list, boolean tappable) {
@@ -78,13 +87,34 @@ final class Strip extends View {
         fill.setColor(mode == 0 ? Theme.MODE_BG : Theme.MODE_ON); c.drawRoundRect(pill, Theme.MODE_R, Theme.MODE_R, fill);
         text.setColor(mode == 0 ? Theme.TEXT2 : Theme.TEXT); c.drawText(pillText, pill.centerX(), baseline(cy), text);
 
-        float left = dot.right, avail = pill.left - Theme.CELL_GAP * d - left;
+        // ✨ Write for me, left of the pill
+        wand.set(pill.left - Theme.DOT_TOUCH * d - 2 * d, top, pill.left - 2 * d, bottom);
+        text.setTextSize(14 * d); text.setColor(Theme.TEXT); c.drawText(Theme.WAND, wand.centerX(), baseline(cy), text);
+
+        float left = dot.right, avail = wand.left - Theme.CELL_GAP * d - left;
         text.setTextSize(Theme.CHIP_TEXT * d); text.setTypeface(Theme.font(getContext(), Theme.W_CHIP)); text.setTextAlign(Paint.Align.CENTER);
         for (RectF ch : cells) ch.setEmpty();
 
-        if (now < detailUntil) { // the context line, only while asked for
-            text.setTextSize(Theme.CTX_TEXT * d); text.setTypeface(Theme.font(getContext(), Theme.W_CTX)); text.setColor(Theme.TEXT2);
-            c.drawText(TextUtils.ellipsize(detail, text, avail - 8 * d, TextUtils.TruncateAt.END).toString(), left + avail / 2, baseline(cy), text);
+        for (RectF r : actRects) r.setEmpty();
+        if (notice != null) { // send-safety: one quiet amber line, no pop-up
+            text.setTextSize(Theme.CTX_TEXT * d); text.setTypeface(Theme.font(getContext(), Theme.W_CTX)); text.setColor(Theme.NOTICE);
+            c.drawText(TextUtils.ellipsize(notice, text, avail - 8 * d, TextUtils.TruncateAt.END).toString(), left + avail / 2, baseline(cy), text);
+            return;
+        }
+        if (now < detailUntil) { // the context line, only while asked for; actions on its right
+            text.setTextSize(Theme.CTX_TEXT * d); text.setTypeface(Theme.font(getContext(), Theme.W_CTX));
+            float right = left + avail;
+            for (int i = acts.length - 1; i >= 0; i--) {
+                if (acts[i] == null) continue;
+                float aw = text.measureText(acts[i]) + 2 * Theme.MODE_PAD_X * d;
+                actRects[i].set(right - aw, cy - Theme.MODE_H * d / 2, right, cy + Theme.MODE_H * d / 2);
+                fill.setColor(Theme.MODE_BG); c.drawRoundRect(actRects[i], Theme.MODE_R, Theme.MODE_R, fill);
+                text.setColor(Theme.KEY_ACCENT); c.drawText(acts[i], actRects[i].centerX(), baseline(cy), text);
+                right -= aw + 4 * d;
+            }
+            text.setColor(Theme.TEXT2); text.setTextAlign(Paint.Align.LEFT);
+            c.drawText(TextUtils.ellipsize(detail, text, right - 8 * d - left, TextUtils.TruncateAt.END).toString(), left, baseline(cy), text);
+            text.setTextAlign(Paint.Align.CENTER);
             return;
         }
         if (loading) {
@@ -125,8 +155,10 @@ final class Strip extends View {
         float x = e.getX(), y = e.getY();
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                if (dot.contains(x, y)) { showDetail(Theme.DETAIL_MS); return true; }
+                if (dot.contains(x, y)) { showDetail(acts[0] != null || acts[1] != null ? Theme.DETAIL_ACTIONS_MS : Theme.DETAIL_MS); return true; }
+                if (wand.contains(x, y)) { listener.onWrite(); return true; }
                 if (pill.contains(x, y)) { mode = (mode + 1) % 3; listener.onMode(mode); invalidate(); return true; }
+                for (int i = 0; i < acts.length; i++) if (acts[i] != null && actRects[i].contains(x, y)) { detailUntil = 0; invalidate(); listener.onDetailAction(acts[i]); return true; }
                 pressedCell = tappable ? cellAt(x, y) : -1; invalidate(); return true;
             case MotionEvent.ACTION_UP:
                 if (pressedCell >= 0 && cellAt(x, y) == pressedCell) listener.onSuggestion(items.get(pressedCell));

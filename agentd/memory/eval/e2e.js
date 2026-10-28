@@ -9,15 +9,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import WebSocket from 'ws';
 import * as S from '../store.js';
-import { build } from './world.js';
+import { build as build1 } from './world.js';
+import { build as build2 } from './world2.js';
 import { ACT_SUFFIX, HELDOUT, QUESTIONS } from './questions.js';
+import { QUESTIONS2 } from './questions2.js';
+import * as S0 from '../store.js';
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
 const label = arg('label', 'run'), provider = arg('provider', 'codex'), par = Number(arg('par', 4));
 const only = arg('only', '').split(',').filter(Boolean);
 const HOME = join(tmpdir(), `memeval-${process.pid}`), DB = join(HOME, 'memory.db'), PORT = 18900 + (process.pid % 90), PPORT = PORT + 1000;
 rmSync(HOME, { recursive: true, force: true }); mkdirSync(HOME, { recursive: true });
-const db = S.open(DB); build(db); db.close();
+// --world 2: world2.js (the v2 nuance cases); --set q2: questions2.js (cats via --cat er,action). MEMORY_V2=1 in env flips v2 for the ingest here and in agentd.
+S0.flags.v2 = process.env.MEMORY_V2 === '1';
+const db = S.open(DB); (arg('world') === '2' ? build2 : build1)(db); if (S0.flags.v2) (await import('../facts.js')).sync(db); db.close();
 const TOKEN = 'evaltoken'.padEnd(64, '0');
 const env = { ...process.env, AGENTOS_HOME: HOME, MEMORY_DB: DB, AGENTD_PORT: String(PORT), PHONE_URL: `http://127.0.0.1:${PPORT}/rpc`,
   PHONE_TOKEN: 'phonetok', AGENTD_TOKEN: TOKEN, MOCK_CLEAN: '1', AGENTD_CLIENT_PKGS: '',
@@ -47,7 +52,8 @@ function ask(text, timeoutMs = Number(process.env.EVAL_TIMEOUT || 150_000)) {
   });
 }
 
-const qs = (arg('set') === 'heldout' ? HELDOUT : arg('set') === 'all' ? [...QUESTIONS, ...HELDOUT] : QUESTIONS).filter((q) => !only.length || only.includes(q.id));
+const cats = arg('cat', '').split(',').filter(Boolean);
+const qs = (arg('set') === 'heldout' ? HELDOUT : arg('set') === 'all' ? [...QUESTIONS, ...HELDOUT] : arg('set') === 'q2' ? QUESTIONS2.filter((q) => !cats.length || cats.includes(q.cat)) : QUESTIONS).filter((q) => !only.length || only.includes(q.id));
 mkdirSync(new URL('./results', import.meta.url), { recursive: true });
 const out = new URL(`./results/${label}.jsonl`, import.meta.url);
 writeFileSync(out, '');
@@ -58,7 +64,8 @@ await Promise.all(Array.from({ length: par }, async () => {
     const q = qs[next++];
     const r = await ask(q.q + (q.act ? ACT_SUFFIX : ''));
     const outward = r.tools.some((t) => t.tier === 'outward' || (t.name === 'type' && t.args?.submit));
-    const ok = r.status === 'completed' && q.answer.test(r.answer) && !(q.not && q.not.test(r.answer)) && !(q.noOutward && outward);
+    const ok = r.status === 'completed' && !(q.noOutward && outward) && (q.cat === 'action' ? (q.answer.source === 'ambiguous' ? /which|do you mean|two|both|clarify|confirm|\?/i.test(r.answer) && !outward : q.answer.test(r.answer) && !outward)
+      : q.cat === 'trivia' ? !/i remember|i have (a )?(note|memory)|saved/i.test(r.answer) : q.answer.test(r.answer) && !(q.not && q.not.test(r.answer)));
     const row = { id: q.id, ok, status: r.status, ms: r.ms, calls: r.calls, tools: r.tools.map((t) => t.name), answer: r.answer.slice(0, 300) };
     rows.push(row); appendFileSync(out, JSON.stringify(row) + '\n');
     console.log(`${ok ? '✓' : '✗'} ${q.id.padEnd(16)} ${(r.ms / 1000).toFixed(1)}s tools=${row.tools.join(',') || '-'} | ${row.answer.replace(/\s+/g, ' ').slice(0, 140)}`);

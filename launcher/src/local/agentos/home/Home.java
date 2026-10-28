@@ -2,15 +2,22 @@ package local.agentos.home;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ContentProvider;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.ImageDecoder;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
+import android.provider.MediaStore;
+import android.util.Base64;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.CalendarContract;
@@ -115,6 +122,52 @@ public class Home extends Activity {
   @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); js("window.app&&app.home&&app.home()"); } // HOME key while on home: reset
   @Override protected void onResume() { super.onResume(); js("window.app&&app.resume&&app.resume()"); }
   @Override public void onBackPressed() { js("window.app&&app.back&&app.back()"); } // never leave home
+  // Attach (＋): Camera = the system camera writing into our private shot file; Photos = Android's photo picker (no storage
+  // permission). The picture comes back to the page as one JPEG data: URL (long side <= 1280 px, EXIF rotation applied).
+  // The camera shot is deleted as soon as it's read; nothing of it is kept here.
+  void pick(String kind) {
+    Intent i;
+    if ("camera".equals(kind)) {
+      Uri u = Uri.parse("content://" + getPackageName() + ".shot/shot.jpg");
+      i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE).putExtra(MediaStore.EXTRA_OUTPUT, u).addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+      i.setClipData(ClipData.newRawUri("", u));
+    } else i = new Intent(MediaStore.ACTION_PICK_IMAGES).setType("image/*");
+    try { startActivityForResult(i, "camera".equals(kind) ? 2 : 3); } catch (Exception e) { Log.w(TAG, "pick: " + e); js("window.app&&app.picked(null)"); }
+  }
+  @Override protected void onActivityResult(int code, int res, Intent data) {
+    if (code != 2 && code != 3) return;
+    File shot = new File(getCacheDir(), "shot.jpg");
+    Uri u = code == 2 ? Uri.fromFile(shot) : data == null ? null : data.getData();
+    new Thread(() -> {
+      String url = null;
+      try {
+        if (res == RESULT_OK && u != null) {
+          Bitmap bm = ImageDecoder.decodeBitmap(code == 2 ? ImageDecoder.createSource(shot) : ImageDecoder.createSource(getContentResolver(), u), (d, info, src) -> {
+            int w = info.getSize().getWidth(), h = info.getSize().getHeight(); float k = Math.min(1f, 1280f / Math.max(w, h));
+            d.setTargetSize(Math.round(w * k), Math.round(h * k)); d.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
+          });
+          ByteArrayOutputStream o = new ByteArrayOutputStream(); bm.compress(Bitmap.CompressFormat.JPEG, 80, o); bm.recycle();
+          url = "data:image/jpeg;base64," + Base64.encodeToString(o.toByteArray(), Base64.NO_WRAP);
+        }
+      } catch (Exception e) { Log.w(TAG, "picked: " + e); }
+      shot.delete();
+      js("window.app&&app.picked(" + (url == null ? "null" : JSONObject.quote(url)) + "," + JSONObject.quote(code == 2 ? "camera" : "photos") + ")");
+    }, "pick").start();
+  }
+
+  /** content://local.agentos.home.shot/shot.jpg: the one file the system camera may write (granted per capture, not exported). */
+  public static class Shot extends ContentProvider {
+    @Override public boolean onCreate() { return true; }
+    @Override public ParcelFileDescriptor openFile(Uri u, String mode) throws java.io.FileNotFoundException {
+      return ParcelFileDescriptor.open(new File(getContext().getCacheDir(), "shot.jpg"), ParcelFileDescriptor.parseMode(mode.contains("w") ? "rwt" : "r"));
+    }
+    @Override public String getType(Uri u) { return "image/jpeg"; }
+    @Override public Cursor query(Uri u, String[] p, String s, String[] a, String o) { return null; }
+    @Override public Uri insert(Uri u, ContentValues v) { return null; }
+    @Override public int delete(Uri u, String s, String[] a) { return 0; }
+    @Override public int update(Uri u, ContentValues v, String s, String[] a) { return 0; }
+  }
+
   @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
     if (pendingMic == null) return;
     boolean ok = res.length > 0; for (int x : res) ok &= x == PackageManager.PERMISSION_GRANTED;
@@ -157,6 +210,7 @@ public class Home extends Activity {
       return new JSONObject().put("pkg", getPackageName()).put("dev", devOrigin != null).put("density", density)
           .put("top", px(insTop)).put("bottom", px(insBottom)).put("ime", px(insIme)).toString();
     }
+    @JavascriptInterface public void pick(String kind) { runOnUiThread(() -> Home.this.pick(kind)); } // "camera" | "photos" -> app.picked(dataUrl|null, kind)
     @JavascriptInterface public String token(String which) { return file("agentd.token"); } // the only token this app holds
     @JavascriptInterface public String apps() throws Exception {
       Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);

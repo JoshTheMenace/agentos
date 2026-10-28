@@ -303,7 +303,7 @@ body{position:fixed;inset:0}
 .vhint{margin-top:40px;width:100%;z-index:1;display:flex;flex-direction:column;gap:12px;transition:opacity .4s;animation:rise .7s var(--soft) both}
 .vhint .k{margin-bottom:2px}
 .vhint p{font-size:19px;font-weight:500;letter-spacing:-.025em;color:var(--l2);line-height:1.3}
-.voice.live .vhint{opacity:0;pointer-events:none}
+.voice.live .vhint{display:none} /* (opacity lost to the rise animation's fill) */
 .vsteps{list-style:none;margin-top:16px;width:100%;display:flex;flex-direction:column;gap:5px;z-index:1}
 .vsteps li{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--l3);animation:rise .4s var(--soft) both}
 .vtask{width:100%;margin-top:14px;z-index:1}
@@ -326,4 +326,16 @@ body{position:fixed;inset:0}
 .kbtn:active{transform:scale(.9)}
 .kbtn.red{color:var(--red)}
 .kbtn.on{background:var(--l1);color:#000}
-.vcam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5;z-index:-1;pointer-events:none} /* voice vision: what the camera sees, behind the glass */
+.vcam{position:absolute;top:calc(var(--top) + 6px);right:16px;width:72px;height:96px;object-fit:cover;border-radius:18px;z-index:2;box-shadow:0 8px 30px rgba(0,0,0,.5)} /* live camera: small preview, tap to stop */
+.ask .att{width:36px;height:36px;margin-left:-11px;border-radius:50%;background:rgba(255,255,255,.12);color:var(--l1);display:grid;place-items:center;flex:none}
+.askpic{position:relative;align-self:flex-start;margin:0 0 8px 6px;flex:none}
+.askpic img,.msg img{display:block;width:64px;height:64px;object-fit:cover;border-radius:14px}
+.msg img{width:150px;height:auto;max-height:200px;margin:-3px -8px 6px auto}
+.askpic button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#3a3a3c;color:#fff;display:grid;place-items:center}
+.attmenu[hidden],.attmenu [hidden],.askpic[hidden]{display:none}
+.attmenu{position:fixed;left:16px;bottom:calc(max(var(--bottom),var(--ime)) + 72px);z-index:60;border-radius:20px;padding:6px;display:flex;flex-direction:column;min-width:190px;animation:rise .3s var(--soft) both}
+.attmenu button{display:flex;align-items:center;gap:12px;padding:12px 14px;font-size:15px;color:var(--l1);border-radius:14px;text-align:left}
+.attmenu button:active{background:rgba(255,255,255,.08)}
+.vsteps img{width:28px;height:28px;object-fit:cover;border-radius:8px}
+.sorb.muted .core{filter:grayscale(1) brightness(.6);animation:none}
+

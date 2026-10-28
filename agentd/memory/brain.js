@@ -11,6 +11,8 @@
 import * as S from './store.js';
 import { groups, relink } from './resolve.js';
 import { profile as derive } from './profile.js';
+import * as identity from './identity.js';
+import * as F from './facts.js';
 
 const H = 36e5, D = 864e5;
 const STOP = new Set(('a an the i me my mine you your yours he him his she her hers it its we us our they them their what whats which who whom whose when where why how ' +
@@ -46,14 +48,18 @@ const caches = new WeakMap();
 function cache(db, cloud = true) {
   // People, links and closeness change slowly: rebuild on new cards/aliases/consent, or every 50 new events (~200 ms on the
   // phone with ~1,300 events), not on every incoming message.
+  if (S.flags.v2) { identity.ensure(db); F.ensure(db); }
   const sig = db.prepare(`SELECT ((SELECT max(id) FROM event)/50)||'/'||(SELECT count(*) FROM alias)||'/'||(SELECT count(*) FROM entity)||'/'||
-    (SELECT max(id) FROM consent)||'/'||(SELECT count(*) FROM event)/50 AS s`).get().s;
+    (SELECT max(id) FROM consent)||'/'||(SELECT count(*) FROM event)/50${S.flags.v2 ? "||'/'||(SELECT count(*) FROM identity_evidence)||'/'||(SELECT count(*) FROM fact)" : ''} AS s`).get().s;
   const srcs = S.readable(db, cloud), IN = srcs.map(() => '?').join(',');
   const per0 = caches.get(db) ?? caches.set(db, {}).get(db);
   let c = per0[cloud];
   if (c?.sig === sig) return c;
-  relink(db);
-  const g = groups(db);
+  let g;
+  if (S.flags.v2) { // identity.js: SAME links merge; MAYBE links are followed for reads (soft) but never for actions (hard)
+    identity.relink(db); const ig = identity.groups(db);
+    g = { canon: ig.softCanon, members: ig.soft, hard: ig.canon, hardMembers: ig.members, maybe: ig.maybe, status: ig.status };
+  } else { relink(db); g = groups(db); }
   const close = new Map(); // canon id -> closeness 0..1 (how much and how recently you deal with them, over every app)
   // closeness = how much you deal with someone, per channel (log-scaled so one chatty channel can't dominate), fading
   // over a month: a 1:1 text counts 1.2, a call 1.5, a group-chat line 0.15, a shared calendar event 0.3, a contact card 0.5
@@ -67,16 +73,16 @@ function cache(db, cloud = true) {
   for (const r of db.prepare(`SELECT DISTINCT entity_id id FROM alias WHERE source='contacts' AND source IN (${IN})`).all(...srcs)) close.set(g.canon(r.id), (close.get(g.canon(r.id)) || 0) + 0.4);
   const maxC = Math.max(1, ...close.values());
   for (const [k, v] of close) close.set(k, v / maxC);
-  const names = new Map(); // token or full name -> Set(canon ids)
-  const add = (key, id) => { if (key && key.length > 1) (names.get(key) ?? names.set(key, new Set()).get(key)).add(id); };
+  const names = new Map(), raw = new Map(); // token or full name -> Set(canon ids); raw: -> Set(card ids), for "which Joe?" (actions)
+  const add = (key, id, rid) => { if (key && key.length > 1) { (names.get(key) ?? names.set(key, new Set()).get(key)).add(id); if (rid) (raw.get(key) ?? raw.set(key, new Set()).get(key)).add(rid); } };
   const people = db.prepare(`SELECT id, name, type FROM entity WHERE type IN ('person','group') AND name NOT LIKE 'Unknown%'`).all();
   for (const p of people) {
-    const id = g.canon(p.id), n = norm(p.name), t = n.split(' ').filter(Boolean);
-    add(n, id); if (p.type === 'person' && t.length > 1 && !NOT_NAMES.has(t[0])) add(t[0], id); // groups only by their full name
+    const id = g.canon(p.id), n = norm(p.name).replace(/\s*\b(discord|slack|messenger|whatsapp|instagram|telegram|signal|notifications|calendar)$/, ''), t = n.split(' ').filter(Boolean);
+    add(n, id, p.id); if (p.type === 'person' && t.length > 1 && !NOT_NAMES.has(t[0])) add(t[0], id, p.id); // groups only by their full name
     for (const r of Object.entries(REL)) if (r[1].includes(n)) for (const w of r[1]) add(w, id);
   }
-  for (const a of db.prepare(`SELECT entity_id, value FROM alias WHERE kind NOT IN ('phone','email','chat') AND source IN (${IN})`).all(...srcs)) add(norm(a.value), g.canon(a.entity_id));
-  c = { sig, g, close, names, srcs, IN, name: new Map(db.prepare('SELECT id, name, type FROM entity').all().map((e) => [e.id, e])) };
+  for (const a of db.prepare(`SELECT entity_id, value FROM alias WHERE kind NOT IN ('phone','email','chat') AND source IN (${IN})`).all(...srcs)) add(norm(a.value), g.canon(a.entity_id), a.entity_id);
+  c = { sig, g, close, names, raw, srcs, IN, name: new Map(db.prepare('SELECT id, name, type FROM entity').all().map((e) => [e.id, e])) };
   per0[cloud] = c;
   return c;
 }
@@ -125,7 +131,7 @@ export function plan(db, question, now = Date.now(), cloud = true) {
   const facets = Object.keys(FACETS).filter((f) => FACETS[f].re.test(q.replace(ACTION, '')));
   const apps = Object.keys(APPS).filter((a) => new RegExp(`\\b${a}\\b`).test(q.replace(ACTION, '')));
   // people: full names / aliases first (longest n-gram), then first names; ambiguous names split the score
-  const people = new Map(), used = new Set();
+  const people = new Map(), used = new Set(), keys = [];
   for (let n = 3; n >= 1; n--) for (let i = 0; i + n <= words.length; i++) {
     if ([...Array(n).keys()].some((k) => used.has(i + k))) continue;
     const key = words.slice(i, i + n).join(' ');
@@ -133,6 +139,7 @@ export function plan(db, question, now = Date.now(), cloud = true) {
     const ids = c.names.get(key);
     if (!ids) continue;
     for (let k = 0; k < n; k++) used.add(i + k);
+    keys.push(key);
     const list = [...ids], tot = list.reduce((s, id) => s + 0.2 + (c.close.get(id) || 0), 0);
     for (const id of list) people.set(id, Math.max(people.get(id) || 0, list.length === 1 ? 1 : (0.2 + (c.close.get(id) || 0)) / tot, n > 1 ? 1 : 0));
   }
@@ -152,7 +159,7 @@ export function plan(db, question, now = Date.now(), cloud = true) {
     : /^(who|whoever)\b|\b(whoever|the (person|guy|girl|one) (who|that|i))\b|\bwho s\b/.test(q) || (ACTION.test(q) && !people.size) ? 'who' : null;
   const unknown = /\b(unknown|random|unsaved|new) (number|caller|sender)\b|\bnumber i don t know\b/.test(q);
   if (unknown) for (const w of ['unknown', 'random', 'unsaved', 'new', 'caller', 'sender']) terms.delete(w);
-  return { q, window, facets, apps, unknown, people: [...people].map(([id, score]) => ({ id, score })).sort((a, b) => b.score - a.score), terms: [...terms], intent, now, action: ACTION.test(q) };
+  return { q, window, facets, apps, unknown, people: [...people].map(([id, score]) => ({ id, score })).sort((a, b) => b.score - a.score), terms: [...terms], intent, now, action: ACTION.test(q), keys };
 }
 
 // ---------------------------------------------------------------- 2. recall
@@ -236,7 +243,7 @@ const when = (t, now) => {
   return `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${rel ? ` (${rel})` : ''}`;
 };
 function card(db, c, { e, ps, score }, cloud, now) {
-  const nm = (id) => { const x = c.name.get(c.g.canon(id)); return x && (cloud ? S.redact(db, x.name) : x.name); };
+  const nm = (id) => { const x = c.name.get(c.g.hard ? c.g.hard(id) : c.g.canon(id)); return x && (cloud ? S.redact(db, x.name) : x.name); };
   const from = ps.filter((x) => x.role === 'from').map((x) => nm(x.id)), to = ps.filter((x) => x.role === 'to' || x.role === 'attendee').map((x) => nm(x.id));
   const grp = ps.filter((x) => x.role === 'group').map((x) => nm(x.id)), place = ps.filter((x) => x.role === 'place').map((x) => nm(x.id));
   const app = ps.filter((x) => ['app', 'player', 'used', 'site', 'album', 'artist'].includes(x.role)).map((x) => pretty(c.name.get(x.id)?.name));
@@ -249,15 +256,17 @@ function card(db, c, { e, ps, score }, cloud, now) {
 
 function personCard(db, c, id, cloud) {
   const ids = c.g.members(id), en = c.name.get(id), Q = ids.map(() => '?').join(','), S2 = c.srcs, IN = c.IN; // only sources this reader may see
-  const aka = [...new Set([...ids.map((x) => c.name.get(x)?.name), ...db.prepare(`SELECT value FROM alias WHERE entity_id IN (${Q}) AND kind NOT IN ('phone','email','chat') AND source IN (${IN})`).all(...ids, ...S2).map((a) => a.value)])]
+  const hardIds = c.g.hardMembers ? c.g.hardMembers(id) : ids, maybe = ids.filter((x) => !hardIds.includes(x)).map((x) => c.name.get(x)?.name).filter(Boolean);
+  const aka = [...new Set([...hardIds.map((x) => c.name.get(x)?.name), ...db.prepare(`SELECT value FROM alias WHERE entity_id IN (${Q}) AND kind NOT IN ('phone','email','chat') AND source IN (${IN})`).all(...ids, ...S2).map((a) => a.value)])]
     .filter((n) => n && n !== en?.name);
   const al = db.prepare(`SELECT DISTINCT kind, value FROM alias WHERE entity_id IN (${Q}) AND kind IN ('phone','email') AND source IN (${IN})`).all(...ids, ...S2);
   const apps = db.prepare(`SELECT a.name, count(*) n, max(e.ts) last FROM event_entity pe JOIN event e ON e.id=pe.event_id
     JOIN event_entity ae ON ae.event_id=e.id AND ae.role='app' JOIN entity a ON a.id=ae.entity_id WHERE pe.entity_id IN (${Q}) AND e.source IN (${IN}) GROUP BY a.name ORDER BY last DESC`).all(...ids, ...S2);
   const srcs = db.prepare(`SELECT DISTINCT e.source FROM event e JOIN event_entity pe ON pe.event_id=e.id WHERE pe.entity_id IN (${Q}) AND e.source IN (${IN})`).all(...ids, ...S2).map((r) => r.source);
-  const links = db.prepare(`SELECT l.conf, l.why FROM entity_link l WHERE l.id IN (${Q}) OR l.canon IN (${Q})`).all(...ids, ...ids);
+  const links = S.flags.v2 ? db.prepare(`SELECT l.score conf, l.status, l.why FROM identity_link l WHERE l.a IN (${Q}) OR l.b IN (${Q})`).all(...ids, ...ids).map((l) => ({ conf: l.conf / 10, why: `${l.status === 'same' ? 'same person' : 'possibly the same person'}: ${JSON.parse(l.why).map((w) => w[2]).join(', ')}` }))
+    : db.prepare(`SELECT l.conf, l.why FROM entity_link l WHERE l.id IN (${Q}) OR l.canon IN (${Q})`).all(...ids, ...ids);
   const red = (s) => (cloud ? S.redact(db, s) : s);
-  return { id, name: red(en?.name), also: aka.length ? aka.map(red) : undefined, type: en?.type,
+  return { id, name: red(en?.name), also: aka.length ? aka.map(red) : undefined, maybe: maybe.length ? maybe.map(red) : undefined, type: en?.type,
     phone: al.filter((a) => a.kind === 'phone').map((a) => (cloud ? S.pseudo(db, 'P', a.value) : a.value)), email: al.filter((a) => a.kind === 'email').map((a) => (cloud ? S.pseudo(db, 'E', a.value) : a.value)),
     apps: [...new Set([...apps.map((a) => pretty(a.name)), ...srcs.filter((s) => ['sms', 'calllog', 'calendar'].includes(s)).map((s) => ({ sms: 'SMS', calllog: 'calls', calendar: 'calendar' })[s])])],
     closeness: +(c.close.get(id) || 0).toFixed(2), linked: links.length ? links.map((l) => `${l.why} (${Math.round(l.conf * 100)}%)`) : undefined };
@@ -355,12 +364,35 @@ export function ask(db, question, { cloud = true, now = Date.now(), k = 6 } = {}
       AND e.kind IN ('message','call') AND e.source IN (${srcs.map(() => '?')}) AND e.ts <= ? ORDER BY e.ts DESC LIMIT 1`).get(...ids, ...srcs, now);
     if (l) facts.push({ fact: `Last ${l.kind} with ${r.people[0].name}: ${when(l.ts, now)} via ${l.source}`, cites: [l.id] });
   }
-  const PK = [[/\b(home|get back|house|address)\b/, 'home'], [/\b(work|office|job)\b/, 'work'], [/\b(usually|routine|habit|every (day|morning)|always)\b/, 'routine'],
+  const PK = [[/\b(home|get back|house|address)\b/, 'home'], [/\b(work|office|job)\b/, 'work'], [/\b(usually|routine|habit|every (day|morning)|always|mornings?|most days)\b/, 'routine'],
     [/\b(close|closest|best friend|friends|family)\b/, 'close_people'], [/\b(apps?|screen time|phone time)\b/, 'apps']].filter(([re]) => re.test(p.q)).map(([, k]) => k);
   if (PK.length) for (const f of profile(db, { cloud, now })) if (PK.includes(f.k)) facts.push({ fact: f.fact, cites: f.cites, profile: true });
+  if (S.flags.v2) {
+    // durable facts (facts.js): about the people named, about the owner when the question is about "me", else by words
+    const hist = /\b(before|used to|previously|old|earlier|was|were|moved from|first)\b/.test(p.q), named = p.people.slice(0, 2).flatMap((x) => c.g.members(x.id));
+    let fs = named.length ? F.list(db, { about: named, history: hist, cloud, srcs }) : [];
+    if (!named.length || /\b(my|mine|am i|do i|did i|i m|i am|i take|i prefer|i like|should i)\b/.test(p.q)) fs.push(...F.list(db, { about: [db.me], q: p.terms.join(' '), history: hist, cloud, srcs }));
+    if (!fs.length && p.terms.length) fs = F.list(db, { q: p.terms.join(' '), history: hist, cloud, srcs });
+    const hit = p.terms.length ? fs.filter((f) => p.terms.some((t) => `${f.pred} ${F.say(f)}`.toLowerCase().includes(t))) : [];
+    if (hit.length) fs = [...hit, ...fs.filter((f) => !hit.includes(f))];
+    else if (p.terms.length && named.length) fs = [...fs.filter((f) => f.pred === 'relationship'), ...fs.filter((f) => f.pred !== 'relationship')].slice(0, 2); // the question is about something else: just who they are
+    for (const f of fs.slice(0, hit.length ? 6 : 4)) facts.push({ fact: f.text, cites: f.event_id ? [f.event_id] : [], memory: f.id });
+    // an outward action to a name that fits two different people: say so, and never pick one
+    if (p.action && p.keys.length) {
+      const rid = [...(c.raw.get(p.keys[0]) || [])].filter((id) => c.name.get(id)?.type === 'person'), hard = new Map();
+      for (const id of rid) (hard.get(c.g.hard(id)) ?? hard.set(c.g.hard(id), []).get(c.g.hard(id))).push(id);
+      if (hard.size > 1) {
+        const desc = [...hard].map(([h, ids]) => { const n = c.name.get(h)?.name, rel = F.list(db, { about: ids, cloud, srcs }).find((f) => f.pred === 'relationship'); return `${cloud ? S.redact(db, n) : n}${rel ? ` (your ${rel.obj})` : ''}${ids.some((i) => db.prepare(`SELECT 1 FROM alias WHERE entity_id=? AND source='contacts'`).get(i)) ? ' [contact]' : ''}`; });
+        facts.push({ fact: `Ambiguous: "${p.keys[0]}" could be ${desc.join(' or ')}. Ask the user which one before sending anything; do not guess.`, cites: [], ambiguous: desc });
+      } else if (hard.size === 1 && c.g.maybe) {
+        const h = [...hard.keys()][0], mb = c.g.maybe(h).filter((m) => c.g.hard(m.id) !== h);
+        if (mb.length) facts.push({ fact: `Note: ${c.name.get(h)?.name} is possibly (not confirmed) the same person as ${mb.map((m) => c.name.get(m.id)?.name).join(' / ')}; send only to the card the user named.`, cites: [] });
+      }
+    }
+  }
   const top = facts.find((f) => f.person);
   if (top && r.people[0]?.id !== top.person) r.people = [personCard(db, c, top.person, cloud), ...r.people.filter((x) => x.id !== top.person)].slice(0, 4);
-  const have = new Set(r.events.map((e) => e.id)), cited = facts.flatMap((f) => f.cites).filter((id) => !have.has(id)).slice(0, 3);
+  const have = new Set(r.events.map((e) => e.id)), cited = facts.filter((f) => !f.memory).flatMap((f) => f.cites).filter((id) => !have.has(id)).slice(0, 3);
   const extra = cited.map((id) => db.prepare('SELECT * FROM event WHERE id=?').get(id)).filter((e) => e && srcs.includes(e.source))
     .map((e) => card(db, c, { e, ps: db.prepare('SELECT entity_id id, role FROM event_entity WHERE event_id=?').all(e.id) }, cloud, now));
   delete r._scored;
@@ -372,17 +404,33 @@ export function ask(db, question, { cloud = true, now = Date.now(), k = 6 } = {}
 const DEVICE = /^(please )?(set|start|stop|turn|open|launch|close|play|pause|resume|skip|navigate|take|search|google|wake|increase|decrease|raise|lower|mute|unmute|enable|disable|block|unblock|install|uninstall|show|go|scroll|tap|type|any trackers)\b/;
 export function context(db, goal, { cloud = true, now = Date.now(), max = 3 } = {}) {
   goal = String(goal).replace(/\s*\([^()]*\)\s*$/, ''); // a trailing aside ("(asap)", the eval's "(Eval: just say who...)") isn't what to recall
-  const p = plan(db, goal, now, cloud);
-  if (!p.people.length && !p.intent && !p.window && !p.terms.length) return null;
+  const p = plan(db, goal, now, cloud), aboutMe = S.flags.v2 && /\b(about me|know about me|remember about me|my (preferences|favou?rites|habits)|who am i)\b/.test(p.q);
+  if (!p.people.length && !p.intent && !p.window && !p.terms.length && !aboutMe) return null;
   if (!p.people.length && !p.intent && DEVICE.test(p.q)) return null; // "set an alarm for 7" needs no memories
   const a = ask(db, goal, { cloud, now, k: max + 2 });
   const top = Math.max(0, ...a.events.map((e) => e.score ?? 0));
-  const cited = new Set(a.facts.flatMap((f) => f.cites));
+  const cited = new Set(a.facts.filter((f) => !f.memory).flatMap((f) => f.cites)); // a stored fact already says it: its source event needn't take a slot
   const strong = a.events.filter((e) => cited.has(e.id) || (e.score ?? 0) >= Math.max(0.9, 0.6 * top)).slice(0, max);
+  if (aboutMe) for (const l of F.about(db, { cloud, names: (id, n) => c0(db, cloud).name.get(id)?.name || n, canon: (id) => c0(db, cloud).g.hard(id) }).lines) a.facts.push({ fact: l, cites: [], profile: true });
   if (!a.facts.length && !a.plan.people.length && !strong.length) return null;
   const named = a.plan.people.length, target = a.facts.some((f) => f.person);
   return { facts: a.facts, people: a.people.slice(0, target ? 1 : named ? Math.min(2, named) : strong.length ? 1 : 0), events: strong, plan: a.plan };
 }
+
+const c0 = (db, cloud) => cache(db, cloud);
+// People the owner should settle (identity.js), the digest, facts: for UIs and the proactivity agent (index.js wraps these).
+export const v2 = { pending: (db, limit) => { cache(db); return identity.pending(db, limit); }, confirm: (db, a, b, same, actor) => { const r = identity.confirm(db, a, b, same, actor); caches.delete(db); return r; },
+  about: (db, { cloud = true, budget } = {}) => F.about(db, { cloud, budget, names: (id, n) => c0(db, cloud).name.get(id)?.name || n, canon: (id) => c0(db, cloud).g.hard(id) }),
+  // resolve a name for an outward action: {ok, person} or {ok:false, ask, candidates}
+  target(db, name, { cloud = true } = {}) {
+    const c = cache(db, cloud), key = norm(name), rid = [...(c.raw.get(key) || [])].filter((id) => c.name.get(id)?.type === 'person'), hard = new Map();
+    for (const id of rid) (hard.get(c.g.hard(id)) ?? hard.set(c.g.hard(id), []).get(c.g.hard(id))).push(id);
+    const cand = [...hard].map(([h, ids]) => ({ id: h, name: c.name.get(h)?.name, cards: ids.map((i) => c.name.get(i)?.name), contact: ids.some((i) => db.prepare(`SELECT 1 FROM alias WHERE entity_id=? AND source='contacts'`).get(i)),
+      maybe: c.g.maybe ? c.g.maybe(h).filter((m) => c.g.hard(m.id) !== h).map((m) => c.name.get(m.id)?.name) : [] }));
+    if (!cand.length) return { ok: false, ask: `I don't know anyone called "${name}".`, candidates: [] };
+    if (cand.length > 1) return { ok: false, ask: `Which ${name}: ${cand.map((x) => x.name).join(' or ')}?`, candidates: cand };
+    return { ok: true, person: cand[0], note: cand[0].maybe.length ? `possibly the same person as ${cand[0].maybe.join(' / ')} (not confirmed)` : undefined };
+  } };
 
 // The derived profile (profile.js) with closeness from the cross-app person groups.
 export function profile(db, { cloud = true, now = Date.now() } = {}) {

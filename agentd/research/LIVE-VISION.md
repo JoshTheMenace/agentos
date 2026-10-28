@@ -74,7 +74,7 @@ We picked `gpt-6-luna` (`VISION_MODEL`).
 - **Bare client** `agentd/voice.html`: a Camera button, a frame at speech start, and `?img=<url>` to stand in for the camera in tests.
 
 ### Flag and settings
-- `VOICE_VISION=1`, or the file `~/.agentos/vision.on`, turns it on. **Default off.** Off means: no camera button, `voice.camera`/`voice.frame` are ignored, and `route()` never picks `look_screen`.
+- **On by default since 10-27 late** (`~/.agentos/vision.off` or `VOICE_VISION=0` turns it off). Off means: no camera button, `voice.camera`/`voice.frame` are ignored, and `route()` never picks `look_screen`.
 - `VISION_MODEL` (default `gpt-6-luna`).
 - `bench/up.sh` passes both through.
 
@@ -119,3 +119,25 @@ Setup: `touch ~/.agentos/vision.on` and restart agentd. Have a plant and a print
 - GPT Live once added a stray line after an answer ("Stinger's go home, champ.") during silence.
 - Refused looks count in Home's "N actions blocked today" (decision `refused`).
 - Test leftovers: up to two Chrome tabs opened on the phone (en.wikipedia.org/wiki/Monstera_deliciosa, github.com/login). Nothing was typed or sent.
+
+## 7. Attach + hands-free (10-27 late, deployed)
+ChatGPT-style. **＋** next to "What should I do?" and in the voice footer opens Camera / Photos (and Live camera in voice).
+- **Camera** = the system camera (`ACTION_IMAGE_CAPTURE`) writing into the launcher's private `Home.Shot` file; **Photos** = Android's photo picker (no storage permission). `Home.pick` returns one JPEG data: URL (long side ≤ 1280, EXIF rotation applied). The camera file is deleted as soon as it's read; nothing goes to DCIM.
+- **Typed:** the picture is a chip on the message, then goes to the task model (gpt-6.1-terra) **natively** as a Codex `image` input; there's no eyes step. Other brains (Claude, local) get the eyes' description instead. Phone, warm: first text **4.0–5.9 s** (one 13.6 s outlier). Plain text questions on the same connection: 1.6–6.4 s.
+- **Voice is hands-free:** the mic is always on and the server decides when you've stopped talking. Tapping the orb only mutes; the power button ends. A local level meter lights the orb while you talk.
+  - **Live camera:** a small preview (tap it to stop). One 768 px frame goes out each time you start talking (at most one per 3 s).
+  - **A shared photo** goes in silently as a `[PHOTO]` note, and the voice answers from it on your next words.
+  - GPT Live **can't speak first** on this path. `response.create` and `response.item.create` both fail with "requires a session with Responses delegation", and `appendSpeech`/`appendText` without an open hand-off are only heard on the next turn.
+  - Phone, TTS through the launcher's real WebRTC path, times from the end of speech to the reply audio:
+
+    | Question | Reply audio starts |
+    |---|---|
+    | Plain question | 1.5–2.0 s |
+    | Live camera "what does this sign say?" (exact text) | 1.8 s |
+    | Follow-up | 1.4 s |
+    | Shared photo, then "how far is that hike?" | 2.5 s |
+
+  - Eyes times: live frame 1.2–1.5 s; shared 1024 px photo 3.5–6.4 s, which is done before the user asks.
+  - The real back camera works in the WebView (576×1280 frames).
+- **Activity:** every picture sent to a model is one `image.sent` line in the broker's audit chain: "Camera photo / Your photo / Live camera frame sent to <model> · N KB". Screenshots keep their own `screen.capture` line. There are no pop-ups.
+- **Not tested:** a real human voice on the phone's mic, including echo while hands-free (only TTS injected into the mic stream was tested).

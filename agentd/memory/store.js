@@ -24,6 +24,12 @@ export const SOURCES = {
 };
 export const SCOPES = ['cloud', 'local']; // cloud: redacted results may go to cloud models. local: only local models see it.
 const USER = 'user'; // memory_remember notes: the user said it, no grant needed
+// MEMORY_V2=1: evidence-scored identity (identity.js), facts (facts.js). Evals flip it in code before building a world.
+export const flags = { v2: process.env.MEMORY_V2 === '1' };
+// Apps that show the owner's own address-book name for a sender (so a name there IS the contact). Discord/Slack/Messenger
+// show the other person's self-chosen name: the same name there is only a hint (identity.js).
+export const ADDRESS_BOOK = /whatsapp|signal|telegram|messag|sms|mms|dialer|phone|contacts|calllog/i;
+export const PLATFORM = { 'com.discord': 'Discord', 'com.Slack': 'Slack', 'com.facebook.orca': 'Messenger', 'com.whatsapp': 'WhatsApp', 'com.instagram.android': 'Instagram', 'org.telegram.messenger': 'Telegram', 'org.thoughtcrime.securesms': 'Signal' };
 
 const sha = (s) => createHash('sha256').update(s).digest('hex');
 
@@ -168,11 +174,20 @@ export function entity(db, type, name) {
 }
 
 // Find or create a person by any alias (exact match only; no fuzzy merging). Unknown numbers get a pseudonymous name.
-export function person(db, source, name, aliases = []) {
+// v2: a name alone only merges when the app shows address-book names (WhatsApp, SMS) or it is the same platform; a
+// "Chris Park" on Discord becomes its own card "Chris Park (Discord)" and identity.js decides, with evidence, who he is.
+export function person(db, source, name, aliases = [], platform) {
   aliases = aliases.filter((a) => a.value).map((a) => ({ ...a, value: a.kind === 'phone' ? normPhone(a.value) : a.kind === 'email' ? a.value.toLowerCase() : a.value }));
   let id;
   for (const a of aliases) id ??= db.prepare('SELECT entity_id FROM alias WHERE kind=? AND value=?').get(a.kind, a.value)?.entity_id;
-  if (!id && name) id = db.prepare(`SELECT id FROM entity WHERE type='person' AND name=?`).get(name)?.id;
+  if (!id && name) {
+    const hit = db.prepare(`SELECT id FROM entity WHERE type='person' AND name=?`).get(name)?.id;
+    const pkg = aliases.find((a) => a.kind === 'chat')?.value.split('|')[0], label = platform || PLATFORM[pkg] || pkg?.split('.').at(-1) || source;
+    const scoped = () => ADDRESS_BOOK.test(label) || ADDRESS_BOOK.test(source) || !db.prepare('SELECT 1 FROM alias WHERE entity_id=?').get(hit)
+      || db.prepare(`SELECT 1 FROM alias WHERE entity_id=? AND (source=? OR (kind='chat' AND value LIKE ?))`).get(hit, source, `${pkg}|%`);
+    if (hit && (!flags.v2 || scoped())) id = hit;
+    else if (hit) { name = `${name} (${label})`; id = db.prepare(`SELECT id FROM entity WHERE type='person' AND name=?`).get(name)?.id; }
+  }
   const label = name || (aliases[0] ? `Unknown ${redactAlias(db, aliases[0])}` : 'Unknown');
   if (!id) id = entity(db, 'person', label);
   else if (name) { // a real name upgrades an "Unknown [P:n]" placeholder
@@ -181,6 +196,8 @@ export function person(db, source, name, aliases = []) {
       db.prepare('UPDATE entity SET name=? WHERE id=?').run(name, id);
   }
   for (const a of aliases) db.prepare('INSERT OR IGNORE INTO alias(entity_id,kind,value,source) VALUES(?,?,?,?)').run(id, a.kind, a.value, source);
+  if (name && aliases.length && source !== 'contacts' && db.prepare('SELECT name FROM entity WHERE id=?').get(id).name !== name) // "Sam P" on WhatsApp is still findable by that name
+    db.prepare('INSERT OR IGNORE INTO alias(entity_id,kind,value,source) VALUES(?,?,?,?)').run(id, 'name', name, source);
   return id;
 }
 

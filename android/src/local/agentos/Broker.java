@@ -142,6 +142,11 @@ final class Broker {
             audit.log(entry(m, lease).put("caller", who(uid)).put("decision", "refused").put("reason", why));
             return ok(false).put("decision", "refused").put("reason", why);
         }
+        if (AppReads.app(m) != null) synchronized (actLock) {
+            String pkg = AppReads.PACKAGES.get(AppReads.app(m));
+            JSONObject out = AppReads.read(svc, m, p), log = entry(m, lease).put("pkg", pkg).put("tier", "T0 read");
+            return finish(log, absorb(lease, new Api.Spec(pkg, 0, true, true, "Checking app updates"), out, ok(true), log), "auto", "background read only", null);
+        }
         if (Api.SPECS.containsKey(m)) synchronized (actLock) { return act(m, p, uid); } // Android's own APIs (Api.java): the same gate as a tap
         switch (m) {
             case "screen.read": return read();
@@ -173,6 +178,8 @@ final class Broker {
             case "approval.list": return approvals();
             case "app.mod.list": return ok(true).put("mods", mods.list());
             case "app.mod.targets": return mods.targets();
+            case "app.mod.preview": return mods.preview(p.getJSONObject("spec"));
+            case "app.mod.disable": return mods.disable(p.optString("package"), "kill switch");
             case "app.mod.remove": return mods.remove(p.getString("id"), p.optString("by", "agent"));
             case "app.mod.apply": synchronized (actLock) { return mod(p); }
             case "approval.confirm": return confirm(p, uid);
@@ -194,6 +201,12 @@ final class Broker {
                 if (!callerIn(uid, "lease_callers")) return ok(false).put("reason", "remote.read only from agentd, not " + who(uid));
                 audit.log(new JSONObject().put("task", "remote").put("tool", "remote.read").put("from", Guard.clip(p.optString("from"), 20))
                         .put("target", Guard.clip(p.optString("tool"), 30)).put("decision", "auto").put("reason", "paired assistant, reads on"));
+                return ok(true);
+            }
+            case "image.sent": { // agentd: a camera frame or photo went to a model (voice eyes, typed chat); one chain line, no card
+                if (!callerIn(uid, "lease_callers")) return ok(false).put("reason", "image.sent only from agentd, not " + who(uid));
+                audit.log(new JSONObject().put("task", "").put("tool", "image.sent").put("target", Guard.clip(p.optString("source"), 10))
+                        .put("model", Guard.clip(p.optString("model"), 30)).put("bytes", p.optInt("bytes")).put("decision", "auto").put("reason", "user's own picture"));
                 return ok(true);
             }
             case "approval.escalate": return escalate(p, uid);
@@ -476,6 +489,7 @@ final class Broker {
         try { if (spec == null) throw new IllegalArgumentException("spec is required"); Mods.validate(spec); }
         catch (IllegalArgumentException e) { bad = "bad spec: " + e.getMessage(); }
         if (bad == null && svc.getPackageManager().getLaunchIntentForPackage(pkg) == null) bad = pkg + " is not installed";
+        else if (bad == null && !mods.previewed(spec)) bad = "preview this exact spec with visible matches first (valid for 5 minutes)";
         else if (bad == null && mods.count(spec.optString("id")) >= Mods.MAX_MODS) bad = "at most " + Mods.MAX_MODS + " mods: remove one first";
         else if (bad == null && svc.getSystemService(KeyguardManager.class).isKeyguardLocked()) bad = "phone is locked";
         String app = labels(Collections.singleton(pkg)), target = "Add “" + (spec == null ? "" : spec.optString("label")) + "” to " + app;
@@ -485,7 +499,7 @@ final class Broker {
         log.put("id", spec.getString("id")).put("label", spec.getString("label")).put("text", text)
                 .put("spec_sha256", Audit.sha256(spec.toString())).put("spec", spec);
         JSONObject r2 = new JSONObject().put("untrusted", l != null && l.h.untrusted).put("private", false).put("outward", false);
-        Approvals.Pending a = approve("app.mod.apply", pkg, target, text, l, "T2 UI change", "adds a button to " + app, r2, HUMAN,
+        Approvals.Pending a = approve("app.mod.apply", pkg, target, text, l, "T2 UI change", "changes the appearance of " + app, r2, HUMAN,
                 "a person should see what is added to their app", Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
         log.put("allowed_channels", new JSONArray(a.channels));
         if (a.channel.isEmpty()) return finish(log, ok(false), "denied", a.reason, null);

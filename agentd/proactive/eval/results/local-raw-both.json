@@ -1,0 +1,1808 @@
+{
+ "approach": "local-raw",
+ "set": "both",
+ "model": "qwen3.5-0.8b",
+ "effort": "low",
+ "ms": 13385,
+ "candidates": 110,
+ "usage": {
+  "in": 27566,
+  "cached": 0,
+  "out": 1871,
+  "reasoning": 0,
+  "calls": 152
+ },
+ "dev": {
+  "precision": 0.7,
+  "recall": 0.519,
+  "f1": 0.596,
+  "cardPrecision": 0.7,
+  "whoAcc": 1,
+  "dueAcc": 0.875,
+  "tp": 14,
+  "fp": 6,
+  "fn": 13
+ },
+ "test": {
+  "precision": 0.364,
+  "recall": 0.296,
+  "f1": 0.327,
+  "cardPrecision": 0.545,
+  "whoAcc": 1,
+  "dueAcc": 1,
+  "tp": 8,
+  "fp": 14,
+  "fn": 19
+ },
+ "blind": {
+  "precision": 0.421,
+  "recall": 0.25,
+  "f1": 0.314,
+  "cardPrecision": 0.842,
+  "whoAcc": 0.875,
+  "dueAcc": 1,
+  "tp": 8,
+  "fp": 11,
+  "fn": 24
+ },
+ "all": {
+  "precision": 0.492,
+  "recall": 0.349,
+  "f1": 0.408,
+  "cardPrecision": 0.689,
+  "whoAcc": 0.967,
+  "dueAcc": 0.95,
+  "tp": 30,
+  "fp": 31,
+  "fn": 56
+ },
+ "fps": [
+  "r03:commitment≠request",
+  "r07:commitment≠request",
+  "r13:commitment≠request",
+  "u03:commitment≠reply",
+  "n01:commitment≠none",
+  "n05:commitment≠none",
+  "n07:commitment≠none",
+  "n09:commitment≠none",
+  "n10:reply≠none",
+  "n13:request≠none",
+  "n23:request≠none",
+  "n24:reply≠none",
+  "n33:commitment≠none",
+  "n36:commitment≠none",
+  "n40:commitment≠none",
+  "n41:commitment≠none",
+  "n42:reply≠none",
+  "n43:commitment≠none",
+  "n46:reply≠none",
+  "n47:commitment≠none",
+  "b09:commitment≠request",
+  "b13:commitment≠reply",
+  "b14:commitment≠request",
+  "b22:commitment≠none",
+  "b29:commitment≠reply",
+  "b32:commitment≠none",
+  "b37:request≠none",
+  "b44:commitment≠request",
+  "b47:commitment≠reply",
+  "b49:commitment≠request",
+  "b50:commitment≠reply"
+ ],
+ "fns": [
+  "c01:commitment",
+  "c05:commitment",
+  "c06:commitment",
+  "c11:commitment",
+  "c12:commitment",
+  "c15:commitment",
+  "c17:commitment",
+  "r01:request",
+  "r02:request",
+  "r04:request",
+  "r05:request",
+  "r10:request",
+  "r11:request",
+  "r15:request",
+  "r16:request",
+  "u01:reply",
+  "u02:reply",
+  "u04:reply",
+  "u05:reply",
+  "u08:reply",
+  "u09:reply",
+  "u10:reply",
+  "u11:reply",
+  "u12:reply",
+  "u13:reply",
+  "u14:reply",
+  "u15:reply",
+  "u16:reply",
+  "b03:reply",
+  "b04:request",
+  "b06:commitment",
+  "b08:reply",
+  "b18:request",
+  "b19:reply",
+  "b21:commitment",
+  "b23:request",
+  "b24:reply",
+  "b28:request",
+  "b33:request",
+  "b34:reply",
+  "b36:commitment",
+  "b38:request",
+  "b41:reply",
+  "b48:commitment"
+ ],
+ "preds": [
+  {
+   "id": "c01",
+   "gold": {
+    "who": "Sam",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "send Sam the deck"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "c02",
+   "gold": {
+    "who": "Mom",
+    "due": "2026-10-29",
+    "kind": "commitment",
+    "what": "call grandma"
+   },
+   "kind": "commitment",
+   "who": "Mom",
+   "due": "2026-10-29",
+   "what": "yes I'll call her thursday",
+   "at": 1793120400000
+  },
+  {
+   "id": "c03",
+   "gold": {
+    "who": "Priya",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "send Priya the Q3 numbers"
+   },
+   "kind": "commitment",
+   "who": "Priya",
+   "due": "2026-10-27",
+   "what": "on it, will have them to you by EOD",
+   "at": 1793124720000
+  },
+  {
+   "id": "c04",
+   "gold": {
+    "who": "Jordan",
+    "due": "2026-10-26",
+    "kind": "commitment",
+    "what": "Venmo Jordan for dinner"
+   },
+   "kind": "commitment",
+   "who": "Jordan",
+   "due": "2026-10-26",
+   "what": "I'll venmo you my half tonight",
+   "at": 1793062800000
+  },
+  {
+   "id": "c05",
+   "gold": {
+    "who": "Dana Whitfield",
+    "due": "2026-10-30",
+    "kind": "commitment",
+    "what": "review the contract for Dana"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "c06",
+   "gold": {
+    "who": "Alex",
+    "due": null,
+    "kind": "commitment",
+    "what": "tell Alex about Saturday climbing"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "c07",
+   "gold": {
+    "who": "Chris",
+    "due": "2026-10-31",
+    "kind": "commitment",
+    "what": "bring Chris the folding chairs"
+   },
+   "kind": "commitment",
+   "who": "Chris",
+   "due": "2026-10-31",
+   "what": "yep I'll bring them",
+   "at": 1793030400000
+  },
+  {
+   "id": "c08",
+   "gold": {
+    "who": "Lena",
+    "due": null,
+    "kind": "commitment",
+    "what": "send Lena the trip photos"
+   },
+   "kind": "commitment",
+   "who": "Lena",
+   "due": null,
+   "what": "right?? I'll send you the photos when I get home",
+   "at": 1793124000000
+  },
+  {
+   "id": "c09",
+   "gold": {
+    "who": "Priya",
+    "due": "2026-10-28",
+    "kind": "commitment",
+    "what": "update the onboarding copy"
+   },
+   "kind": "commitment",
+   "who": "Priya",
+   "due": "2026-10-28",
+   "what": "I can take that, will do it tomorrow",
+   "at": 1793122200000
+  },
+  {
+   "id": "c10",
+   "gold": {
+    "who": "Dad",
+    "due": "2026-10-30",
+    "kind": "commitment",
+    "what": "renew the car registration"
+   },
+   "kind": "commitment",
+   "who": "Dad",
+   "due": "2026-10-30",
+   "what": "thanks, I'll renew it before Friday",
+   "at": 1792965600000
+  },
+  {
+   "id": "c11",
+   "gold": {
+    "who": "Taylor",
+    "due": null,
+    "kind": "commitment",
+    "what": "text Taylor the address"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "c12",
+   "gold": {
+    "who": "Kim Lee",
+    "due": "2026-10-25",
+    "kind": "commitment",
+    "what": "send Kim your availability"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "c13",
+   "gold": {
+    "who": "Rachel",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "book the campsite and send Rachel the link"
+   },
+   "kind": "commitment",
+   "who": "Rachel",
+   "due": "2026-10-27",
+   "what": "not yet, I'm going to book it tonight and I'll send you the link",
+   "at": 1793124000000
+  },
+  {
+   "id": "c14",
+   "gold": {
+    "who": "Mom",
+    "due": null,
+    "kind": "commitment",
+    "what": "bring pie for Thanksgiving"
+   },
+   "kind": "commitment",
+   "who": "Mom",
+   "due": null,
+   "what": "I will 🥧",
+   "at": 1793052000000
+  },
+  {
+   "id": "c15",
+   "gold": {
+    "who": "Marcus",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "review PR 482"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "c16",
+   "gold": {
+    "who": "Jess",
+    "due": "2026-10-28",
+    "kind": "commitment",
+    "what": "pick up the cake"
+   },
+   "kind": "commitment",
+   "who": "Jess",
+   "due": "2026-10-28",
+   "what": "I'll pick up the cake on my way home tomorrow",
+   "at": 1793131200000
+  },
+  {
+   "id": "c17",
+   "gold": {
+    "who": "Pat Morgan",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "confirm an inspection time with Pat"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "c18",
+   "gold": {
+    "who": "Maya",
+    "due": null,
+    "kind": "commitment",
+    "what": "send Maya the recipe"
+   },
+   "kind": "commitment",
+   "who": "Maya",
+   "due": null,
+   "what": "omg yes I'll send you the recipe",
+   "at": 1793106000000
+  },
+  {
+   "id": "c19",
+   "gold": {
+    "who": "Coach Ben",
+    "due": "2026-10-29",
+    "kind": "commitment",
+    "what": "take Liam to practice"
+   },
+   "kind": "commitment",
+   "who": "Coach Ben",
+   "due": "2026-10-29",
+   "what": "Got it, I'll have Liam there by 5:30 thursday",
+   "at": 1793127600000
+  },
+  {
+   "id": "c20",
+   "gold": {
+    "who": "Alex",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "set up the server"
+   },
+   "kind": "commitment",
+   "who": "Alex",
+   "due": "2026-10-27",
+   "what": "I'll set up the server tonight",
+   "at": 1793120400000
+  },
+  {
+   "id": "c21",
+   "gold": {
+    "who": "Nina",
+    "due": null,
+    "kind": "commitment",
+    "what": "send Nina the cabin wifi password"
+   },
+   "kind": "commitment",
+   "who": "Nina",
+   "due": null,
+   "what": "yes! will send when I get back to my laptop",
+   "at": 1793043000000
+  },
+  {
+   "id": "c22",
+   "gold": {
+    "who": "Owen",
+    "due": "2026-11-02",
+    "kind": "commitment",
+    "what": "send Owen the revised quote"
+   },
+   "kind": "commitment",
+   "who": "Owen",
+   "due": "2026-11-02",
+   "what": "I'll put together the revised quote and send it Monday",
+   "at": 1793115000000
+  },
+  {
+   "id": "r01",
+   "gold": {
+    "who": "Priya Shah",
+    "due": "2026-10-29",
+    "kind": "request",
+    "what": "send Priya the signed NDA"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "r02",
+   "gold": {
+    "who": "Mom",
+    "due": "2026-10-27",
+    "kind": "request",
+    "what": "pick up milk"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "r03",
+   "gold": {
+    "who": "Marcus",
+    "due": "2026-10-28",
+    "kind": "request",
+    "what": "review Marcus's PR"
+   },
+   "kind": "commitment",
+   "who": "Marcus",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "r04",
+   "gold": {
+    "who": "Lena",
+    "due": null,
+    "kind": "request",
+    "what": "send Lena the pics from Saturday"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "r05",
+   "gold": {
+    "who": "Bright Smile Dental",
+    "due": null,
+    "kind": "request",
+    "what": "call the dentist to reschedule"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "r06",
+   "gold": {
+    "who": "Chris",
+    "due": null,
+    "kind": "request",
+    "what": "send Chris Jordan's number"
+   },
+   "kind": "request",
+   "who": "Chris",
+   "due": null,
+   "what": "can you send me Jordan's number",
+   "at": 1793120400000
+  },
+  {
+   "id": "r07",
+   "gold": {
+    "who": "Marcus",
+    "due": "2026-10-27",
+    "kind": "request",
+    "what": "update the deploy doc"
+   },
+   "kind": "commitment",
+   "who": "Marcus",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "r08",
+   "gold": {
+    "who": "Kai",
+    "due": "2026-10-30",
+    "kind": "request",
+    "what": "Venmo Kai your half of rent"
+   },
+   "kind": "request",
+   "who": "Kai",
+   "due": "2026-10-30",
+   "what": "rent is due friday, can you venmo me your half",
+   "at": 1793113200000
+  },
+  {
+   "id": "r09",
+   "gold": {
+    "who": "Alex",
+    "due": null,
+    "kind": "request",
+    "what": "send Alex the game link"
+   },
+   "kind": "request",
+   "who": "Alex",
+   "due": null,
+   "what": "can you send me the link to that game",
+   "at": 1793026800000
+  },
+  {
+   "id": "r10",
+   "gold": {
+    "who": "Prof. Alvarez",
+    "due": "2026-11-02",
+    "kind": "request",
+    "what": "submit the revised draft"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "r11",
+   "gold": {
+    "who": "Dad",
+    "due": null,
+    "kind": "request",
+    "what": "call Dad"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "r12",
+   "gold": {
+    "who": "Maya",
+    "due": null,
+    "kind": "request",
+    "what": "send Maya the recipe"
+   },
+   "kind": "request",
+   "who": "Maya",
+   "due": null,
+   "what": "send me that recipe!!",
+   "at": 1793116800000
+  },
+  {
+   "id": "r13",
+   "gold": {
+    "who": "Mom",
+    "due": "2026-11-01",
+    "kind": "request",
+    "what": "book the restaurant for Sunday"
+   },
+   "kind": "commitment",
+   "who": "Mom",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "r14",
+   "gold": {
+    "who": "Jess",
+    "due": "2026-10-27",
+    "kind": "request",
+    "what": "grab Jess's package"
+   },
+   "kind": "request",
+   "who": "Jess",
+   "due": null,
+   "what": "Could you grab my package from the front desk? I'm out until 8",
+   "at": 1793127600000
+  },
+  {
+   "id": "r15",
+   "gold": {
+    "who": "Priya",
+    "due": null,
+    "kind": "request",
+    "what": "add notes to the planning doc"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "r16",
+   "gold": {
+    "who": "Leah Kim",
+    "due": "2026-11-02",
+    "kind": "request",
+    "what": "fill out the onboarding form"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u01",
+   "gold": {
+    "who": "Sam",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u02",
+   "gold": {
+    "who": "Lena",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u03",
+   "gold": {
+    "who": "Alex",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "commitment",
+   "who": "Alex",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "u04",
+   "gold": {
+    "who": "Kim Lee",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u05",
+   "gold": {
+    "who": "Grandma",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u06",
+   "gold": {
+    "who": "Marcus",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "reply",
+   "who": "Marcus",
+   "due": null,
+   "what": "hey, which branch has the fix?",
+   "at": 1793120400000
+  },
+  {
+   "id": "u07",
+   "gold": {
+    "who": "Rachel",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "reply",
+   "who": "Rachel",
+   "due": null,
+   "what": "Happy birthday!! 🎉 how are you celebrating?",
+   "at": 1793106000000
+  },
+  {
+   "id": "u08",
+   "gold": {
+    "who": "Taylor",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u09",
+   "gold": {
+    "who": "Coach Ben",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u10",
+   "gold": {
+    "who": "Mom",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u11",
+   "gold": {
+    "who": "Pat Morgan",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u12",
+   "gold": {
+    "who": "Jordan",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u13",
+   "gold": {
+    "who": "Maya",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u14",
+   "gold": {
+    "who": "Priya",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u15",
+   "gold": {
+    "who": "Dr. Patel's Office",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "u16",
+   "gold": {
+    "who": "Nina",
+    "due": null,
+    "kind": "reply"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n01",
+   "gold": {
+    "who": "Eli",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Eli",
+   "due": null,
+   "what": "I might go, not sure yet",
+   "at": 1793124000000
+  },
+  {
+   "id": "n02",
+   "gold": {
+    "who": "Sam",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n03",
+   "gold": {
+    "who": "Taylor",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n04",
+   "gold": {
+    "who": "Kim Lee",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n05",
+   "gold": {
+    "who": "Jess",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Jess",
+   "due": null,
+   "what": "if I finish early I'll swing by",
+   "at": 1793127600000
+  },
+  {
+   "id": "n06",
+   "gold": {
+    "who": "Kai",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n07",
+   "gold": {
+    "who": "Lena",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Lena",
+   "due": null,
+   "what": "sure I'll just quit my job and move to Bali lol",
+   "at": 1793117160000
+  },
+  {
+   "id": "n08",
+   "gold": {
+    "who": "Mom",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n09",
+   "gold": {
+    "who": "Dad",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Dad",
+   "due": null,
+   "what": "will do!",
+   "at": 1793109960000
+  },
+  {
+   "id": "n10",
+   "gold": {
+    "who": "Chris",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "reply",
+   "who": "Chris",
+   "due": null,
+   "what": "what are you up to",
+   "at": 1793123640000
+  },
+  {
+   "id": "n11",
+   "gold": {
+    "who": "Sam",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n12",
+   "gold": {
+    "who": "Target",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n13",
+   "gold": {
+    "who": "Family",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "request",
+   "who": "Dad",
+   "due": null,
+   "what": "Linda can you grab bread on the way?",
+   "at": 1793120400000
+  },
+  {
+   "id": "n14",
+   "gold": {
+    "who": "Mom",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n15",
+   "gold": {
+    "who": "Sam",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n16",
+   "gold": {
+    "who": "22395",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n17",
+   "gold": {
+    "who": "Amazon",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n18",
+   "gold": {
+    "who": "Uber",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n19",
+   "gold": {
+    "who": "Health Weekly",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n20",
+   "gold": {
+    "who": "Chris",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n21",
+   "gold": {
+    "who": "Sam",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n22",
+   "gold": {
+    "who": "Lena",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n23",
+   "gold": {
+    "who": "Rachel",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "request",
+   "who": "Rachel",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "n24",
+   "gold": {
+    "who": "Jordan",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "reply",
+   "who": "Jordan",
+   "due": null,
+   "what": "that game was insane",
+   "at": 1793113200000
+  },
+  {
+   "id": "n25",
+   "gold": {
+    "who": "Maya",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n26",
+   "gold": {
+    "who": "Raid Night",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n27",
+   "gold": {
+    "who": "Rachel",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n28",
+   "gold": {
+    "who": "Owen",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n29",
+   "gold": {
+    "who": "+1 (385) 555-0142",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n30",
+   "gold": {
+    "who": "Family",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n31",
+   "gold": {
+    "who": "Jordan",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n32",
+   "gold": {
+    "who": "Calendar",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n33",
+   "gold": {
+    "who": "Jira",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Jira",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "n34",
+   "gold": {
+    "who": "+1 (801) 555-0199",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n35",
+   "gold": {
+    "who": "Allbirds",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n36",
+   "gold": {
+    "who": "Jess",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Jess",
+   "due": null,
+   "what": "coming down",
+   "at": 1793127600000
+  },
+  {
+   "id": "n37",
+   "gold": {
+    "who": "Lena",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n38",
+   "gold": {
+    "who": "Chris",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n39",
+   "gold": {
+    "who": "Kai",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n40",
+   "gold": {
+    "who": "Eli",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Eli",
+   "due": null,
+   "what": "I'll try to make it",
+   "at": 1793124000000
+  },
+  {
+   "id": "n41",
+   "gold": {
+    "who": "Priya",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Priya",
+   "due": null,
+   "what": "done, added them",
+   "at": 1793062800000
+  },
+  {
+   "id": "n42",
+   "gold": {
+    "who": "Sam",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "reply",
+   "who": "Sam",
+   "due": null,
+   "what": "did you get a chance to look at the deck?",
+   "at": 1793041200000
+  },
+  {
+   "id": "n43",
+   "gold": {
+    "who": "Kim Lee",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Kim Lee",
+   "due": "2026-10-29",
+   "what": "Thursday at 2 works great.",
+   "at": 1793066400000
+  },
+  {
+   "id": "n44",
+   "gold": {
+    "who": "Mom",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n45",
+   "gold": {
+    "who": "LinkedIn",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "n46",
+   "gold": {
+    "who": "Alex",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "reply",
+   "who": "Alex",
+   "due": "2026-10-28",
+   "what": "I'll pick you up at 7 tomorrow",
+   "at": 1793116800000
+  },
+  {
+   "id": "n47",
+   "gold": {
+    "who": "Grandma",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Grandma",
+   "due": null,
+   "what": "Yes! Thank you grandma, I love it ❤️",
+   "at": 1792882800000
+  },
+  {
+   "id": "n48",
+   "gold": {
+    "who": "#general",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b01",
+   "gold": {
+    "who": "Rachel Kim",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "send Rachel the Q3 retention numbers"
+   },
+   "kind": "commitment",
+   "who": "Rachel Kim",
+   "due": "2026-10-27",
+   "what": "lemme pull them from looker, I'll get that to you by EOD",
+   "at": 1793116800000
+  },
+  {
+   "id": "b02",
+   "gold": {
+    "who": "Zoe",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b03",
+   "gold": {
+    "who": "Tyler",
+    "due": null,
+    "kind": "reply",
+    "what": "tell Tyler if you're climbing this weekend"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b04",
+   "gold": {
+    "who": "Dad",
+    "due": "2026-10-27",
+    "kind": "request",
+    "what": "call Gary at the insurance company about the claim"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b05",
+   "gold": {
+    "who": "Kelsey Morgan",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b06",
+   "gold": {
+    "who": "Diego",
+    "due": "2026-10-29",
+    "kind": "commitment",
+    "what": "return Diego's drill"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b07",
+   "gold": {
+    "who": "+1 (415) 555-0193",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b08",
+   "gold": {
+    "who": "Hannah Wright",
+    "due": null,
+    "kind": "reply",
+    "what": "tell Hannah if you want to be on the Founders Night panel"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b09",
+   "gold": {
+    "who": "Chris Patel",
+    "due": "2026-10-27",
+    "kind": "request",
+    "what": "review Chris's PR #482"
+   },
+   "kind": "commitment",
+   "who": "Chris Patel",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "b10",
+   "gold": {
+    "who": "Abby",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b11",
+   "gold": {
+    "who": "Kev",
+    "due": "2026-10-26",
+    "kind": "commitment",
+    "what": "renew the game server subscription"
+   },
+   "kind": "commitment",
+   "who": "Tasha",
+   "due": "2026-10-26",
+   "what": "ill handle it tonight",
+   "at": 1793041200000
+  },
+  {
+   "id": "b12",
+   "gold": {
+    "who": "Jake",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b13",
+   "gold": {
+    "who": "Grace Liu",
+    "due": null,
+    "kind": "reply",
+    "what": "tell Grace which logo to use on the Meridian deck"
+   },
+   "kind": "commitment",
+   "who": "Grace Liu",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "b14",
+   "gold": {
+    "who": "Kyle",
+    "due": null,
+    "kind": "request",
+    "what": "Venmo Kyle $40"
+   },
+   "kind": "commitment",
+   "who": "Kyle",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "b15",
+   "gold": {
+    "who": "Danny",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b16",
+   "gold": {
+    "who": "Laura Chen",
+    "due": "2026-11-05",
+    "kind": "commitment",
+    "what": "submit Laura's recommendation letter"
+   },
+   "kind": "commitment",
+   "who": "Laura Chen",
+   "due": "2026-11-05",
+   "what": "Hi Laura, of course, happy to do it. I'll have it submitted before the Nov 5 deadline.\n\nJosh",
+   "at": 1792965600000
+  },
+  {
+   "id": "b17",
+   "gold": {
+    "who": "#general",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b18",
+   "gold": {
+    "who": "Marcus",
+    "due": null,
+    "kind": "request",
+    "what": "send Marcus your updated character sheet"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b19",
+   "gold": {
+    "who": "Mom",
+    "due": null,
+    "kind": "reply",
+    "what": "tell Mom what you want for your birthday"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b20",
+   "gold": {
+    "who": "72384",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b21",
+   "gold": {
+    "who": "Mark Davies",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "fill out the Acme security questionnaire"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b22",
+   "gold": {
+    "who": "Luis",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Luis",
+   "due": null,
+   "what": "unplug the router for 30 sec, if that doesn't work I'll come look",
+   "at": 1793028600000
+  },
+  {
+   "id": "b23",
+   "gold": {
+    "who": "Megan Ortiz",
+    "due": "2026-10-30",
+    "kind": "request",
+    "what": "complete and return the benefits enrollment form"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b24",
+   "gold": {
+    "who": "marco.v",
+    "due": null,
+    "kind": "reply",
+    "what": "tell marco.v where you got the jacket"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b25",
+   "gold": {
+    "who": "Lake House 🏡",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b26",
+   "gold": {
+    "who": "Nana",
+    "due": "2026-11-01",
+    "kind": "commitment",
+    "what": "fix Nana's printer"
+   },
+   "kind": "commitment",
+   "who": "Nana",
+   "due": "2026-11-01",
+   "what": "yes nana I'll fix it sunday when I come over 😊",
+   "at": 1793062800000
+  },
+  {
+   "id": "b27",
+   "gold": {
+    "who": "Jenna",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b28",
+   "gold": {
+    "who": "Sofia",
+    "due": "2026-10-27",
+    "kind": "request",
+    "what": "pick up the cake from Flour Bakery"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b29",
+   "gold": {
+    "who": "Devon Lee",
+    "due": null,
+    "kind": "reply",
+    "what": "tell Devon which Postgres version the billing service uses"
+   },
+   "kind": "commitment",
+   "who": "Devon Lee",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "b30",
+   "gold": {
+    "who": "Nordstrom",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b31",
+   "gold": {
+    "who": "Alyssa",
+    "due": null,
+    "kind": "commitment",
+    "what": "send Alyssa the pics from Saturday"
+   },
+   "kind": "commitment",
+   "who": "Alyssa",
+   "due": null,
+   "what": "ya ofc!! will send em when i get home",
+   "at": 1793106000000
+  },
+  {
+   "id": "b32",
+   "gold": {
+    "who": "Olivia",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "commitment",
+   "who": "Olivia",
+   "due": null,
+   "what": "omw be there in 10!!",
+   "at": 1793027160000
+  },
+  {
+   "id": "b33",
+   "gold": {
+    "who": "Jordan",
+    "due": "2026-10-27",
+    "kind": "request",
+    "what": "rotate the staging API keys"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b34",
+   "gold": {
+    "who": "Aunt Lisa",
+    "due": null,
+    "kind": "reply",
+    "what": "tell Aunt Lisa if you're flying or driving for Thanksgiving"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b35",
+   "gold": {
+    "who": "Ava",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b36",
+   "gold": {
+    "who": "Ben",
+    "due": "2026-10-30",
+    "kind": "commitment",
+    "what": "Venmo Ben $85 for the concert tickets"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b37",
+   "gold": {
+    "who": "Carlos",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "request",
+   "who": "Carlos",
+   "due": null,
+   "what": "wanna grab lunch? im near the office",
+   "at": 1793131200000
+  },
+  {
+   "id": "b38",
+   "gold": {
+    "who": "Leah",
+    "due": null,
+    "kind": "request",
+    "what": "fill out the reunion RSVP form"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b39",
+   "gold": {
+    "who": "Priyanka",
+    "due": "2026-10-27",
+    "kind": "commitment",
+    "what": "push a fix for the flaky checkout test"
+   },
+   "kind": "commitment",
+   "who": "Priyanka",
+   "due": "2026-10-27",
+   "what": "on it, gonna push a fix this afternoon",
+   "at": 1793113200000
+  },
+  {
+   "id": "b40",
+   "gold": {
+    "who": "Ethan",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b41",
+   "gold": {
+    "who": "Natalie",
+    "due": null,
+    "kind": "reply",
+    "what": "tell Natalie if you still have Netflix"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b42",
+   "gold": {
+    "who": "Slackbot",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b43",
+   "gold": {
+    "who": "Aunt Carol",
+    "due": "2026-10-31",
+    "kind": "commitment",
+    "what": "set up Aunt Carol's iPad"
+   },
+   "kind": "commitment",
+   "who": "Aunt Carol",
+   "due": "2026-10-31",
+   "what": "Yes! I can come by saturday morning and get it all set up",
+   "at": 1793034000000
+  },
+  {
+   "id": "b44",
+   "gold": {
+    "who": "Emma",
+    "due": null,
+    "kind": "request",
+    "what": "pick up Emma's package from the front desk"
+   },
+   "kind": "commitment",
+   "who": "Emma",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "b45",
+   "gold": {
+    "who": "Ryan",
+    "due": null,
+    "kind": "none"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b46",
+   "gold": {
+    "who": "jess.makes",
+    "due": "2026-10-25",
+    "kind": "commitment",
+    "what": "tag jess.makes in the market photos"
+   },
+   "kind": "commitment",
+   "who": "jess.makes",
+   "due": "2026-10-25",
+   "what": "haha thank you!! yes will tag you tonight",
+   "at": 1792976400000
+  },
+  {
+   "id": "b47",
+   "gold": {
+    "who": "Coach Rivera",
+    "due": null,
+    "kind": "reply",
+    "what": "tell Coach Rivera which rec league slot you want"
+   },
+   "kind": "commitment",
+   "who": "Coach Rivera",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "b48",
+   "gold": {
+    "who": "Tom Becker",
+    "due": "2026-10-28",
+    "kind": "commitment",
+    "what": "mail Tom the signed lease renewal"
+   },
+   "kind": "none"
+  },
+  {
+   "id": "b49",
+   "gold": {
+    "who": "Ana Souza",
+    "due": null,
+    "kind": "request",
+    "what": "book the conference room for the client demo"
+   },
+   "kind": "commitment",
+   "who": "Ana Souza",
+   "due": null,
+   "what": ""
+  },
+  {
+   "id": "b50",
+   "gold": {
+    "who": "zeph",
+    "due": null,
+    "kind": "reply",
+    "what": "tell zeph if you still want the 3070"
+   },
+   "kind": "commitment",
+   "who": "zeph",
+   "due": null,
+   "what": ""
+  }
+ ]
+}

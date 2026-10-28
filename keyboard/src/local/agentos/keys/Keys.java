@@ -27,12 +27,13 @@ import java.util.concurrent.Executors;
  * The AgentOS keyboard (InputMethodService). It owns the field's InputConnection, decides what context may leave
  * the field (privacy rules), debounces suggestion requests, and wires the strip and the key grid together.
  */
-public final class Keys extends InputMethodService implements KeyboardView.Listener, Strip.Listener {
+public final class Keys extends InputMethodService implements KeyboardView.Listener, Strip.Listener, Writer.Listener {
     private static final int MODE_REPLY = 0, MODE_REWRITE = 1, MODE_FIX = 2;
     private static final int MAX_BEFORE = 500, MAX_AFTER = 200;
 
     private KeyboardView kb;
     private Strip strip;
+    private Writer writer;
     private Agent agent;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final ExecutorService bg = Executors.newSingleThreadExecutor();
@@ -48,6 +49,9 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     private int mode = MODE_REPLY;
     private int gen; // request generation: late answers for older generations are dropped
     private String lastKey = "";
+    private Agent.Screen lastScreen; private long lastScreenAt; // reused by the writer for 20 s (saves the ~0.9 s screen.read)
+    private String intent = ""; // what the user asked the writer for; kept for Redo / chips
+    private int wgen; // writer request generation
 
     @Override public void onCreate() { super.onCreate(); agent = new Agent(this); }
     @Override public boolean onEvaluateFullscreenMode() { return false; }
@@ -58,8 +62,9 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         col.setOrientation(LinearLayout.VERTICAL);
         KeyboardView.Preview preview = new KeyboardView.Preview(this);
         strip = new Strip(this, this);
+        writer = new Writer(this, this);
         kb = new KeyboardView(this, this, preview);
-        col.addView(strip); col.addView(kb);
+        col.addView(writer); col.addView(strip); col.addView(kb);
         root.addView(col); root.addView(preview);
         return root;
     }
@@ -86,8 +91,9 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         kb.setEnter(enterAction == EditorInfo.IME_ACTION_NONE ? "return" : label, enterAction != EditorInfo.IME_ACTION_NONE);
         kb.setPreviews(!password);
         kb.setShift(autoCap(before(3)));
-        strip.setMode(mode);
-        lastKey = "";
+        strip.setMode(mode); strip.setActions(null, null); strip.setNotice(null);
+        if (writer != null) writer.hide();
+        lastKey = ""; lastScreen = null;
         if (privateField) {
             strip.setContext(password ? "Password field · nothing sent" : "Private field · nothing sent", Theme.CORAL);
             strip.setItems(new ArrayList<String>(), false);
@@ -96,7 +102,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
 
     @Override public void onFinishInputView(boolean finishingInput) {
         super.onFinishInputView(finishingInput);
-        ui.removeCallbacks(debounced); gen++; agent.cancel();
+        ui.removeCallbacks(debounced); gen++; wgen++; agent.cancel();
     }
 
     @Override public void onUpdateSelection(int os, int oe, int ns, int ne, int cs, int ce) {
@@ -116,6 +122,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     // ---- keys ----
     private long lastSpace;
     @Override public void onText(String t) {
+        if (writer.typing()) { writer.type(t); return; }
         InputConnection ic = getCurrentInputConnection(); if (ic == null) return;
         long now = android.os.SystemClock.uptimeMillis();
         if (t.equals(" ") && now - lastSpace < Theme.DOUBLE_TAP && before(2).matches("\\w ")) { ic.deleteSurroundingText(1, 0); t = ". "; } // iOS: double space = period
@@ -123,11 +130,13 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         ic.commitText(t, 1);
     }
     @Override public void onBackspace() {
+        if (writer.typing()) { writer.backspace(); return; }
         InputConnection ic = getCurrentInputConnection(); if (ic == null) return;
         CharSequence sel = ic.getSelectedText(0);
         if (sel != null && sel.length() > 0) ic.commitText("", 1); else ic.deleteSurroundingText(1, 0);
     }
     @Override public void onEnter() {
+        if (writer.typing()) { writer.submit(); return; }
         InputConnection ic = getCurrentInputConnection(); if (ic == null) return;
         if (enterAction != EditorInfo.IME_ACTION_NONE) ic.performEditorAction(enterAction); else ic.commitText("\n", 1);
     }
@@ -147,11 +156,87 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         kb.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM);
     }
 
+    @Override public void onWrite() { if (privateField) return; writer.open(); kb.setShift(true); }
+    @Override public void onDetailAction(String action) {
+        if (action.equals(Strip.ACT_CATCH_UP)) runWrite("summary", "", "", "Catch me up");
+        else runWrite("translate_last", "", lang(), "Last message in " + lang());
+    }
+
+    // ---- writer ----
+    @Override public void onSubmit(String what) { intent = what; runWrite("write", what, "", "Writing for " + app); }
+    @Override public void onChip(String task, String lg) {
+        if (!lg.isEmpty()) prefs().edit().putString("lang|" + convKey(), lg).apply(); // remember the language per conversation
+        runWrite(task, intent, lg, task.equals("translate") ? "Translating to " + lg : task.substring(0, 1).toUpperCase() + task.substring(1));
+    }
+    @Override public void onInsert(String text) { writer.hide(); onSuggestion(text); }
+    @Override public void onClose() { wgen++; writer.hide(); } // a stale answer is dropped by wgen; the suggest socket is left alone
+
+    private android.content.SharedPreferences prefs() { return getSharedPreferences("keys", MODE_PRIVATE); }
+    /** "Conversation" = app + the top line on screen (the contact or subject), good enough to remember a language. */
+    private String convKey() { return pkg + "|" + (lastScreen != null && !lastScreen.lines.isEmpty() ? lastScreen.lines.get(0) : ""); }
+    private String lang() { return prefs().getString("lang|" + convKey(), prefs().getString("lang|" + pkg + "|", "Spanish")); }
+
+    /** One writer job: screen context (reused if fresh) + agentd `write`; shows the result card. Chips act on the shown result, not the field. */
+    private void runWrite(final String task, final String what, final String lg, String label) {
+        final int g = ++wgen;
+        final boolean onResult = writer.state() == Writer.RESULT || writer.state() == Writer.LANGS;
+        final String b = onResult ? writer.result() : before(MAX_BEFORE), a = onResult ? "" : after(MAX_AFTER);
+        final boolean note = task.equals("summary") || task.equals("translate_last");
+        writer.loading(label);
+        bg.execute(() -> {
+            Agent.Screen sc = screen();
+            if (g != wgen) return;
+            int[] red = {0};
+            JSONArray lines = new JSONArray();
+            for (String l : sc.lines) lines.put(Agent.redact(l, red));
+            try {
+                JSONObject ctx = new JSONObject().put("pkg", pkg).put("app", app).put("hint", hint).put("inputType", inputType).put("before", Agent.redact(b, red)).put("after", Agent.redact(a, red))
+                    .put("screen", lines).put("redacted", red[0]).put("untrusted", true);
+                Agent.Result r = agent.write(ctx, task, what, lg);
+                Log.i(Agent.TAG, "write " + task + " via " + r.how + " in " + r.ms + " ms: " + r.items);
+                final String out = r.items.isEmpty() ? "" : r.items.get(0);
+                final String title = String.format("%s · %d lines%s · %s %.1fs", app, sc.lines.size(), red[0] > 0 ? " · " + red[0] + " hidden" : "", r.how, r.ms / 1000.0);
+                ui.post(() -> {
+                    if (g != wgen) return;
+                    if (out.isEmpty()) writer.showNote("Nothing came back. Try again.", title);
+                    else if (note) writer.showNote(out, title);
+                    else writer.showResult(out, title, task.equals("translate") ? lg : prefs().getString("lang|" + convKey(), ""));
+                });
+            } catch (Exception e) {
+                Log.w(Agent.TAG, "write failed", e);
+                ui.post(() -> { if (g == wgen) writer.showNote("agentd offline: " + e.getMessage(), app); });
+            }
+        });
+    }
+
+    private Agent.Screen screen() {
+        Agent.Screen sc = lastScreen;
+        if (sc == null || System.currentTimeMillis() - lastScreenAt > 20000) { sc = agent.screenRead(); lastScreen = sc; lastScreenAt = System.currentTimeMillis(); }
+        ui.post(() -> strip.setActions(lastScreen != null && !lastScreen.lines.isEmpty() ? Strip.ACT_TRANSLATE : null, lastScreen != null && lastScreen.lines.size() >= 8 ? Strip.ACT_CATCH_UP : null));
+        return sc;
+    }
+
+    // ---- send-safety: a login code, password or card number typed into a chat gets one calm line, and nothing leaves the keyboard ----
+    private static final java.util.regex.Pattern CODE = java.util.regex.Pattern.compile("(?<!\\d)\\d{6,8}(?!\\d)"), CARD = java.util.regex.Pattern.compile("(?<!\\d)(?:\\d[ -]?){13,19}(?!\\d)"),
+        PASSWORD = java.util.regex.Pattern.compile("(?i)\\b(password|passwd|pwd|passcode|pin)\\b\\s*(is|:|=)\\s*\\S+");
+    static String sendSafety(String draft, String hint) {
+        if (hint.matches("(?i).*(code|otp|password|card|cvv|pin).*")) return null; // the field itself asks for it (a login form), not a chat
+        if (PASSWORD.matcher(draft).find()) return "Looks like a password. Real support never asks for it in a chat.";
+        java.util.regex.Matcher m = CARD.matcher(draft);
+        while (m.find()) if (luhn(m.group().replaceAll("\\D", ""))) return "Looks like a card number. Keep card details inside a payment app.";
+        if (CODE.matcher(draft).find()) return "Looks like a login code. Codes are never asked for by real support.";
+        return null;
+    }
+    private static boolean luhn(String n) { int sum = 0; boolean alt = false; for (int i = n.length() - 1; i >= 0; i--) { int x = n.charAt(i) - '0'; if (alt) { x *= 2; if (x > 9) x -= 9; } sum += x; alt = !alt; } return n.length() >= 13 && sum % 10 == 0; }
+
     // ---- suggestions ----
     private void request() {
         if (privateField) return;
         final int g = ++gen;
         final String b = before(MAX_BEFORE), a = after(MAX_AFTER);
+        String warn = sendSafety(b + a, hint);
+        strip.setNotice(warn);
+        if (warn != null) { lastKey = ""; agent.cancel(); return; } // nothing is sent while the draft looks like a secret
         if (mode != MODE_REPLY && b.trim().isEmpty() && a.trim().isEmpty()) {
             strip.setContext(app + " · empty draft", Theme.IDLE);
             strip.setItems(Arrays.asList(mode == MODE_REWRITE ? "Type a draft to rewrite" : "Type a draft to fix"), false);
@@ -164,6 +249,8 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         agent.cancel();
         bg.execute(() -> {
             Agent.Screen sc = agent.screenRead(); // ~1 s; what the other person said
+            lastScreen = sc; lastScreenAt = System.currentTimeMillis();
+            ui.post(() -> strip.setActions(sc.lines.isEmpty() ? null : Strip.ACT_TRANSLATE, sc.lines.size() >= 8 ? Strip.ACT_CATCH_UP : null));
             if (g != gen) return;
             int[] red = {0};
             JSONArray lines = new JSONArray();

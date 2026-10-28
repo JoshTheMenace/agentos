@@ -38,6 +38,8 @@ import org.json.JSONObject;
  */
 public class Notifs extends NotificationListenerService {
     static final int MAX = 40;
+    static final int HISTORY = 240; // per-app reads filter before limiting; a noisy app must not hide every other app
+    static final long started = System.currentTimeMillis();
     static volatile boolean connected;
     private static final Map<String, Rec> recent = Collections.synchronizedMap(new LinkedHashMap<String, Rec>());
     /** OTPs/canaries that arrived by notification (P3: the agent can never type or send them), and their texts (copy check). */
@@ -89,7 +91,7 @@ public class Notifs extends NotificationListenerService {
                 synchronized (recent) {
                     recent.remove(r.key);
                     recent.put(r.key, r); // newest last
-                    while (recent.size() > MAX) recent.remove(recent.keySet().iterator().next());
+                    while (recent.size() > HISTORY) recent.remove(recent.keySet().iterator().next());
                 }
                 if (!live || same) return;
                 Events.emit("notification.posted", r.json());
@@ -160,12 +162,17 @@ public class Notifs extends NotificationListenerService {
 
     /** notifications.list: newest first. */
     static JSONArray list(int n) throws Exception {
+        return list(n, "", 0);
+    }
+
+    static JSONArray list(int n, String pkg, long since) throws Exception {
         List<Rec> all;
         synchronized (recent) { all = new ArrayList<>(recent.values()); }
         Collections.sort(all, (x, y) -> Long.compare(y.when, x.when));
         JSONArray a = new JSONArray();
         for (int i = 0; i < all.size() && a.length() < n; i++) {
             Rec r = all.get(i);
+            if ((!pkg.isEmpty() && !pkg.equals(r.pkg)) || r.when < since) continue;
             if (r.score < 0) bg.execute(() -> { if (r.score < 0) score(r); }); // never make the caller wait for the model
             a.put(r.json());
         }

@@ -8,6 +8,7 @@ import * as context from './context.js';
 import * as schedule from './schedule.js';
 import * as plugins from './plugins.js';
 import * as microapps from './apps.js';
+import { tools as appReads } from './app-reads.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -35,7 +36,7 @@ const MOD_TOOLS = {
     + 'and the button appears. For Calculator and Clock use the examples as they are (ids are real). For other apps open the app, call app_mod_targets for view ids '
     + 'and bounds, anchor next to a button in empty space (place above/below/left/right, sizes in dp, w:"anchor" = same as the anchor), give an alt spot, copy the look '
     + 'with style.sample = a neighbour id. A spot that would cover any app button is skipped. Mods can never press Send/Pay/Delete-type buttons. '
-    + 'Reuse an id to replace a mod.\n' + MOD_EXAMPLES,
+    + 'Call mod_preview with this exact spec before applying. Reuse an id to replace a mod.\n' + MOD_EXAMPLES,
     schema: obj({ spec: { type: 'object', description: 'mod spec, see the examples', properties: {
       id: { type: 'string', description: 'a-z 0-9 _ -, max 32' }, package: { type: 'string' }, label: { type: 'string', description: 'max 24 chars' },
       anchor: sel, place: { type: 'string', enum: ['above', 'below', 'left', 'right', 'over'] }, align: { type: 'string', enum: ['start', 'center', 'end'] },
@@ -50,6 +51,18 @@ const MOD_TOOLS = {
   app_mod_list: { method: 'app.mod.list', tier: 'read', schema: obj(), description: 'List the mods on this phone: {mods:[{id, package, app, label, shown}]}.' },
   app_mod_remove: { method: 'app.mod.remove', tier: 'act', schema: obj({ id: { type: 'string' } }, ['id']), description: 'Remove a mod by id (no approval needed).' },
 };
+
+// Short names used by the Mods plugin; keep the old app_mod_* names for existing clients.
+MOD_TOOLS.mod_inspect = MOD_TOOLS.app_mod_targets;
+MOD_TOOLS.mod_list = MOD_TOOLS.app_mod_list;
+MOD_TOOLS.mod_remove = MOD_TOOLS.app_mod_remove;
+const modSpec = { type: 'object', description: 'Strict declarative spec. Mask: {id,package,label,action:{type:"mask",match:{text:"Promoted"},scope:"item",color:"#101820"}}. Match exactly one of text (exact, case-insensitive), id (short view id), class. scope node or item (containing scroll item). No code/regex. Button specs: see app_mod_apply.' };
+MOD_TOOLS.mod_preview = { method: 'app.mod.preview', tier: 'read', schema: obj({ spec: modSpec }, ['spec']),
+  description: 'Dry-run a mod in the foreground app: highlight matched rectangles for 3 seconds. No app actions. Required before apply; receipt binds this exact spec for 5 minutes. Zero matches cannot apply.' };
+MOD_TOOLS.mod_apply = { method: 'app.mod.apply', tier: 'outward', schema: obj({ spec: modSpec }, ['spec']),
+  description: 'Apply the exact spec after mod_preview with visible matches; owner approval card required. Masks cover content, do not collapse layout. LinkedIn allows passive masks only. No banking/security/system apps. Mods persist across app restarts. Calculator button examples: ' + MOD_EXAMPLES };
+MOD_TOOLS.mod_disable = { method: 'app.mod.disable', tier: 'act', schema: obj({ package: { type: 'string' } }),
+  description: 'Kill switch: disable every mod, or all mods for package. No approval required. Re-enable only by preview and approved apply.' };
 
 const S = { type: 'string' }, N = { type: 'integer' }, B = { type: 'boolean' }, pct = { type: 'integer', minimum: 0, maximum: 100 };
 const when = { type: 'string', description: 'local "YYYY-MM-DDTHH:MM"' }, who = { type: 'string', description: 'contact name or phone number' };
@@ -83,6 +96,7 @@ const API_TOOLS = {
 // name (model-safe, no dots) -> {method on :7777, tier, description, schema}. Tiers here are only hints for the UI;
 // the Android broker assigns the real tier (T0-T4) per call.
 export const TOOLS = {
+  ...Object.fromEntries(appReads.map(({ name, ...t }) => [name, t])),
   task_start: { method: 'task.start', tier: 'read', schema: obj({ apps: { type: 'array', items: { type: 'string' }, description: 'package names you will act in, e.g. ["local.agentos.pigeon"]' } }, ['apps']),
     description: 'Start this task\'s lease. Call once before acting, listing every app package you will touch (find them with list_apps). Actions outside these apps are blocked.' },
   screen_read: { method: 'screen.read', tier: 'read', schema: obj(),
@@ -151,8 +165,10 @@ export async function guardMemory(x, ctx) {
   if (Array.isArray(x)) { for (const v of x) await guardMemory(v, ctx); return x; }
   if (!x || typeof x !== 'object') return x;
   if (x.trusted === false && typeof x.text === 'string') {
+    ctx.turn.untrusted = true; // applies even when a background read precedes task.start
     const g = await classify(x.text);
     if (g.label !== 'benign') {
+      (ctx.turn.alerted ??= new Set()).add(x.text);
       ctx.emit({ type: 'guard.alert', source_pkg: `${x.phone ? 'phone' : 'memory'}:${x.source}`, score: g.score, label: g.label, excerpt: x.text.slice(0, 160) });
       x.text = `[withheld by guard: likely prompt injection, score ${g.score}]`;
     }
@@ -285,6 +301,7 @@ export async function runTool(name, args, ctx) {
     }
     if (t.method === 'screen.read') r = await guardScreen(r, ctx);
     else if (t.method === 'notifications.list') r = await context.guardList(r, ctx);
+    else if (t.appRead) r = await guardMemory(r, ctx); // retain trusted:false + source on every app preview
     else if (r.items) r = { ...r, items: (await guardMemory(r.items.map((x) => ({ ...x, phone: true })), ctx)).map(({ phone, trusted, source, ...x }) => x) }; // SMS, calls, contacts, events: other people's words
     else if (r.screen) r = { ...r, screen: await guardScreen(r.screen, ctx) };
     const ok = r.ok !== false;

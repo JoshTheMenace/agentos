@@ -39,7 +39,7 @@ export const cfg = {
   claudeEffort: env.CLAUDE_EFFORT || 'medium',
   localUrl: env.LOCAL_URL || 'http://127.0.0.1:8081', // llama-server (deploy/local-model)
   debug: !!env.AGENTD_DEBUG,
-  voiceVision: (env.VOICE_VISION ?? (existsSync(join(STATE, 'vision.on')) ? '1' : '0')) === '1', // camera + "look at my screen" for the voice (research/LIVE-VISION.md); off by default
+  voiceVision: (env.VOICE_VISION ?? (existsSync(join(STATE, 'vision.off')) ? '0' : '1')) === '1', // camera, photos + "look at my screen" for the voice (research/LIVE-VISION.md); on unless ~/.agentos/vision.off
   visionModel: env.VISION_MODEL || 'gpt-6-luna', // the voice's eyes: answers from a camera frame or screenshot (~1.3 s warm)
   clientPkgs: (env.AGENTD_CLIENT_PKGS ?? 'local.agentos,local.agentos.keys,local.agentos.home').split(',').filter(Boolean), // apps that get the WS token
 

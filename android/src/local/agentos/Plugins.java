@@ -25,19 +25,23 @@ import org.json.JSONObject;
  */
 final class Plugins {
     static final List<String> IDS = Collections.unmodifiableList(Arrays.asList(
-            "calendar", "messages", "clock", "device", "media", "web", "privacy", "vault", "memory", "rules", "schedule", "mods", "apps")); // apps (micro-apps) runs in agentd only
+            "calendar", "messages", "clock", "device", "media", "web", "privacy", "vault", "memory", "rules", "schedule", "mods", "apps",
+            "linkedin", "x", "slack", "instagram", "discord", "whatsapp", "gmail", "spotify", "youtube")); // apps (micro-apps) runs in agentd only
     /** Broker method (or "intent:kind": one method serves several plugins) -> plugin. memory, rules, schedule run in agentd only. */
     private static final Map<String, String> MAP = new HashMap<>();
     static {
+        for (String id : AppReads.PACKAGES.keySet()) MAP.put(id + ".summary", id);
+        MAP.put("linkedin.unread", "linkedin");
         for (String m : new String[]{"calendar.add", "calendar.find", "calendar.update", "calendar.delete"}) MAP.put(m, "calendar");
-        for (String m : new String[]{"contacts.find", "sms.send", "sms.list", "calls.list", "call.place", "intent:email"}) MAP.put(m, "messages");
+        for (String m : new String[]{"contacts.find", "sms.send", "sms.list", "calls.list", "call.place"}) MAP.put(m, "messages");
+        MAP.put("intent:email", "gmail");
         for (String m : new String[]{"alarms.list", "alarms.delete"}) MAP.put(m, "clock"); // set_alarm/set_timer are core
         for (String m : new String[]{"device.set", "device.status"}) MAP.put(m, "device");
         for (String m : new String[]{"media.control", "intent:play"}) MAP.put(m, "media");
         for (String m : new String[]{"intent:navigate", "intent:url"}) MAP.put(m, "web"); // intent:search is core
         for (String m : new String[]{"trackers.scan", "trackers.list", "trackers.block", "trackers.unblock", "firewall.list", "firewall.set", "firewall.clear"}) MAP.put(m, "privacy");
         for (String m : new String[]{"vault.list", "vault.fill"}) MAP.put(m, "vault");
-        for (String m : new String[]{"app.mod.apply", "app.mod.targets", "app.mod.list", "app.mod.remove"}) MAP.put(m, "mods");
+        for (String m : new String[]{"app.mod.apply", "app.mod.targets", "app.mod.list", "app.mod.remove", "app.mod.preview", "app.mod.disable"}) MAP.put(m, "mods");
     }
     private static File file;
     private static volatile Set<String> off = Collections.emptySet();

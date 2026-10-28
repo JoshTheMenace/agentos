@@ -41,6 +41,12 @@ final class Theme {
     static final int MODE_BG = 0x14FFFFFF, MODE_ON = 0x33FFFFFF;
 
     static final String SPACE_LABEL = "space", MODE_GLYPH = "✦"; // ✦ on the mode pill in the default (Reply) mode
+    static final String WAND = "✨";                              // the "Write for me" button on the strip
+    // ---- writer panel (✨ Write for me) and strip extras ----
+    static final int WRITER_BG = 0xFF2A2A2D, WRITER_LINE = 0x1FFFFFFF, CHIP_BG = 0x1FFFFFFF, CHIP_ON = 0xFF0A84FF, CURSOR = 0xFF0A84FF;
+    static final int NOTICE = 0xFFFFD60A;        // calm send-safety line (--yellow), never a red pop-up
+    static final float WRITER_PAD_X = 12, WRITER_TEXT = 15, WRITER_LINE_H = 20, WRITER_ROW_H = 44, WRITER_CHIP_H = 30, WRITER_CHIP_PAD_X = 11, WRITER_CHIP_GAP = 6, WRITER_CHIP_TEXT = 12, WRITER_TITLE = 11;
+    static final int WRITER_MAX_LINES = 4, DETAIL_ACTIONS_MS = 5000, CURSOR_BLINK = 530;
 
     // ---- radii (dp) ----
     static final float KEY_R = 6, PREVIEW_R = 10, STRIP_R = 0, CHIP_R = 8, MODE_R = 999;

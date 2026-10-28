@@ -6,6 +6,7 @@ import * as S from './store.js';
 import { ingest as runIngest, INGESTORS } from './ingest.js';
 import * as brain from './brain.js';
 import * as connectors from './connectors/index.js';
+import * as F from './facts.js';
 
 let shared;
 const dbOf = (ctx = {}) => ctx.db || (shared ??= S.open());
@@ -31,6 +32,17 @@ export const tools = [
     schema: obj({ text: str('what to remember'), about: str('entity name or id this is about') }, ['text']) },
   { name: 'memory_forget', tier: 'outward', description: 'Permanently delete one event, or one entity and every event involving it. Needs the user\'s confirmation.',
     schema: obj({ event_id: { type: 'integer' }, entity_id: { type: 'integer' } }) },
+  // ---- v2 (MEMORY_V2=1): durable facts, identity questions, owner corrections
+  { name: 'memory_person', tier: 'read', description: 'Everything memory knows about one person: name, other names across apps, apps, phone/email ([P:n]/[E:n]), what they are to the user, durable facts (with history), and identity status (cards that are possibly the same person, not confirmed). Use before messaging someone whose name could fit two people.',
+    schema: obj({ id: { type: 'integer' }, name: str('name as the user said it') }) },
+  { name: 'memory_facts', tier: 'read', description: 'Durable facts memory keeps (preferences, favorites, where people live/work, relationships, plans, projects, dates), each cited to its source. Filter by words and/or a person. history:true includes superseded values ("lived in Provo until Oct 7").',
+    schema: obj({ q: str('words to match'), about: str('person name or id'), history: { type: 'boolean' } }) },
+  { name: 'memory_correct', tier: 'outward', description: 'The user corrects or deletes one remembered fact (by fact id from memory_facts). Needs the user\'s confirmation.',
+    schema: obj({ fact_id: { type: 'integer' }, obj: str('the corrected value'), retract: { type: 'boolean', description: 'forget this fact' } }, ['fact_id']) },
+  { name: 'memory_identity', tier: 'read', description: 'Open identity questions memory would like the user to settle ("Is Discord Joe the same person as Joe Smith?"), with the evidence. Also resolves a name for an outward action: {name} → one person, or a list to choose from.',
+    schema: obj({ name: str('a name to resolve for sending/calling') }) },
+  { name: 'memory_confirm_identity', tier: 'outward', description: 'Record the user\'s answer to an identity question: card a and card b are the same person (same:true) or different (same:false). Only after the user said so. Needs confirmation.',
+    schema: obj({ a: { type: 'integer' }, b: { type: 'integer' }, same: { type: 'boolean' } }, ['a', 'b', 'same']) },
   { name: 'consent_list', tier: 'read', description: 'Which data sources the user has granted, their scope, row counts, and whether the consent ledger hash chain verifies.', schema: obj() },
   { name: 'consent_grant', tier: 'outward', description: 'Ask the user to allow a data source. scope "cloud" = redacted results may go to cloud models; "local" = local models only. Needs the user\'s confirmation.',
     schema: obj({ source, scope: str('cloud|local (default cloud)', { enum: S.SCOPES }) }, ['source']) },
@@ -145,8 +157,31 @@ const H = {
       const about = a.about ? (findEntity(db, /^\d+$/.test(a.about) ? { id: +a.about } : { name: a.about })?.id ?? S.entity(db, 'person', a.about)) : null;
       const id = S.addEvent(db, { source: 'user', kind: 'note', ts: Date.now(), body: a.text, ext_id: `note-${Date.now()}-${Math.random()}` }, about ? [[about, 'about']] : []);
       S.rebuildRelations(db);
-      return { ok: true, event_id: id, about };
+      const facts = S.flags.v2 ? F.sync(db).facts : 0; // "my mom is Linda Gimenes" becomes a fact (and identity evidence) at once
+      return { ok: true, event_id: id, about, facts };
     });
+  },
+  memory_person(db, a, ctx) {
+    const e = findEntity(db, a);
+    if (!e) return { found: false };
+    return { found: true, ...person(e.id, { ...ctx, db }) };
+  },
+  memory_facts(db, a, ctx) {
+    const about = a.about ? findEntity(db, /^\d+$/.test(String(a.about)) ? { id: +a.about } : { name: a.about }) : null;
+    if (a.about && !about) return { found: false, facts: [] };
+    return { facts: facts({ q: a.q, about: about?.id, history: !!a.history }, { ...ctx, db }), note: 'Each fact cites the event it came from (event_id). The user can correct or forget any of them.' };
+  },
+  async memory_correct(db, a, ctx) {
+    await confirm(ctx, a.retract ? `forget fact #${a.fact_id}` : `change fact #${a.fact_id} to "${a.obj}"`);
+    return F.correct(db, a.fact_id, a);
+  },
+  memory_identity(db, a, ctx) {
+    if (a.name) return brain.v2.target(db, String(a.name), { cloud: ctx.cloud !== false });
+    return { pending: brain.v2.pending(db) };
+  },
+  async memory_confirm_identity(db, a, ctx) {
+    await confirm(ctx, `record that #${a.a} and #${a.b} are ${a.same ? 'the same person' : 'different people'}`);
+    return { ok: true, link: brain.v2.confirm(db, a.a, a.b, !!a.same, ctx.actor || 'agent') };
   },
   async memory_forget(db, a, ctx) {
     if (!a.event_id && !a.entity_id) throw new Error('give event_id or entity_id');
@@ -203,12 +238,12 @@ export function noteMessage(m, ctx = {}) {
   return S.tx(db, () => {
     const who = m.dir === 'out' || !m.group ? m.conversation : m.sender; // 1:1: the thread is the person
     if (!who || who === 'me') return null;
-    const p = S.person(db, 'notifications', who, [{ kind: 'chat', value: `${m.pkg}|${m.conversation}` }].filter(() => !m.group));
+    const p = S.person(db, 'notifications', who, [{ kind: 'chat', value: `${m.pkg}|${m.group ? who : m.conversation}` }], m.app);
     const roles = [[p, m.dir === 'out' ? 'to' : 'from'], [S.entity(db, 'app', m.app || m.pkg), 'app']];
     if (m.group) roles.push([S.entity(db, 'group', m.conversation), 'group']);
     const id = S.addEvent(db, { source: 'notifications', kind: 'message', ts: m.when || Date.now(), title: `${m.app}: ${m.conversation}`,
       body: m.text, ext_id: `${m.pkg}|${m.conversation}|${m.when}|${m.dir}|${String(m.text).slice(0, 40)}` }, roles);
-    if (id) S.rebuildRelations(db);
+    if (id) { S.rebuildRelations(db); if (S.flags.v2) F.sync(db); } // v2: rule facts from the new message, ~0.1 ms
     return id;
   });
 }
@@ -258,13 +293,40 @@ export const recall = (q, ctx = {}) => brain.recall(dbOf(ctx), q, { cloud: ctx.c
 export const ask = (q, ctx = {}) => brain.ask(dbOf(ctx), q, { cloud: ctx.cloud !== false });
 export const profile = (ctx = {}) => brain.profile(dbOf(ctx), { cloud: ctx.cloud !== false });
 
+// ---------- v2 API for other agents (proactivity, UIs). See MEMORY-API.md. All read-only unless named otherwise; never throw on bad ids.
+// person(idOrName) -> {id, name, also, maybe, apps, phone, email, closeness, relationship, facts, history, identity:{pending:[...]}} | null
+export function person(idOrName, ctx = {}) {
+  const db = dbOf(ctx), cloud = ctx.cloud !== false;
+  const e = typeof idOrName === 'number' ? db.prepare('SELECT * FROM entity WHERE id=?').get(idOrName) : findEntity(db, { name: String(idOrName) });
+  if (!e) return null;
+  const r = brain.recall(db, e.name, { cloud, k: 0 }), card = r.people.find((p) => p.id === e.id) || r.people[0];
+  if (!card) return null;
+  const ids = S.flags.v2 ? [card.id, ...(card.also || []), ...(card.maybe || [])].map((n) => (typeof n === 'number' ? n : findEntity(db, { name: n })?.id)).filter(Boolean) : [card.id];
+  const fs = F.list(db, { about: ids, cloud, history: true, srcs: S.readable(db, cloud) });
+  const pend = S.flags.v2 ? brain.v2.pending(db, 50).filter((p) => ids.includes(p.a.id) || ids.includes(p.b.id)) : [];
+  return { ...card, relationship: fs.find((f) => f.pred === 'relationship' && f.status === 'active')?.obj, facts: fs.filter((f) => f.status === 'active'), history: fs.filter((f) => f.status !== 'active'), identity: { pending: pend } };
+}
+// facts({q, about, history}) -> [{id, name, pred, obj, text, since, until, status, event_id, by}]
+export function facts({ q, about, history = false } = {}, ctx = {}) {
+  const db = dbOf(ctx), cloud = ctx.cloud !== false;
+  const ids = about == null ? [] : typeof about === 'number' ? [about] : [findEntity(db, { name: String(about) })?.id].filter(Boolean);
+  if (about != null && !ids.length) return [];
+  return F.list(db, { q, about: ids, history, cloud, srcs: S.readable(db, cloud) });
+}
+export const about = (ctx = {}) => brain.v2.about(dbOf(ctx), { cloud: ctx.cloud !== false, budget: ctx.budget });
+export const identity = { pending: (ctx = {}, limit = 5) => brain.v2.pending(dbOf(ctx), limit), confirm: (a, b, same, ctx = {}) => brain.v2.confirm(dbOf(ctx), a, b, same, ctx.actor || 'user:owner'),
+  target: (name, ctx = {}) => brain.v2.target(dbOf(ctx), String(name), { cloud: ctx.cloud !== false }) };
+export const correct = (factId, change, ctx = {}) => F.correct(dbOf(ctx), factId, change);
+export const syncFacts = (ctx = {}) => F.sync(dbOf(ctx), ctx);
+export const people = (ctx = {}) => brain.profile(dbOf(ctx), { cloud: ctx.cloud !== false }).find((f) => f.k === 'close_people') ? brain.recall(dbOf(ctx), 'people', { cloud: ctx.cloud !== false, k: 0 }).people : [];
+
 // Lines for <phone_context>: [{text, untrusted}] (text written by other people is untrusted; the caller guards it).
 export function contextLines(goal, ctx = {}) {
   const r = brain.context(dbOf(ctx), String(goal || ''), { cloud: ctx.cloud !== false });
   if (!r) return [];
   const q = (s, n = 160) => JSON.stringify(String(s).replace(/\s+/g, ' ').slice(0, n));
-  const lines = r.facts.map((f) => ({ text: `${f.fact} [mem ${f.cites.join(',')}]`, untrusted: false, fact: !f.profile }));
-  for (const p of r.people) lines.push({ text: `${p.name}${p.also ? ` (also "${p.also.slice(0, 3).join('", "')}")` : ''}: ${[...p.apps.slice(0, 4), ...p.phone.slice(0, 1).map((x) => `phone ${x}`)].join(', ')}`, untrusted: false });
+  const lines = r.facts.map((f) => ({ text: `${f.fact}${f.cites.length ? ` [mem ${f.cites.join(',')}]` : ''}`, untrusted: false, fact: !f.profile }));
+  for (const p of r.people) lines.push({ text: `${p.name}${p.also ? ` (also "${p.also.slice(0, 3).join('", "')}")` : ''}${p.maybe ? ` (possibly also "${p.maybe.slice(0, 3).join('", "')}", not confirmed)` : ''}: ${[...p.apps.slice(0, 4), ...p.phone.slice(0, 1).map((x) => `phone ${x}`)].join(', ')}`, untrusted: false });
   for (const e of r.events) lines.push({ text: `[${e.app || e.source} · ${e.when}${e.from ? ` · ${e.from}` : ''}${e.to && e.to !== 'you' ? ` → ${e.to}` : ''}${e.group ? ` · ${e.group}` : ''}${e.place ? ` @ ${e.place}` : ''}] ${e.title && e.kind !== 'message' ? e.title : ''}${e.text ? ` ${q(e.text)}` : ''} [mem ${e.id}]`, untrusted: !e.trusted && !!e.text, source: e.source });
   return lines;
 }

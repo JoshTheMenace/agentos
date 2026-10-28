@@ -77,7 +77,7 @@ final class Server {
                 JSONObject params = req.optJSONObject("params");
                 String m = req.getString("method");
                 JSONObject p = params == null ? new JSONObject() : params;
-                int uid = java.util.Arrays.asList("task.start", "approval.confirm", "approval.escalate", "vault.add", "vault.remove", "audit.mark_breaks", "audit.demo_reset", "trackers.block", "trackers.unblock", "schedule.alarm", "plugins.set", "remote.read").contains(m)
+                int uid = java.util.Arrays.asList("task.start", "approval.confirm", "approval.escalate", "vault.add", "vault.remove", "audit.mark_breaks", "audit.demo_reset", "trackers.block", "trackers.unblock", "schedule.alarm", "plugins.set", "remote.read", "image.sent").contains(m)
                         || Plugins.off(m, p) != null ? callerUid(s) : -1; // only these care who asks (a switched-off plugin: is it the owner's own screen?)
                 res = broker.call(m, p, uid);
             } catch (Exception e) {

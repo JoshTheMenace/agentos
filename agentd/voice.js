@@ -57,6 +57,22 @@ const SCREEN_NOTE = 'When the user asks what is on their screen, or for help ans
 const CAMERA_Q = /\b(looking at|what(?:'s| is) (this|that)|read (this|that|it)|(this|that) (sign|plant|thing|label|menu|building|dog|cat|flower|bird)|what (does|do) (this|it|that) say|identify|what (kind|type) of|can you see|look at (this|that))\b/i;
 const LOOK = /\b(on|of) (my|the|this) screen\b|\b(my|this) screen\b|\bscreenshot\b|\bhelp me (answer|reply to|respond to|with) (this|that|it)\b|\bwhat(?:'s| is) (this|that) (app|page|message)\b/i;
 
+// GPT Live can't start talking on its own here (response.create needs "Responses delegation"), so a shared photo is a silent note it answers from on the user's next words.
+const PHOTO_NOTE = 'The user just shared a photo with you. You cannot see it yourself: a [PHOTO] note describing it comes in a moment. Answer questions about it from that note, naturally, as if you saw it. Until it comes say at most "Let me see."; never guess what it shows.';
+const JPEG = /^data:image\/jpeg;base64,/;
+
+// Every picture that goes to a model is one line in the broker's audit chain (Activity: "Camera photo sent to gpt-6-luna · 84 KB").
+// Screenshots aren't logged here: the broker already logs each screen.capture.
+export function logImage(source, image, model) {
+  rpc('image.sent', { source, model, bytes: Math.round(image.length * 0.75) }, 5000).catch(() => {});
+}
+// The eyes: one vision turn on a warm thread, ~1.3 s. Returns the answer text, or null.
+export async function eyes(codex, image, text, source) {
+  if (source !== 'screen') logImage(source, image, cfg.visionModel);
+  return codex.quick('eyes', { model: cfg.visionModel, effort: 'low', prompt: EYES, rotate: 4, images: [image] }, text, AbortSignal.timeout(15_000))
+    .then((x) => String(x).trim(), (e) => { log(`voice eyes failed: ${e.message}`); return null; });
+}
+
 const TOOL = /^\W*(start_task|task_status|list_tasks|stop_task)\b\s*[:\-–]?\s*(.*)$/is;
 // Fallback for a plain sentence: status / list / stop words, else it's a new task.
 export function route(text, hasTasks = true, vision = false) {
@@ -94,7 +110,11 @@ export class Voice {
         this.#camera = cfg.voiceVision && !!msg.on; this.#frame = null;
         if (this.#camera) this.#codex.quick('eyes', { model: cfg.visionModel, effort: 'low', prompt: EYES, rotate: 4 }, 'Camera opened. Reply OK.', AbortSignal.timeout(15_000)).catch(() => {}); // warm the eyes (~1 s saved on the first frame)
         return this.#thread && this.#codex.voiceText(this.#thread, this.#camera ? CAMERA_NOTE : 'The camera is off now.', 'developer').catch(() => {});
-      case 'voice.frame': return this.#camera && /^data:image\/jpeg;base64,/.test(msg.image) && this.#describe(msg.image);
+      case 'voice.frame': return this.#camera && JPEG.test(msg.image) && this.#describe(msg.image, 'live');
+      case 'voice.image': // a photo the user attached (Camera or Photos): the eyes describe it, the voice answers from it
+        if (!cfg.voiceVision || !JPEG.test(msg.image) || !this.#thread) return;
+        this.#codex.voiceText(this.#thread, PHOTO_NOTE, 'developer').catch(() => {});
+        return this.#describe(msg.image, msg.source === 'camera' ? 'camera' : 'photos', true);
       case 'voice.text': return this.#thread && this.#codex.voiceText(this.#thread, String(msg.text || ''), 'user').catch((e) => this.#send({ type: 'voice.error', message: e.message })); // typed/test input
     }
   }
@@ -106,6 +126,7 @@ export class Voice {
       const v = await this.#codex.voiceStart(sdp, (m) => this.#onVoice(m), { initialItems: [{ role: 'developer', text: DESK_NOTE }, ...(cfg.voiceVision ? [{ role: 'developer', text: SCREEN_NOTE }] : [])], ...(process.env.VOICE_PROMPT === 'agentos' && { prompt: VOICE_PROMPT }) });
       this.#thread = v.threadId;
       this.#send({ type: 'voice.answer', sdp: v.sdp, ms: Date.now() - t0, vision: cfg.voiceVision });
+      if (cfg.voiceVision) this.#codex.quick('eyes', { model: cfg.visionModel, effort: 'low', prompt: EYES, rotate: 4 }, 'Voice started. Reply OK.', AbortSignal.timeout(15_000)).catch(() => {}); // warm the eyes for a shared photo
     } catch (e) { this.#send({ type: 'voice.error', message: e.message }); }
   }
 
@@ -137,7 +158,7 @@ export class Voice {
     if (!text || this.#seen.has(itemId)) return; // the page and app-server's sideband may both report it
     this.#seen.add(itemId);
     if (BACKSTOP.test(text)) this.#handedAt = Date.now(); // the model handed this kind off itself
-    if (this.#camera && this.#frame && Date.now() - this.#frame.at < 15_000 && CAMERA_Q.test(text)) // about the picture: not a task
+    if (this.#frame && Date.now() - this.#frame.at < (this.#camera ? 15_000 : 120_000) && CAMERA_Q.test(text)) // about the picture: not a task
       return this.#answerFromCamera(this.#frame, await this.#frame.p);
     const heard = Date.now();
     if (events.pending.size && events.intent(text)) { // a spoken "yes" handed off: the user's transcript answers it, not this
@@ -174,13 +195,13 @@ export class Voice {
     this.say(a ? `Looked at the screen (${r.pkg}): ${a} Tell the user this in your own words.` : 'Could not read the screen just now. Tell the user briefly.');
   }
 
-  // A camera frame (the user just started talking): describe it now and put it silently into the session. If the user's
-  // question already finished (GPT Live said "Let me look"), ask it to answer now.
-  #describe(image) {
-    const f = { at: Date.now() };
-    f.p = this.#see(image, DESCRIBE, 'camera', Math.round(image.length * 0.75)).then(async (d) => {
+  // A live camera frame (the user just started talking): describe it now and put it silently into the session. If the user's
+  // question already finished (GPT Live said "Let me look"), ask it to answer now. A shared photo works the same way.
+  #describe(image, source, shared = false) {
+    const f = { at: Date.now() }, tag = shared ? 'PHOTO' : 'CAMERA';
+    f.p = this.#see(image, DESCRIBE, source, Math.round(image.length * 0.75)).then(async (d) => {
       if (!d || this.#frame !== f || !this.#thread) return d;
-      await this.#codex.voiceText(this.#thread, `[CAMERA] ${d}`, 'developer').catch(() => {});
+      await this.#codex.voiceText(this.#thread, `[${tag}] ${d}`, 'developer').catch(() => {});
       if (this.#asked > f.at) this.#answerFromCamera(f, d); // they finished asking before the note was in
       return d;
     });
@@ -188,13 +209,11 @@ export class Voice {
   }
   #answerFromCamera(f, d) {
     if (f.said) return; f.said = true;
-    this.say(d ? 'The camera picture is in the [CAMERA] note above. Answer the user from it now.' : 'Could not see the camera picture. Tell the user briefly.');
+    this.say(d ? 'The picture is in the latest [CAMERA] or [PHOTO] note above. Answer the user from it now.' : 'Could not see the camera picture. Tell the user briefly.');
   }
 
   async #see(image, text, source, bytes) {
-    const t = Date.now();
-    const a = await this.#codex.quick('eyes', { model: cfg.visionModel, effort: 'low', prompt: EYES, rotate: 4, images: [image] }, text, AbortSignal.timeout(15_000))
-      .then((x) => String(x).trim(), (e) => { log(`voice eyes failed: ${e.message}`); return null; });
+    const t = Date.now(), a = await eyes(this.#codex, image, text, source);
     log(`voice eyes (${source}, ${bytes} B) ${Date.now() - t} ms: ${a}`);
     this.#send({ type: 'voice.seen', source, bytes, ms: Date.now() - t, text: a });
     return a;

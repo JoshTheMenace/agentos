@@ -1,0 +1,292 @@
+{
+ "90f5443d22d5521d045b4c8c": {
+  "text": "[{\"subject\": \"me\", \"predicate\": \"rent\", \"object\": \"$1,700/month, due on the 1st\", \"op\": \"add\", \"worth\": 4}, {\"subject\": \"me\", \"predicate\": \"rent\", \"object\": \"$1,850/month\", \"op\": \"update\", \"valid_from\": \"2026-12-01\", \"worth\": 4}]",
+  "tokens": 6368,
+  "ms": 4301
+ },
+ "d8ffbbc56c45f8488a773131": {
+  "text": "[\n{\"subject\": \"Joe Smith\", \"predicate\": \"relationship\", \"object\": \"cousin\", \"op\": \"add\", \"worth\": 4},\n{\"subject\": \"Linda Gimenes\", \"predicate\": \"relationship\", \"object\": \"mom\", \"op\": \"add\", \"worth\": 5},\n{\"subject\": \"me\", \"predicate\": \"prefers\", \"object\": \"window seats on flights\", \"op\": \"add\", \"worth\": 3},\n{\"subject\": \"me\", \"predicate\": \"prefers\", \"object\": \"coffee with oat milk\", \"op\": \"add\", \"worth\": 3},\n{\"subject\": \"Kai Nakamura\", \"predicate\": \"relationship\", \"object\": \"climbing partner\", \"op\": \"add\", \"worth\": 4},\n{\"subject\": \"me\", \"predicate\": \"address\", \"object\": \"455 E 300 S, Salt Lake City\", \"op\": \"add\", \"worth\": 5},\n{\"subject\": \"me\", \"predicate\": \"lives_in\", \"object\": \"Salt Lake City\", \"op\": \"add\", \"worth\": 4}\n]",
+  "tokens": 6423,
+  "ms": 4289
+ },
+ "d7100a1e9ea40b8d9514f4cb": {
+  "text": "[{\"subject\":\"me\",\"predicate\":\"works_at\",\"object\":\"Figma\",\"op\":\"update\",\"valid_from\":\"2026-10-19\",\"worth\":5},{\"subject\":\"me\",\"predicate\":\"project\",\"object\":\"AgentOS hackathon entry\",\"op\":\"add\",\"valid_from\":\"2026-10-23\",\"worth\":4},{\"subject\":\"me\",\"predicate\":\"likes\",\"object\":\"climbing (hangboard training)\",\"op\":\"add\",\"valid_from\":\"2026-10-24\",\"worth\":3}]",
+  "tokens": 7209,
+  "ms": 7524
+ },
+ "2460b41a8d6ab06078267bdf": {
+  "text": "[{\"subject\":\"Mom\",\"predicate\":\"relationship\",\"object\":\"mom\",\"op\":\"add\",\"worth\":5},{\"subject\":\"Mom\",\"predicate\":\"lives_in\",\"object\":\"Boise, ID\",\"op\":\"update\",\"valid_from\":\"2026-10-07\",\"worth\":5},{\"subject\":\"Mom\",\"predicate\":\"address\",\"object\":\"12 Elm St, Boise, ID\",\"op\":\"update\",\"valid_from\":\"2026-10-07\",\"worth\":5},{\"subject\":\"me\",\"predicate\":\"allergic_to\",\"object\":\"shellfish\",\"op\":\"add\",\"valid_from\":\"2026-09-27\",\"worth\":5}]",
+  "tokens": 7075,
+  "ms": 6240
+ },
+ "15abfeb2339341d4b76eba80": {
+  "text": "[{\"subject\": \"Sam Patel\", \"predicate\": \"birthday\", \"object\": \"November 8\", \"op\": \"add\", \"worth\": 4}, {\"subject\": \"Sam Patel\", \"predicate\": \"diet\", \"object\": \"vegetarian\", \"op\": \"add\", \"valid_from\": \"2026-10-12\", \"worth\": 5}, {\"subject\": \"Sam Patel\", \"predicate\": \"favorite:burger\", \"object\": \"Lucky 13\", \"op\": \"add\", \"valid_from\": \"2026-09-17\", \"worth\": 3}, {\"subject\": \"Sam Patel\", \"predicate\": \"wants\", \"object\": \"Patagonia Nano Puff, green, size M\", \"op\": \"add\", \"valid_from\": \"2026-10-16\", \"worth\": 3}]",
+  "tokens": 7193,
+  "ms": 6593
+ },
+ "687f0d30a29677b48bb0bb64": {
+  "text": "[{\"subject\": \"me\", \"predicate\": \"favorite:coffee_shop\", \"object\": \"Blue Copper (Salt Lake City)\", \"op\": \"add\", \"valid_from\": \"2026-10-02\", \"worth\": 4}]",
+  "tokens": 6756,
+  "ms": 4652
+ },
+ "122144973d56ab24b5c41c42": {
+  "text": "[]",
+  "tokens": 5917,
+  "ms": 2325
+ },
+ "d6d557b09535e2dd79719bdf": {
+  "text": "[]",
+  "tokens": 5739,
+  "ms": 1320
+ },
+ "0943ca6171af3c4158cc67ff": {
+  "text": "[{\"subject\":\"me\",\"predicate\":\"wants\",\"object\":\"crash pad\",\"op\":\"add\",\"worth\":3},{\"subject\":\"me\",\"predicate\":\"plan\",\"object\":\"attend climbing competition\",\"op\":\"add\",\"worth\":3},{\"subject\":\"me\",\"predicate\":\"likes\",\"object\":\"outdoor bouldering at Joe's Valley\",\"op\":\"add\",\"worth\":3}]",
+  "tokens": 6832,
+  "ms": 4559
+ },
+ "09b289ac9d85348b0d01d98c": {
+  "text": "```json\n[\n  {\"subject\": \"Dad\", \"predicate\": \"status\", \"object\": \"retired from Delta after 31 years\", \"op\": \"add\", \"valid_from\": \"2026-10-10\", \"worth\": 5},\n  {\"subject\": \"Dad\", \"predicate\": \"plan\", \"object\": \"golf every day in retirement\", \"op\": \"add\", \"valid_from\": \"2026-10-10\", \"worth\": 4},\n  {\"subject\": \"Dad\", \"predicate\": \"likes\", \"object\": \"golf\", \"op\": \"add\", \"worth\": 4},\n  {\"subject\": \"Dad\", \"predicate\": \"relationship\", \"object\": \"father\", \"op\": \"add\", \"worth\": 4},\n  {\"subject\": \"Dad\", \"predicate\": \"likes\", \"object\": \"Catena Malbec 2021\", \"op\": \"add\", \"worth\": 3}\n]\n```",
+  "tokens": 6920,
+  "ms": 5577
+ },
+ "f45a75483b337bc7d468b25a": {
+  "text": "[]",
+  "tokens": 5851,
+  "ms": 1647
+ },
+ "df0678c42b049a6c790531bf": {
+  "text": "[]",
+  "tokens": 5800,
+  "ms": 1698
+ },
+ "5501c0f63a73c8477a9d0c5d": {
+  "text": "[{\"subject\":\"me\",\"predicate\":\"favorite:coffee_shop\",\"object\":\"Publik\",\"op\":\"update\",\"valid_from\":\"2026-10-18\",\"worth\":4},{\"subject\":\"Priya Shah\",\"predicate\":\"favorite:brunch_spot\",\"object\":\"Pago (9th & 9th)\",\"op\":\"add\",\"valid_from\":\"2026-10-21\",\"worth\":3}]",
+  "tokens": 6519,
+  "ms": 3375
+ },
+ "0c84d3ac48fceeacb8a3f7f9": {
+  "text": "[{\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"pottery class with Rebecca Torres (Tuesdays)\", \"op\": \"add\", \"worth\": 3}]",
+  "tokens": 6923,
+  "ms": 5660
+ },
+ "d6a082106f5466acc55ae8c1": {
+  "text": "```json\n[{\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"attend grandma's 80th birthday party on Nov 12 and bring a cake\", \"op\": \"add\", \"valid_from\": \"2026-10-21\", \"worth\": 4}]\n```",
+  "tokens": 7034,
+  "ms": 6846
+ },
+ "7e7f3d92e96923af1ace74e1": {
+  "text": "[{\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"bring a pie to Thanksgiving at Aunt Rosa's (Nov 26), pie to be dropped off by 2pm\", \"op\": \"add\", \"valid_from\": \"2026-10-21\", \"worth\": 3}]",
+  "tokens": 7579,
+  "ms": 9009
+ },
+ "d1461eb56350d8f8a21cd7be": {
+  "text": "[]",
+  "tokens": 5870,
+  "ms": 1340
+ },
+ "86caba98ccf1f069bca6647c": {
+  "text": "[]",
+  "tokens": 5914,
+  "ms": 1931
+ },
+ "22ec43030120783a675aca1a": {
+  "text": "[]",
+  "tokens": 6145,
+  "ms": 2630
+ },
+ "baf84e351740a85ce2582721": {
+  "text": "[{\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"bring 12 quickdraws to Red Rock climbing trip\", \"op\": \"add\", \"valid_from\": \"2026-10-24\", \"worth\": 3}]",
+  "tokens": 5949,
+  "ms": 1414
+ },
+ "8ddc0f664261fecb214e707b": {
+  "text": "[]",
+  "tokens": 5981,
+  "ms": 1239
+ },
+ "171c0bef9bf3d4845f2fbb60": {
+  "text": "[]",
+  "tokens": 5984,
+  "ms": 1651
+ },
+ "ea1b4c17b7aada6131b6bde3": {
+  "text": "[]",
+  "tokens": 6020,
+  "ms": 1417
+ },
+ "b192d84b83451099fad6c8cd": {
+  "text": "[{\"subject\":\"me\",\"predicate\":\"plan\",\"object\":\"Red Rock climbing trip with Jordan W., Nov 14-16\",\"op\":\"add\",\"valid_from\":\"2026-10-26\",\"worth\":3},{\"subject\":\"Jordan W.\",\"predicate\":\"relationship\",\"object\":\"climbing partner\",\"op\":\"add\",\"valid_from\":\"2026-10-26\",\"worth\":3}]",
+  "tokens": 6628,
+  "ms": 3707
+ },
+ "42547d82d04cf56a694418af": {
+  "text": "[]",
+  "tokens": 5987,
+  "ms": 1611
+ },
+ "8123b5755a46b7d73cfcd14d": {
+  "text": "[]",
+  "tokens": 6464,
+  "ms": 3320
+ },
+ "6ade9623ae6db5760b255a33": {
+  "text": "[]",
+  "tokens": 6021,
+  "ms": 1433
+ },
+ "c87a00cdef7f4edfa5afb16a": {
+  "text": "[]",
+  "tokens": 6442,
+  "ms": 4297
+ },
+ "c91e897290a470aaadf1c431": {
+  "text": "[{\"subject\":\"me\",\"predicate\":\"address\",\"object\":\"455 E 300 S, Salt Lake City\",\"op\":\"add\",\"valid_from\":\"2026-09-27\",\"worth\":5},{\"subject\":\"me\",\"predicate\":\"lives_in\",\"object\":\"Salt Lake City\",\"op\":\"add\",\"valid_from\":\"2026-09-27\",\"worth\":4}]",
+  "tokens": 6252,
+  "ms": 2968
+ },
+ "a8a59ff0ae4cd3df174acd58": {
+  "text": "```json\n[{\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"Moab climbing trip with Alex Rivera (date not stated; Alex asked about bringing the stove)\", \"op\": \"add\", \"worth\": 3}]\n```",
+  "tokens": 7658,
+  "ms": 8220
+ },
+ "f91f88b753a1b57d720752d3": {
+  "text": "[{\"subject\": \"Mom\", \"predicate\": \"address\", \"object\": \"12 Elm St, Boise ID\", \"op\": \"add\", \"valid_from\": \"2026-10-07\", \"worth\": 4}]",
+  "tokens": 6676,
+  "ms": 4251
+ },
+ "158e16f2def3e6e189feded2": {
+  "text": "[{\"subject\": \"Sam Patel\", \"predicate\": \"favorite:burger place\", \"object\": \"Lucky 13\", \"op\": \"add\", \"valid_from\": \"2026-09-17\", \"worth\": 3},\n{\"subject\": \"Sam Patel\", \"predicate\": \"dislikes\", \"object\": \"steakhouses\", \"op\": \"add\", \"valid_from\": \"2026-10-12\", \"worth\": 3}]",
+  "tokens": 6771,
+  "ms": 3891
+ },
+ "75f9821c201d80b61d9248ba": {
+  "text": "[]",
+  "tokens": 7506,
+  "ms": 7014
+ },
+ "0f90855e18278a43fff01507": {
+  "text": "[]",
+  "tokens": 5958,
+  "ms": 1842
+ },
+ "1ede2c925817d98aee0fcdaa": {
+  "text": "[]",
+  "tokens": 5926,
+  "ms": 2060
+ },
+ "d7f46a28af6f5e8a48e2774e": {
+  "text": "[]",
+  "tokens": 6385,
+  "ms": 2019
+ },
+ "d8f9b182c119df91243a1a97": {
+  "text": "[{\"subject\": \"Dad\", \"predicate\": \"likes\", \"object\": \"golf (plays every day since retiring)\", \"op\": \"add\", \"valid_from\": \"2026-10-17\", \"worth\": 4}, {\"subject\": \"Dad\", \"predicate\": \"likes\", \"object\": \"Catena Malbec 2021\", \"op\": \"add\", \"valid_from\": \"2026-10-25\", \"worth\": 3}]",
+  "tokens": 6752,
+  "ms": 4465
+ },
+ "a178f62a68f4b13d3ceb7ff4": {
+  "text": "[]",
+  "tokens": 5941,
+  "ms": 1138
+ },
+ "efda167e1a485ab06135f94f": {
+  "text": "[]",
+  "tokens": 5914,
+  "ms": 1449
+ },
+ "dc0edfd809586fbb6a5c63df": {
+  "text": "[]",
+  "tokens": 6433,
+  "ms": 4427
+ },
+ "3f5a1d968484a40b6131b2a6": {
+  "text": "[]",
+  "tokens": 6601,
+  "ms": 4320
+ },
+ "20d837e3f1066545cadc84a3": {
+  "text": "[{\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"attend grandma's 80th birthday party on the 12th and bring the cake (Joe Smith's mom is making tamales)\", \"op\": \"add\", \"valid_from\": \"2026-10-21\", \"worth\": 3}]",
+  "tokens": 6839,
+  "ms": 5086
+ },
+ "b5fbb74b795f0461c78e3f0c": {
+  "text": "[{\"subject\":\"me\",\"predicate\":\"plan\",\"object\":\"bring a pie to Thanksgiving at Aunt Rosa's this year\",\"op\":\"add\",\"valid_from\":\"2026-10-21\",\"worth\":3},{\"subject\":\"Rosa\",\"predicate\":\"relationship\",\"object\":\"aunt\",\"op\":\"add\",\"valid_from\":\"2026-10-21\",\"worth\":3}]",
+  "tokens": 7123,
+  "ms": 5633
+ },
+ "240d85647e3519a360edac70": {
+  "text": "[]",
+  "tokens": 6030,
+  "ms": 1047
+ },
+ "c7f8fe937e6a25983acb7742": {
+  "text": "[]",
+  "tokens": 6000,
+  "ms": 1367
+ },
+ "fcd122574fad6d181ffb355e": {
+  "text": "[]",
+  "tokens": 6140,
+  "ms": 1771
+ },
+ "0c185df95206398e32e849cf": {
+  "text": "[]",
+  "tokens": 6542,
+  "ms": 3391
+ },
+ "e85354455d4de31bcab7de91": {
+  "text": "[]",
+  "tokens": 6053,
+  "ms": 1864
+ },
+ "0868abbe6fadbf1536c8ec24": {
+  "text": "[]",
+  "tokens": 6022,
+  "ms": 1616
+ },
+ "1c8a9a52905e6104ae7afef0": {
+  "text": "[]",
+  "tokens": 6119,
+  "ms": 1588
+ },
+ "0def0b886de96fd685619f1e": {
+  "text": "```json\n[{\"subject\": \"me\", \"predicate\": \"status\", \"object\": \"Red Rock climbing trip Nov 14-16 confirmed; booking a casita for lodging\", \"op\": \"add\", \"valid_from\": \"2026-10-26\", \"worth\": 3}, {\"subject\": \"Jordan W.\", \"predicate\": \"relationship\", \"object\": \"climbing partner (Red Rock trip, drives)\", \"op\": \"add\", \"valid_from\": \"2026-10-26\", \"worth\": 3}]\n```",
+  "tokens": 7503,
+  "ms": 7219
+ },
+ "b48964b01ebac6a4e4af7b83": {
+  "text": "[]",
+  "tokens": 6087,
+  "ms": 1146
+ },
+ "0dcba60081417c0d852a0e2b": {
+  "text": "[]",
+  "tokens": 6529,
+  "ms": 2591
+ },
+ "baa64c49f9070d9f967128d6": {
+  "text": "[]",
+  "tokens": 6126,
+  "ms": 850
+ },
+ "4926c9e6017aca9ad701aa47": {
+  "text": "[]",
+  "tokens": 6049,
+  "ms": 1843
+ },
+ "b83c20330340b6b6466f5f67": {
+  "text": "```json\n[\n  {\"subject\": \"Linda Gimenes\", \"predicate\": \"relationship\", \"object\": \"mom\", \"op\": \"add\", \"valid_from\": \"2026-08-28\", \"worth\": 5},\n  {\"subject\": \"Joe Smith\", \"predicate\": \"relationship\", \"object\": \"cousin\", \"op\": \"add\", \"valid_from\": \"2026-08-28\", \"worth\": 4},\n  {\"subject\": \"Kai Nakamura\", \"predicate\": \"relationship\", \"object\": \"climbing partner\", \"op\": \"add\", \"valid_from\": \"2026-09-17\", \"worth\": 4},\n  {\"subject\": \"me\", \"predicate\": \"address\", \"object\": \"455 E 300 S, Salt Lake City\", \"op\": \"add\", \"valid_from\": \"2026-09-27\", \"worth\": 5},\n  {\"subject\": \"me\", \"predicate\": \"lives_in\", \"object\": \"Salt Lake City\", \"op\": \"add\", \"valid_from\": \"2026-09-27\", \"worth\": 5},\n  {\"subject\": \"me\", \"predicate\": \"prefers\", \"object\": \"window seats on flights\", \"op\": \"add\", \"valid_from\": \"2026-09-02\", \"worth\": 3},\n  {\"subject\": \"me\", \"predicate\": \"prefers\", \"object\": \"oat milk in coffee\", \"op\": \"add\", \"valid_from\": \"2026-09-07\", \"worth\": 3}\n]\n```",
+  "tokens": 6886,
+  "ms": 4311
+ },
+ "4ecc870d56053187010c7423": {
+  "text": "[{\"subject\":\"Alex Rivera\",\"predicate\":\"likes\",\"object\":\"climbing, hangboard training\",\"op\":\"add\",\"valid_from\":\"2026-10-24\",\"worth\":3},{\"subject\":\"me\",\"predicate\":\"plan\",\"object\":\"Moab trip with Alex Rivera (stove coordination, dates not stated)\",\"op\":\"add\",\"worth\":3}]",
+  "tokens": 7727,
+  "ms": 8114
+ },
+ "05ca6f6df1ab42d66b26aee9": {
+  "text": "[{\"subject\": \"Mom\", \"predicate\": \"address\", \"object\": \"12 Elm St, Boise ID\", \"op\": \"add\", \"valid_from\": \"2026-10-07\", \"worth\": 4}, {\"subject\": \"Mom\", \"predicate\": \"relationship\", \"object\": \"mom\", \"op\": \"add\", \"worth\": 4}, {\"subject\": \"me\", \"predicate\": \"plan\", \"object\": \"visit Mom in Boise in November 2026\", \"op\": \"add\", \"valid_from\": \"2026-10-07\", \"worth\": 3}]",
+  "tokens": 7257,
+  "ms": 5968
+ }
+}

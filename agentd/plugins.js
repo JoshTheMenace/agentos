@@ -7,6 +7,7 @@
 //   - AGENTD_TOOLS=all (default): every enabled tool upfront, as before. AGENTD_TOOLS=plugins: core + the 0-2 plugins
 //     pick() reads in the user's own words; the other enabled plugins are deferred (one-line summaries, load on demand).
 import { cfg } from './config.js';
+import { plugins as appPlugins } from './app-reads.js';
 
 // Always on, never toggled: everything the current bench tasks need, so no core task gets slower.
 export const CORE = ['task_start', 'screen_read', 'tap', 'type', 'scroll', 'press', 'open_app', 'list_apps', 'act', 'wait',
@@ -15,14 +16,15 @@ export const CORE = ['task_start', 'screen_read', 'tap', 'type', 'scroll', 'pres
 // route: the pre-selector's words (the user's request only; never screen or notification text, so planted text can't
 // widen the tool set). prompt: the system-prompt lines that only matter when the plugin's tools are visible.
 export const PLUGINS = [
+  ...appPlugins,
   { id: 'calendar', name: 'Calendar', on: true, summary: 'Find, add, move and delete calendar events directly (no Calendar screen).',
     tools: ['add_event', 'find_events', 'update_event', 'delete_event'],
     route: /\b(calendars?|meetings?|events?|appointments?|agenda|invites?|free|busy|lunch|dinner|breakfast|dentist|doctor)\b/,
     prompt: '- Calendar: add_event/find_events/update_event/delete_event; never tap through the Calendar app.' },
-  { id: 'messages', name: 'Messages & calls', on: true, summary: 'Contacts, send/read SMS, call log, place calls, Gmail drafts.',
-    tools: ['find_contact', 'send_sms', 'read_sms', 'read_calls', 'call', 'email_draft'],
-    route: /\b(texts?|texted|sms|messages?|calls?|called|calling|phone number|number|contacts?|e-?mails?|gmail|voicemail)\b/,
-    prompt: '- Messages & calls: find_contact; send_sms, read_sms, read_calls, call; email_draft.' },
+  { id: 'messages', name: 'Messages & calls', on: true, summary: 'Contacts, send/read SMS, call log, place calls.',
+    tools: ['find_contact', 'send_sms', 'read_sms', 'read_calls', 'call'],
+    route: /\b(texts?|texted|sms|messages?|calls?|called|calling|phone number|number|contacts?|voicemail)\b/,
+    prompt: '- Messages & calls: find_contact; send_sms, read_sms, read_calls, call.' },
   { id: 'clock', name: 'Alarms', on: true, summary: 'List the alarms in Clock and delete or turn one off.',
     tools: ['list_alarms', 'delete_alarm'],
     route: /\b(alarms|(delete|remove|cancel|turn off|disable|clear|change|snooze)\b.{0,30}\balarm|alarm\b.{0,20}\b(off|delete)|my alarm)\b/,
@@ -63,9 +65,9 @@ export const PLUGINS = [
     tools: ['build_app', 'list_my_apps', 'remove_app'],
     route: /\b(apps?|build|make|create|track|tracker|tracking|log|logger|counter|dice|roller|habits?|streaks?|widget|intake)\b/,
     prompt: '- Apps: when the user wants to track, log, count, roll or time something, or asks for an app/tool, call build_app once with their request (no questions; sensible defaults). "Add X to my <name> app" = build_app with update:"<name>". It takes about half a minute; then say it is on their home screen.' },
-  { id: 'mods', name: 'App mods', on: true, summary: 'Add a native-looking button to another app that presses its own buttons.',
-    tools: ['app_mod_apply', 'app_mod_targets', 'app_mod_list', 'app_mod_remove'],
-    route: /\b(mods?|buttons?)\b/,
+  { id: 'mods', name: 'Mods', on: true, summary: 'Preview and mask promoted app content, simplify screens, add safe buttons, list/remove mods.',
+    tools: ['mod_inspect', 'mod_preview', 'mod_apply', 'mod_list', 'mod_remove', 'mod_disable', 'app_mod_apply', 'app_mod_targets', 'app_mod_list', 'app_mod_remove'],
+    route: /\b(mods?|buttons?|promoted|sponsored|simplify|restyle|hide|reorder|banners?)\b/,
     prompt: '' },
 ];
 export const BY_ID = Object.fromEntries(PLUGINS.map((p) => [p.id, p]));

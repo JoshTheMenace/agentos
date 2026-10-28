@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { cfg, log } from '../config.js';
-import { SUGGEST_PROMPT, systemPrompt } from '../prompt.js';
+import { SUGGEST_PROMPT, WRITE_PROMPT, systemPrompt } from '../prompt.js';
 import { appList, runTool, spec, toolset } from '../tools.js';
 import { LOADERS } from '../plugins.js';
 
@@ -19,6 +19,8 @@ const ARGS = ['app-server', ...OFF.flatMap((f) => ['-c', `features.${f}=false`])
 const TRANSIENT = /dns|lookup|resolve|ENOTFOUND|EAI_AGAIN|error sending request|stream disconnected|connection (reset|refused|closed|failed)|timed? ?out|network|unreachable|exited|routing discovery failed/i;
 const STALL_MS = 45_000;
 const SUGGEST_SCHEMA = { type: 'object', properties: { items: { type: 'array', items: { type: 'string' } } }, required: ['items'], additionalProperties: false };
+const WRITE_SCHEMA = { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false };
+const noDash = (x) => String(x).replace(/\s*—\s*/g, ', '); // the owner never wants em dashes
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Finishing tools (cfg.codexFinish): the model may pass its final reply as `done`. If the call succeeds (so the broker
 // allowed it), agentd shows that reply and ends the turn: the "tell the user it's done" model call (~2.5 s) is skipped.
@@ -166,7 +168,7 @@ export class Codex {
       });
       s = session.codex = { threadId: r.thread.id, gen: this.#gen, off: ts.off.join(), loaded: ts.loaded, deferred: ts.deferred };
     }
-    const r = await this.#turn(s.threadId, text, ctx, { effort: cfg.codexEffort });
+    const r = await this.#turn(s.threadId, text, ctx, { effort: cfg.codexEffort, images: ctx.images }); // a photo the user attached (server.js ask)
     if (r.usage) r.usage.plugins = { mode: cfg.tools, loaded: s.loaded, deferred: s.deferred }; // for the bench
     return r;
   }
@@ -207,13 +209,18 @@ export class Codex {
     const turn = this.#turn(s.threadId, text, { emit: (m) => m.type === 'text.delta' && onDelta?.(m.text), signal }, { effort: job.effort, images: job.images, ...(job.schema && { outputSchema: job.schema }) });
     s.idle = turn;
     const r = await turn;
+    this.lastUsage = r.usage; // token counts of the last quick job (proactive eval reads it)
     if (r.status !== 'completed') throw new Error(r.error || r.status);
     return job.schema ? JSON.parse(r.text) : r.text;
   }
 
   // Keyboard suggestions -> items[].
   async suggest(text, signal) {
-    return (await this.quick('suggest', { model: cfg.suggestModel, effort: cfg.suggestEffort, prompt: SUGGEST_PROMPT, schema: SUGGEST_SCHEMA, rotate: 30 }, text, signal)).items;
+    return (await this.quick('suggest', { model: cfg.suggestModel, effort: cfg.suggestEffort, prompt: SUGGEST_PROMPT, schema: SUGGEST_SCHEMA, rotate: 30 }, text, signal)).items.map(noDash);
+  }
+  // Keyboard "Write for me" (write / shorter / casual / formal / redo / translate / summary) -> one finished text.
+  async write(text, signal) {
+    return noDash((await this.quick('write', { model: cfg.suggestModel, effort: cfg.suggestEffort, prompt: WRITE_PROMPT, schema: WRITE_SCHEMA, rotate: 30 }, text, signal)).text);
   }
 
   // Voice: a separate thread with NO tools. Delegations are handed to agentd (onEvent gets every realtime

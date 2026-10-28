@@ -45,7 +45,7 @@ public class AgentA11y extends AccessibilityService {
     @Override public void onAccessibilityEvent(AccessibilityEvent e) {
         lastEvent = SystemClock.uptimeMillis();
         if (e.getEventType() != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) screen.markDirty();
-        if (broker != null) { broker.mods.onEvent(); broker.vault.onEvent(e); }
+        if (broker != null) { broker.mods.onEvent(e); broker.vault.onEvent(e); }
         Look.onEvent(this, e);
     }
 
@@ -58,7 +58,7 @@ public class AgentA11y extends AccessibilityService {
         if (e.getKeyCode() != KeyEvent.KEYCODE_VOLUME_DOWN) return false;
         if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) volDownAt = e.getEventTime();
         if (e.getAction() == KeyEvent.ACTION_UP && e.getEventTime() - volDownAt >= 1000) {
-            new Thread(() -> { try { broker.stop("", "volume-down kill switch"); } catch (Exception ignored) {} }).start();
+            new Thread(() -> { try { broker.mods.disable("", "volume-down kill switch"); broker.stop("", "volume-down kill switch"); } catch (Exception ignored) {} }).start();
         }
         return false; // the volume still changes
     }
@@ -68,6 +68,7 @@ public class AgentA11y extends AccessibilityService {
     /** Re-bound by the system: free :7777 so the new instance's broker serves, not two brokers side by side. */
     @Override public boolean onUnbind(Intent i) {
         if (server != null) server.stop();
+        if (broker != null) broker.mods.close();
         return super.onUnbind(i);
     }
 
@@ -100,7 +101,7 @@ public class AgentA11y extends AccessibilityService {
         if (server != null) server.stop();
         try { unregisterReceiver(demo); } catch (Exception ignored) {}
         if (island != null) island.hide();
-        if (broker != null) broker.mods.hideAll();
+        if (broker != null) broker.mods.close();
         if (autoPause != null) autoPause.stop();
         super.onDestroy();
     }

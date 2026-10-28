@@ -61,6 +61,7 @@ final class Mods {
         JSONObject spec; String id, pkg, by; long created;
         TextView btn; WindowManager.LayoutParams lp; Style style; boolean shown;
         LinearLayout chips; WindowManager.LayoutParams clp; final List<TextView> chipViews = new ArrayList<>(); double value = Double.NaN;
+        String disabled = ""; final List<View> masks = new ArrayList<>();
         long t0; CompletableFuture<Long> onScreen, secure; int sampleFails; // secure: FLAG_SECURE check started when the chips open
     }
 
@@ -74,6 +75,12 @@ final class Mods {
     private final WindowManager wm;
     private final float dp;
     private boolean sampling;
+    private final Map<String, Long> previews = new java.util.concurrent.ConcurrentHashMap<>();
+    private int checkedWindow = -1; private boolean checkingWindow, windowSafe;
+    private final List<View> highlights = new ArrayList<>();
+    private final Runnable clearPreview = this::clearPreview;
+    private volatile boolean watching, closed;
+    private Process watcher;
     private String fgPkg = ""; private long fgSince; // sample colors only after the app's launch animation has settled
 
     Mods(AgentA11y svc, Audit audit) {
@@ -84,7 +91,10 @@ final class Mods {
             JSONObject saved = new JSONObject(prefs().getString("mods", "{}"));
             for (Iterator<String> it = saved.keys(); it.hasNext(); ) {
                 JSONObject r = saved.getJSONObject(it.next());
-                put(r.getJSONObject("spec"), r.optString("by"), r.optLong("created"));
+                try {
+                    Mod m = put(validate(r.getJSONObject("spec")), r.optString("by"), r.optLong("created"));
+                    m.disabled = r.optString("disabled");
+                } catch (IllegalArgumentException e) { Log.w(TAG, "refused saved mod", e); }
             }
             JSONObject st = new JSONObject(prefs().getString("styles", "{}"));
             for (Iterator<String> it = st.keys(); it.hasNext(); ) {
@@ -93,18 +103,106 @@ final class Mods {
                 styles.put(k, s);
             }
         } catch (JSONException e) { Log.w(TAG, "bad saved mods", e); }
+        if (prefs().contains("rendering")) {
+            String id = prefs().getString("rendering", "");
+            if (mods.containsKey(id)) mods.get(id).disabled = "AgentOS stopped during render";
+            prefs().edit().remove("rendering").commit(); save();
+        }
+        watch();
         svc.main.post(refreshR);
     }
 
     /** AgentA11y: any window/content/scroll event. Re-place on the next frame (16 ms debounce). */
-    void onEvent() { svc.main.removeCallbacks(refreshR); svc.main.postDelayed(refreshR, 16); }
+    void onEvent(android.view.accessibility.AccessibilityEvent e) {
+        if ("local.agentos".contentEquals(e.getPackageName() == null ? "" : e.getPackageName())) return;
+        if (e.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) checkedWindow = -1;
+        clearPreview();
+        for (Mod m : mods.values()) try { if (ModMask.is(m.spec)) hide(m); } catch (RuntimeException error) { fail(m, "event exception"); }
+        svc.main.removeCallbacks(refreshR); svc.main.postDelayed(refreshR, 16);
+    }
     void onConfig() { fgSince = SystemClock.uptimeMillis(); svc.main.postDelayed(refreshR, 50); }
-    void hideAll() { for (Mod m : mods.values()) hide(m); }
+    void hideAll() { for (Mod m : mods.values()) try { hide(m); } catch (RuntimeException ignored) {} }
+    void close() { closed = true; watching = false; if (watcher != null) watcher.destroy(); svc.main.removeCallbacks(refreshR); clearPreview(); hideAll(); }
+    private void clearPreview() { ModMask.clear(wm, highlights); }
+
+    JSONObject disable(String pkg, String reason) throws Exception {
+        CompletableFuture<Integer> f = new CompletableFuture<>();
+        svc.main.post(() -> {
+            previews.clear(); clearPreview();
+            int n = 0;
+            for (Mod m : mods.values()) if (pkg.isEmpty() || pkg.equals(m.pkg)) { fail(m, reason); n++; }
+            f.complete(n);
+        });
+        return new JSONObject().put("ok", true).put("disabled", f.get(2, TimeUnit.SECONDS));
+    }
+
+    private void fail(Mod m, String why) {
+        m.disabled = why; previews.remove(Audit.sha256(m.spec.toString()));
+        try { hide(m); } catch (RuntimeException ignored) {}
+        save(); emit("disabled", m.id);
+        try { audit.log(new JSONObject().put("tool", "app.mod.disable").put("id", m.id).put("pkg", m.pkg).put("decision", "auto").put("reason", why)); }
+        catch (JSONException ignored) {}
+    }
+
+    private void watch() {
+        new Thread(() -> {
+            try {
+                watcher = new ProcessBuilder("su", "-c", "logcat -b crash -b main -b system -v brief -T 0 AndroidRuntime:E ActivityManager:E DEBUG:F '*:S'").start();
+                watching = true;
+                java.util.regex.Pattern death = Pattern.compile("(?:Process: |ANR in |Cmdline: )([A-Za-z0-9_.]+)(?:[:, ]|$)");
+                try (java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(watcher.getInputStream()))) {
+                    for (String line; !closed && (line = in.readLine()) != null;) {
+                        java.util.regex.Matcher hit = death.matcher(line);
+                        if (hit.find()) disable(hit.group(1), "target crash/ANR");
+                    }
+                }
+            } catch (Exception e) { Log.w(TAG, "mod watchdog stopped", e); }
+            finally { watching = false; if (!closed) try { disable("", "crash watchdog unavailable"); } catch (Exception ignored) {} }
+        }, "mod-watch").start();
+    }
+
+    boolean previewed(JSONObject spec) { return SystemClock.uptimeMillis() - previews.getOrDefault(Audit.sha256(spec.toString()), -300001L) < 300000; }
+
+    JSONObject preview(JSONObject spec) throws Exception {
+        validate(spec);
+        if (probe.secureNow()) throw new IllegalArgumentException("secure screen");
+        CompletableFuture<JSONObject> f = new CompletableFuture<>();
+        svc.main.post(() -> {
+            try {
+                clearPreview();
+                AccessibilityNodeInfo root = svc.getRootInActiveWindow();
+                need(root != null && spec.optString("package").contentEquals(root.getPackageName()), "open the target app first");
+                List<Rect> rects;
+                if (ModMask.is(spec)) rects = ModMask.bounds(root, spec);
+                else {
+                    AccessibilityNodeInfo n = find(root, spec.optString("package"), spec.opt("anchor"));
+                    need(n != null, "anchor is not on screen"); Rect r = new Rect(); n.getBoundsInScreen(r);
+                    rects = Arrays.asList(r);
+                }
+                JSONArray a = new JSONArray();
+                for (Rect r : rects) {
+                    View v = new View(svc); ModMask.paint(v, spec, true);
+                    WindowManager.LayoutParams lp = params(); lp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                    move(lp, r.left, r.top, r.width(), r.height()); wm.addView(v, lp); highlights.add(v);
+                    a.put(new JSONArray(Arrays.asList(r.left, r.top, r.right, r.bottom)));
+                }
+                String hash = Audit.sha256(spec.toString());
+                if (!rects.isEmpty()) {
+                    if (previews.size() >= MAX_MODS) previews.clear();
+                    previews.put(hash, SystemClock.uptimeMillis());
+                }
+                svc.main.removeCallbacks(clearPreview); svc.main.postDelayed(clearPreview, 3000);
+                f.complete(new JSONObject().put("ok", !rects.isEmpty()).put("matches", a).put("spec_sha256", hash).put("expires_ms", 300000));
+            } catch (Exception e) { clearPreview(); f.completeExceptionally(e); }
+        });
+        return f.get(4, TimeUnit.SECONDS);
+    }
 
     // ---------------------------------------------------------------- broker API (any thread)
 
     /** Adds (or replaces) a validated mod. Waits up to waitMs for it to be on screen. {id, shown, ms?} */
     JSONObject apply(JSONObject spec, String by, long waitMs) throws Exception {
+        validate(spec);
         CompletableFuture<Long> f = new CompletableFuture<>();
         svc.main.post(() -> {
             Mod m = put(spec, by, System.currentTimeMillis());
@@ -138,7 +236,7 @@ final class Mods {
             try {
                 for (Mod m : mods.values())
                     a.put(new JSONObject().put("id", m.id).put("package", m.pkg).put("app", label(m.pkg)).put("label", m.spec.optString("label"))
-                            .put("shown", m.shown).put("created", m.created).put("by", m.by));
+                            .put("shown", m.shown).put("disabled", m.disabled).put("created", m.created).put("by", m.by));
             } catch (JSONException ignored) {}
             f.complete(a);
         });
@@ -151,7 +249,7 @@ final class Mods {
     JSONObject targets() throws JSONException {
         AccessibilityNodeInfo root = svc.getRootInActiveWindow();
         String pkg = root == null ? "" : String.valueOf(root.getPackageName());
-        if (root == null || Guard.forbidden(pkg) || Guard.privateApp(pkg))
+        if (root == null || blocked(pkg, pkg.equals("com.linkedin.android")))
             return new JSONObject().put("ok", false).put("reason", root == null ? "no app on screen" : "mods are not allowed in " + pkg);
         JSONArray out = new JSONArray();
         ids(root, pkg + ":id/", out);
@@ -165,9 +263,9 @@ final class Mods {
     private void ids(AccessibilityNodeInfo n, String prefix, JSONArray out) {
         if (n == null || out.length() >= 120 || !n.isVisibleToUser()) return;
         String id = n.getViewIdResourceName();
-        if (id != null && id.startsWith(prefix) && (n.isClickable() || n.getText() != null)) { // buttons and displays, not layout containers
+        if ((id == null || id.startsWith(prefix)) && (n.isClickable() || n.getText() != null)) { // buttons and displays, not layout containers
             Rect r = new Rect(); n.getBoundsInScreen(r);
-            String l = Guard.label(n), vid = id.substring(prefix.length());
+            String l = Guard.label(n), vid = id == null ? "(no id)" : id.substring(prefix.length());
             out.put(vid + " " + Screen.role(n.getClassName()) + (l.equals(vid) ? "" : " \"" + Guard.clip(l, 32) + "\"")
                     + " [" + r.left + "," + r.top + "," + r.right + "," + r.bottom + "]" + (n.isClickable() ? " tap" : "") + (Guard.riskyLabel(n) != null ? " T3" : ""));
         }
@@ -178,6 +276,7 @@ final class Mods {
     String describe(JSONObject spec) {
         AccessibilityNodeInfo root = svc.getRootInActiveWindow();
         String pkg = spec.optString("package");
+        if (ModMask.is(spec)) return "Covers matching " + spec.optJSONObject("action").optJSONObject("match") + " · hold volume down to disable mods";
         if (root != null && !pkg.contentEquals(root.getPackageName())) root = null;
         JSONObject a = spec.optJSONObject("action");
         boolean press = "press".equals(a.optString("type"));
@@ -224,9 +323,23 @@ final class Mods {
         String id = s.optString("id"), pkg = s.optString("package"), label = s.optString("label");
         need(MOD_ID.matcher(id).matches(), "id must be 1-32 chars of a-z 0-9 _ -");
         need(pkg.matches("[A-Za-z0-9_.]{3,100}"), "package is required (e.g. com.google.android.calculator)");
-        need(!Guard.forbidden(pkg) && !Guard.privateApp(pkg), "mods are not allowed in " + pkg + " (system, AgentOS, messaging, mail, money and store apps)");
+        boolean mask = s.optJSONObject("action") != null && ModMask.is(s);
+        need(!blocked(pkg, mask), "mods are not allowed in " + pkg + " (system, AgentOS, messaging, mail, money and store apps)");
         need(!label.trim().isEmpty() && label.length() <= 24, "label is required, at most 24 chars");
         need(Guard.riskyText(label) == null, "label \"" + label + "\" names an outward action; mods can't send, pay or delete");
+        if (mask) {
+            keys(s, new HashSet<>(Arrays.asList("id", "package", "label", "action")), "mask spec");
+            JSONObject a = s.optJSONObject("action"), m = a.optJSONObject("match");
+            keys(a, new HashSet<>(Arrays.asList("type", "match", "scope", "color")), "action");
+            need(m != null && m.length() == 1, "match requires exactly one text, id or class");
+            keys(m, new HashSet<>(Arrays.asList("text", "id", "class")), "match");
+            String k = m.keys().next();
+            need(m.opt(k) instanceof String && m.optString(k).trim().length() > 0 && m.optString(k).length() <= 100, "match must be 1-100 characters");
+            if (k.equals("id")) need(VID.matcher(m.optString(k)).matches(), "match.id must be a short view id");
+            need(!a.has("scope") || Arrays.asList("node", "item").contains(a.optString("scope")), "scope is node or item");
+            need(!a.has("color") || COLOR.matcher(a.optString("color")).matches(), "color is #RRGGBB");
+            return s;
+        }
         spot(s, pkg, "spec");
         JSONArray alt = s.optJSONArray("alt");
         need(!s.has("alt") || alt != null && alt.length() <= 3, "alt is a list of at most 3 placements");
@@ -272,6 +385,12 @@ final class Mods {
             }
         } else throw new IllegalArgumentException("action.type must be \"press\" or \"compute\"");
         return s;
+    }
+
+    private static boolean blocked(String pkg, boolean mask) {
+        return Guard.forbidden(pkg) || pkg.startsWith("local.agentos") || pkg.startsWith("com.android.") || pkg.startsWith("com.motorola.")
+                || pkg.matches("(?i).*(bank|pay|wallet|finance|credit|crypto|trading|broker|security|password|vault|authenticator|bitwarden|lastpass|keepass).*")
+                || Guard.privateApp(pkg) && !(mask && pkg.equals("com.linkedin.android"));
     }
 
     private static void spot(JSONObject o, String pkg, String where) {
@@ -341,7 +460,7 @@ final class Mods {
 
     private void save() {
         JSONObject o = new JSONObject();
-        try { for (Mod m : mods.values()) o.put(m.id, new JSONObject().put("spec", m.spec).put("by", m.by).put("created", m.created)); } catch (JSONException ignored) {}
+        try { for (Mod m : mods.values()) o.put(m.id, new JSONObject().put("spec", m.spec).put("by", m.by).put("created", m.created).put("disabled", m.disabled)); } catch (JSONException ignored) {}
         prefs().edit().putString("mods", o.toString()).apply();
     }
 
@@ -363,20 +482,61 @@ final class Mods {
 
     // ---------------------------------------------------------------- follow the app: show, place, hide
 
+    private boolean safeWindow(AccessibilityNodeInfo root) {
+        if (svc.getSystemService(android.app.KeyguardManager.class).isKeyguardLocked()) return false;
+        int id = root.getWindowId();
+        if (checkedWindow == id) return windowSafe;
+        if (!checkingWindow) {
+            checkingWindow = true;
+            CompletableFuture.supplyAsync(() -> !probe.secureNow()).whenComplete((safe, error) -> svc.main.post(() -> {
+                checkingWindow = false;
+                AccessibilityNodeInfo now = svc.getRootInActiveWindow();
+                if (now != null && now.getWindowId() == id) { checkedWindow = id; windowSafe = error == null && Boolean.TRUE.equals(safe); }
+                if (!closed) refresh();
+            }));
+        }
+        return false;
+    }
+
     private void refresh() {
-        AccessibilityNodeInfo root = svc.getRootInActiveWindow();
+        AccessibilityNodeInfo root;
+        try { root = svc.getRootInActiveWindow(); } catch (RuntimeException e) { hideAll(); return; }
         String pkg = root == null ? "" : String.valueOf(root.getPackageName());
         if (!pkg.equals(fgPkg)) { fgPkg = pkg; fgSince = SystemClock.uptimeMillis(); }
         List<Rect> keys = null;
-        for (Mod m : mods.values()) {
-            if (!pkg.equals(m.pkg) || !whenOk(root, m)) { hide(m); continue; }
-            if (keys == null) keys = buttons(root, new ArrayList<>());
-            Rect r = spot(root, m, keys);
-            if (r == null) { hide(m); continue; } // no free spot in this layout: better absent than covering a real button
-            if (!sampled(root, m)) continue;
-            show(m, r, styleOf(m, m.spec.optJSONObject("style")));
-            if (m.chips != null) updateChips(m, root, r);
-        }
+        for (Mod m : mods.values()) try {
+            if (!watching || !m.disabled.isEmpty() || !pkg.equals(m.pkg) || !whenOk(root, m)) { hide(m); continue; }
+            prefs().edit().putString("rendering", m.id).commit();
+            if (ModMask.is(m.spec)) {
+                if (!safeWindow(root)) { hide(m); continue; }
+                ModMask.clear(wm, m.masks);
+                for (Rect r : ModMask.bounds(root, m.spec)) {
+                    View v = new View(svc); ModMask.paint(v, m.spec, false);
+                    WindowManager.LayoutParams lp = params();
+                    float[] down = new float[2];
+                    v.setOnTouchListener((view, event) -> {
+                        if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) { down[0] = event.getRawX(); down[1] = event.getRawY(); }
+                        if (event.getAction() == android.view.MotionEvent.ACTION_UP && Math.abs(event.getRawY() - down[1]) > px(48)) {
+                            AccessibilityNodeInfo now = svc.getRootInActiveWindow();
+                            try { if (now != null && m.pkg.contentEquals(now.getPackageName())) ModMask.scroll(now, (int) down[0], (int) down[1], event.getRawY() < down[1], 0); }
+                            catch (RuntimeException error) { fail(m, "scroll exception"); }
+                        }
+                        return true; // consume taps; only an owner's swipe may scroll the underlying collection
+                    });
+                    move(lp, r.left, r.top, r.width(), r.height()); wm.addView(v, lp); m.masks.add(v);
+                    v.postOnAnimation(() -> {
+                        if (v.isAttachedToWindow() && m.shown && m.onScreen != null) { m.onScreen.complete(SystemClock.uptimeMillis() - m.t0); m.onScreen = null; }
+                    });
+                }
+                m.shown = !m.masks.isEmpty();
+            } else {
+                if (keys == null) keys = buttons(root, new ArrayList<>());
+                Rect r = spot(root, m, keys);
+                if (r == null) hide(m);
+                else if (sampled(root, m)) { show(m, r, styleOf(m, m.spec.optJSONObject("style"))); if (m.chips != null) updateChips(m, root, r); }
+            }
+        } catch (RuntimeException e) { fail(m, "render exception: " + e.getClass().getSimpleName()); }
+        finally { prefs().edit().remove("rendering").commit(); }
     }
 
     /** First placement (the spec itself, then each "alt") whose anchor is on screen and that covers none of the app's own buttons. */
@@ -490,8 +650,10 @@ final class Mods {
     }
 
     private void hide(Mod m) {
+        ModMask.clear(wm, m.masks);
         hideChips(m);
-        if (m.shown) { wm.removeViewImmediate(m.btn); m.shown = false; }
+        if (m.btn != null && m.btn.isAttachedToWindow()) wm.removeViewImmediate(m.btn);
+        m.shown = false;
     }
 
     private void paint(TextView v, Style s, int hh) {

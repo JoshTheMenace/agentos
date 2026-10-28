@@ -118,6 +118,7 @@ const auditLine = (e) => { // one human line per audit entry: what happened, in 
     case 'app.mod.remove': return ['Removed a mod', ''];
     case 'audit.break': return ['Audit chain break marked', 'c'];
     case 'screen.capture': return [bad ? `Didn't look at ${app_ || 'the screen'} · ${short(e.reason, 34)}` : `Looked at your screen${inApp}${/blacked/.test(e.reason || '') ? ' · private parts hidden' : ''}`, bad ? 'c' : 'a'];
+    case 'image.sent': return [`${{ camera: 'Camera photo', photos: 'Your photo', live: 'Live camera frame' }[e.target] || 'A picture'} sent to ${e.model || 'the AI'}${e.bytes ? ` · ${Math.round(e.bytes / 1024)} KB` : ''}`, 'b'];
     case 'remote.read': return [`${e.from || 'A remote assistant'} ${e.target === 'memory_lookup' ? 'searched your memory' : 'read your latest messages'}`, 'b'];
     default: { // direct Android API tools (contacts.find, sms.send, calendar.add …): "<verb> <what> · <where>"
       const m = /^(contacts|sms|calls|call|calendar|clock|maps|alarm|device|media)\.(\w+)$/.exec(e.tool);
@@ -532,12 +533,27 @@ function sheetEmpty() {
   body.before(row);
 }
 function sendUser(text) {
-  if (!text) return;
-  body.append(el('div', 'msg me', esc(text))); aiMsg = null; S.home = null; askAt = Date.now(); sheetEmpty();
-  if (!send({ type: 'ask', text, provider: S.provider })) body.append(el('div', 'msg err', 'Agent offline'));
+  const p = pic; if (!text && !p) return;
+  setPic(null); body.append(el('div', 'msg me', (p ? `<img src="${p.url}">` : '') + esc(text))); aiMsg = null; S.home = null; askAt = Date.now(); sheetEmpty();
+  if (!send({ type: 'ask', text, provider: S.provider, ...(p && { images: [p.url], image_source: p.kind }) })) body.append(el('div', 'msg err', 'Agent offline'));
   else { S.turn = true; setSheet('Thinking', 'working'); think(); renderStatus(); renderNow(); }
   scrollDown();
 }
+// Attach (＋): Camera (system camera) or Photos (Android's photo picker), both through Home.pick -> app.picked(dataUrl, kind).
+// In the ask sheet the picture becomes a chip on the next message; in voice it goes straight into the conversation.
+let pic = null; // {url, kind}: the chip waiting on the next typed message
+function setPic(p) { pic = p; $('#askPic').hidden = !p; if (p) $('#askPic img').src = p.url; }
+$('#askPic button').onclick = () => { hap('tick'); setPic(null); };
+const attMenu = $('#attMenu'), inVoice = () => $('#voice').classList.contains('on');
+const attOpen = (e) => { e.stopPropagation(); hap('tick'); $('#attLive').hidden = !inVoice(); $('#attLive span').textContent = cam ? 'Stop live camera' : 'Live camera'; attMenu.hidden = !attMenu.hidden; };
+$('#askAtt').onclick = $('#vatt').onclick = attOpen;
+document.addEventListener('pointerdown', (e) => { if (!attMenu.hidden && !attMenu.contains(e.target)) attMenu.hidden = true; }, true);
+attMenu.onclick = (e) => { const k = e.target.closest('[data-k]')?.dataset.k; if (!k) return; hap(); attMenu.hidden = true; if (k === 'live') return liveCam(); N.pick?.(k); };
+app.picked = (url, kind) => {
+  if (!url) return;
+  if (!inVoice()) { open('sheet'); setPic({ url, kind }); return setTimeout(() => $('#askIn').focus(), 350); }
+  send({ type: 'voice.image', image: url, source: kind }); $('#vsteps').append(el('li', '', `<img src="${url}">Shared a photo`)); V.state('Ask me about it');
+};
 $('#askForm').onsubmit = (e) => { e.preventDefault(); const t = $('#askIn').value.trim(); $('#askIn').value = ''; hap('tick'); sendUser(t); };
 $('#shstop').onclick = () => { hap(); send({ type: 'stop' }); };
 on('text.delta', (m) => { dots?.remove(); dots = null; if (!aiMsg) body.append(aiMsg = el('div', 'msg ai')); aiMsg.textContent += m.text; if (S.home) S.home.text = aiMsg.textContent; scrollDown(); });
@@ -565,15 +581,15 @@ on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.st
 on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
 on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
-// ---------- voice (WebRTC per agentd/voice.html; hold the orb to talk) ----------
-let pc, mic, micTrack, cam;
+// ---------- voice (WebRTC per agentd/voice.html; hands-free: the server hears when you stop, the orb only mutes) ----------
+let pc, mic, micTrack, cam, vad;
 const V = { state: (s) => ($('#vstate').textContent = s) };
 async function voiceStart() {
   open('voice'); $('#voice').classList.remove('live'); $('#vu').textContent = $('#va').textContent = ''; $('#vsteps').replaceChildren(); $('#vtask').replaceChildren(); V.state('Connecting');
   if (!wsOk) return V.state('Agent offline');
   try {
     mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-    micTrack = mic.getAudioTracks()[0]; micTrack.enabled = false;
+    micTrack = mic.getAudioTracks()[0]; vad = speech(mic);
     pc = new RTCPeerConnection(); pc.addTrack(micTrack, mic);
     const dc = pc.createDataChannel('oai-events'); // must exist before createOffer
     dc.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === 'delegation.created') send({ type: 'voice.delegate', item_id: m.item.id, text: m.item.content.map((c) => c.text).join('') }); };
@@ -583,9 +599,9 @@ async function voiceStart() {
     send({ type: 'voice.start', sdp: pc.localDescription.sdp });
   } catch (e) { V.state('Mic unavailable'); }
 }
-function voiceStop() { if (cam) camOff(); send({ type: 'voice.stop' }); pc?.close(); pc = null; mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; $('#wave').classList.remove('on'); }
-on('voice.answer', async (m) => { $('#vcamBtn').hidden = !m.vision; if (pc) await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); });
-on('voice.started', () => V.state('Hold to talk'));
+function voiceStop() { if (cam) camOff(); vad?.(); vad = null; attMenu.hidden = true; send({ type: 'voice.stop' }); pc?.close(); pc = null; mic?.getTracks().forEach((t) => t.stop()); mic = micTrack = null; $('#wave').classList.remove('on'); }
+on('voice.answer', async (m) => { $('#vatt').hidden = !m.vision; if (pc) await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); });
+on('voice.started', () => V.state('Listening'));
 on('voice.transcript', (m) => { $('#voice').classList.add('live'); const p = $(m.role === 'user' ? '#vu' : '#va'); p.innerHTML = esc(m.text) + (m.final ? '' : '<span class="cur"></span>'); if (m.role !== 'user') V.state('Speaking'); });
 on('voice.delegation', (m) => { V.state('Working'); $('#vsteps').replaceChildren(); renderVoiceTask(); });
 function renderVoiceTask() {
@@ -599,20 +615,32 @@ on('voice.closed', () => V.state('Ended')); on('voice.error', (m) => V.state(sho
 on('tool.request', (m) => { if ($('#voice').classList.contains('on')) { $('#vsteps').append(el('li', '', `<span class="orb working sm"></span>${esc(toolName(m.name))}`)); } });
 on('tool.result', (m) => { const li = $('#vsteps li:last-child'); if (li) $('.orb', li).className = 'orb sm ' + (/denied|blocked/.test(m.decision || '') ? 'alert' : 'done'); });
 const sorb = $('#sorbBtn');
-sorb.onpointerdown = (e) => { e.preventDefault(); if (!micTrack) return; snap(); $('#voice').classList.add('live'); sorb.setPointerCapture(e.pointerId); micTrack.enabled = true; sorb.classList.add('hot'); $('#wave').classList.add('on'); V.state('Listening'); hap('tick'); };
-sorb.onpointerup = sorb.onpointercancel = () => { if (!micTrack) return; micTrack.enabled = false; sorb.classList.remove('hot'); $('#wave').classList.remove('on'); V.state('Thinking'); };
+sorb.onclick = () => { if (!micTrack) return; hap('tick'); micTrack.enabled = !micTrack.enabled; sorb.classList.toggle('muted', !micTrack.enabled); V.state(micTrack.enabled ? 'Listening' : 'Muted'); };
+// Local speech detector (same as voice.html's meter): lights the orb while you talk and, with the live camera on, sends the
+// frame at the start of each utterance (at most one per 3 s) so "what's this?" while pointing just works.
+function speech(stream) {
+  const ac = new AudioContext(), an = ac.createAnalyser(), buf = new Float32Array(1024); ac.createMediaStreamSource(stream).connect(an);
+  let on = false, last = 0, shot = 0;
+  const i = setInterval(() => {
+    an.getFloatTimeDomainData(buf); const t = Date.now(), loud = micTrack?.enabled && Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length) > 0.02;
+    if (loud) { last = t; if (!on) { on = true; sorb.classList.add('hot'); $('#wave').classList.add('on'); $('#voice').classList.add('live'); if (cam && t - shot > 3000) { shot = t; snap(); } } }
+    else if (on && t - last > 600) { on = false; sorb.classList.remove('hot'); $('#wave').classList.remove('on'); }
+  }, 30);
+  return () => { clearInterval(i); ac.close(); };
+}
 $('#vend').onclick = () => { hap(); close('voice'); };
-// Voice vision (agentd VOICE_VISION=1, agentd/research/LIVE-VISION.md): the camera shows behind the sheet; each orb press sends
-// agentd one 768 px JPEG of what it sees (never a stream). agentd's vision model describes it and the voice answers.
-$('#vcamBtn').onclick = async () => {
-  hap(); if (cam) return camOff();
+// Live camera (agentd/research/LIVE-VISION.md): a small preview; each time you start talking agentd gets one 768 px JPEG of
+// what it sees (never a stream). agentd's vision model describes it and the voice answers. Tap the preview to stop.
+$('#vcam').onclick = () => { hap(); camOff(); };
+async function liveCam() {
+  if (cam) return camOff();
   try {
     cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
     const v = $('#vcam'); v.srcObject = cam; v.hidden = false; await v.play();
-    $('#vcamBtn').classList.add('on'); send({ type: 'voice.camera', on: true });
+    send({ type: 'voice.camera', on: true });
   } catch (e) { cam = null; V.state('Camera unavailable'); }
-};
-function camOff() { cam.getTracks().forEach((k) => k.stop()); cam = null; $('#vcam').hidden = true; $('#vcamBtn').classList.remove('on'); send({ type: 'voice.camera', on: false }); }
+}
+function camOff() { cam.getTracks().forEach((k) => k.stop()); cam = null; $('#vcam').hidden = true; send({ type: 'voice.camera', on: false }); }
 function snap() {
   const v = $('#vcam'); if (!cam || !v.videoWidth) return;
   const k = Math.min(1, 768 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement('canvas');

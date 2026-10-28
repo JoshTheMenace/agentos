@@ -23,5 +23,7 @@
     <!-- Micro-apps (agentd apps.js): one activity, its own task, a sandboxed WebView per app (MicroApp.java) -->
     <activity android:name=".MicroApp" android:exported="false" android:launchMode="singleTop" android:taskAffinity="local.agentos.home.apps"
         android:screenOrientation="portrait" android:windowSoftInputMode="adjustResize" android:configChanges="orientation|screenSize|keyboardHidden"/>
+    <!-- The system camera's one write target for Attach › Camera (Home.Shot); per-capture grant only -->
+    <provider android:name=".Home$Shot" android:authorities="local.agentos.home.shot" android:exported="false" android:grantUriPermissions="true"/>
   </application>
 </manifest>

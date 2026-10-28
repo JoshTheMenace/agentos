@@ -9,6 +9,8 @@
 //   node cli.js forget --event_id 12               node cli.js consent | ledger | stats
 //   node cli.js graph [--out graph.json]           node cli.js serve [--port 8790]   (GET /graph.json, CORS on, localhost)
 //   node cli.js call <tool> '{"json":"args"}'      global: --db <path> (default ~/.agentos/memory.db)
+//   v2 (MEMORY_V2=1): facts [words] [--about Mom] [--history]   about   person Joe   pending   confirm <a> <b> --same|--different
+//                     correct <fact_id> --obj "..." | --retract    facts-sync [--force]   facts-llm [--force] (Claude CLI, haiku)
 process.removeAllListeners('warning'); // hide node:sqlite's "experimental" banner
 
 const argv = process.argv.slice(2), pos = [], flags = {};
@@ -46,6 +48,14 @@ switch (cmd) {
   case 'remember': await tool('memory_remember', { text: rest.join(' '), ...(flags.about && { about: String(flags.about) }) }); break;
   case 'forget': await tool('memory_forget', { ...(flags.event_id && { event_id: flags.event_id }), ...(flags.entity_id && { entity_id: flags.entity_id }) }); break;
   case 'call': await tool(rest[0], JSON.parse(rest[1] || '{}')); break;
+  case 'facts': out(M.facts({ q: rest.join(' ') || undefined, about: flags.about, history: !!flags.history }, ctx)); break;
+  case 'about': out(M.about(ctx)); break;
+  case 'person': out(M.person(/^\d+$/.test(rest[0]) ? +rest[0] : rest.join(' '), ctx)); break;
+  case 'pending': out(M.identity.pending(ctx, flags.limit || 10)); break;
+  case 'confirm': out(M.identity.confirm(+rest[0], +rest[1], !flags.different, { ...ctx, actor: 'user:owner' })); break;
+  case 'correct': out(M.correct(+rest[0], { obj: flags.obj, retract: !!flags.retract }, ctx)); break;
+  case 'facts-sync': out(M.syncFacts({ ...ctx, force: !!flags.force })); break;
+  case 'facts-llm': out((await import('./extract-llm.js')).run(db, { force: !!flags.force, log: console.error })); break;
   case 'stats': out({ fts: db.fts, ...Object.fromEntries(['entity', 'alias', 'event', 'relation', 'consent'].map((t) => [t, db.prepare(`SELECT count(*) n FROM ${t}`).get().n])),
     by_source: db.prepare('SELECT source, kind, count(*) n FROM event GROUP BY 1, 2').all(), entities_by_type: db.prepare('SELECT type, count(*) n FROM entity GROUP BY 1').all() }); break;
   case 'graph': {
