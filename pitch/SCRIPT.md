@@ -18,7 +18,7 @@ Rule: say the line, do the thing, move on. Approved wording fixes are applied. �
 | 3:45 | **Security, part 1: what it can do vs what it may do** | "It can do almost anything, but it can only ask. Every action is logged." | Command center › Activity | The log in plain words |
 | 4:00 | **Trackers & scams** | "It sees which companies every app talks to and blocks trackers and ads, and catches scam messages before the AI reads them." | Protected today → Blockers | Live counters, company names |
 | 4:20 | **Approvals** | "An auto-reviewer, the same model OpenAI uses for Codex's auto mode, clears safe steps; risky ones need me; money and installs need my fingerprint." | "Install <small free app>." | "Fingerprint required" card → touch or Deny (the prompt is black on mirroring, so say so) |
-| 4:45 | **Prompt injection** | "Meta's Prompt Guard 2 runs on the phone, so outside text is untrusted. And because of the OS-vs-model split, even a model that tries something unsafe is blocked at the system level." | Show the "Scam message caught" line in Activity | – |
+| 4:45 | **Prompt injection, live** | "Here's a message with hidden instructions for my AI. Meta's Prompt Guard 2 runs on the phone and catches it, and because of the OS-vs-model split, even a fooled model gets blocked at the system level." | Pigeon (our test messenger): the "Unknown number" chat holds the trap message (stage it with Pigeon's ⋮ › Replay test scenario). Ask: "Summarize my Pigeon messages." | The island's calm amber "Ignored instructions in a message"; the summary leaves the trap out; Activity shows "Scam message caught" |
 | 5:05 | **Grok finale** | "I love Grok as an assistant, so mine can reach my phone. It can ask, but the OS decides." | Lock the phone. Laptop Grok: "Use AgentOS: open Spotify and play my liked songs." (or "turn on my flashlight") | The phone unlocks itself, does it, re-locks; music plays |
 | 5:40 | **Close** | "The model proposes. The OS decides. That's AgentOS." | Hold the phone up | – |
 
@@ -32,6 +32,7 @@ Rule: say the line, do the thing, move on. Approved wording fixes are applied. �
 2. **Knowledge graph:** pick a person who's in several apps (Slack + Discord + email/calendar) and is OK to show on a big screen. Check "What do I know about <name>?" once.
 3. **Keyboard:** email yourself "Are you free Thursday at 3?" so it's waiting in Gmail.
 4. **LinkedIn:** apply "Hide promoted posts" before you go on stage.
-5. **Fingerprint:** pick a small free app that isn't installed.
-6. **Grok:** laptop on grok.com with AgentOS connected; "Remote can unlock" ON (Command center › Remote).
-7. `scripts/preflight.sh --fix wifi,warm,ime,home`, then `--fix dnd,reset`. Close leftover apps; no sign-in page open in Chrome.
+5. **Prompt Guard:** in Pigeon, ⋮ › Replay test scenario before stage so the trap message is waiting. Run this beat AFTER the fingerprint beat, since a flag makes later sends need a person for 10 min.
+6. **Fingerprint:** pick a small free app that isn't installed.
+7. **Grok:** laptop on grok.com with AgentOS connected; "Remote can unlock" ON (Command center › Remote).
+8. `scripts/preflight.sh --fix wifi,warm,ime,home`, then `--fix dnd,reset`. Close leftover apps; no sign-in page open in Chrome.
