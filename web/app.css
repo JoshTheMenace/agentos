@@ -202,6 +202,8 @@ body{position:fixed;inset:0}
 .rowi.mod{margin-bottom:6px;padding:10px 12px}
 .bempty small{color:var(--l3);font-size:12.5px}
 
+#plist .rowi .s{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+
 /* remote */
 .rst{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600;letter-spacing:-.01em;padding:4px 0 2px}
 .rst .s{display:block;color:var(--l2);font-size:12px;font-weight:500;margin-top:1px}
@@ -241,7 +243,7 @@ body{position:fixed;inset:0}
 .ma:active{transform:scale(.97)}
 .ma .emo{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:21px;line-height:1;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
 .ma>div{min-width:0;flex:1}
-.ma .t{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ma .t{font-size:14px;font-weight:600;letter-spacing:-.01em;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .ma .s{color:var(--l2);font-size:11.5px;font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ma .s.live{color:var(--teal)}
 .ma .rm:not([hidden]){position:absolute;inset:0;border-radius:inherit;background:rgba(255,69,58,.88);color:#fff;font-size:13px;font-weight:600;display:grid;place-items:center;animation:pop .3s var(--spring) both}

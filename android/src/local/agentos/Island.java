@@ -20,6 +20,7 @@ import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
@@ -30,7 +31,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * The island: a black pill over the camera hole, drawn as TYPE_ACCESSIBILITY_OVERLAY so no app or web content can
+ * The island: a black pill just below the camera hole and status bar (placed from the window insets, never a fixed
+ * offset, so it clears the cutout on any phone), drawn as TYPE_ACCESSIBILITY_OVERLAY so no app or web content can
  * fake it. It breathes while the agent works (orb + step label + progress ring) and springs open into a card
  * (approval, security alert, task lease, or the task sheet with Stop). Think of a pupil dilating: the shape is one
  * clip path animated with invalidate() only, so there is no layout work per frame; the window is resized once per
@@ -76,8 +78,9 @@ final class Island extends FrameLayout {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
         lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        lp.y = dp(TOP_DP);
         lp.setFitInsetsTypes(0);
+        lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        place(wm.getCurrentWindowMetrics().getWindowInsets());
         fill.setColor(Color.BLACK);
         hair.setStyle(Paint.Style.STROKE); hair.setStrokeWidth(dp(1)); hair.setColor(HAIR);
         sw = pillW = dp(PILL_W); sh = dp(PILL_H); sr = sh / 2;
@@ -267,6 +270,16 @@ final class Island extends FrameLayout {
         Broker b = ((AgentA11y) getContext()).broker;
         if (b != null) b.mods.holdForApproval(on);
     }
+
+    /** Top edge = TOP_DP below whatever is taller, the camera cutout or the status bar (rotation and phone agnostic). */
+    private void place(WindowInsets in) {
+        int y = in.getInsets(WindowInsets.Type.statusBars() | WindowInsets.Type.displayCutout()).top + dp(TOP_DP);
+        if (y == lp.y) return;
+        lp.y = y;
+        if (shown) wm.updateViewLayout(this, lp);
+    }
+
+    @Override public WindowInsets onApplyWindowInsets(WindowInsets in) { place(in); return super.onApplyWindowInsets(in); }
 
     private void window(int w, int h) {
         lp.width = w; lp.height = h;

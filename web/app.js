@@ -70,6 +70,7 @@ const TOOLN = { act: 'Acting', open_app: 'Opening an app', tap: 'Tapping', type:
 const toolName = (n) => TOOLN[n] || String(n || '').replace(/[._]/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 const stepText = (s) => TOOLN[s] || s;
 const ago = (ms) => { const s = Math.max(0, Math.round((Date.now() - ms) / 1000)); return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`; };
+const one = (s) => String(s).replace(/\b1 (day|hour|minute|min|week)s\b/g, '1 $1'); // "1 days ago" -> "1 day ago"
 const short = (s, n = 48) => (s = String(s || '')).length > n ? s.slice(0, n - 1) + '…' : s;
 
 // ---------- clock ----------
@@ -121,9 +122,9 @@ const auditLine = (e) => { // one human line per audit entry: what happened, in 
     case 'image.sent': return [`${{ camera: 'Camera photo', photos: 'Your photo', live: 'Live camera frame' }[e.target] || 'A picture'} sent to ${e.model || 'the AI'}${e.bytes ? ` · ${Math.round(e.bytes / 1024)} KB` : ''}`, 'b'];
     case 'remote.read': return [`${e.from || 'A remote assistant'} ${e.target === 'memory_lookup' ? 'searched your memory' : 'read your latest messages'}`, 'b'];
     default: { // direct Android API tools (contacts.find, sms.send, calendar.add …): "<verb> <what> · <where>"
-      const m = /^(contacts|sms|calls|call|calendar|clock|maps|alarm|device|media)\.(\w+)$/.exec(e.tool);
+      const m = /^(contacts|sms|calls|call|calendar|clock|maps|alarms?|device|media)\.(\w+)$/.exec(e.tool);
       if (m) {
-        const where = { contacts: 'Contacts', sms: 'Messages', calls: 'Phone', call: 'Phone', calendar: 'Calendar', clock: 'Clock', maps: 'Maps', alarm: 'Clock', device: 'Settings', media: 'Media' }[m[1]];
+        const where = { contacts: 'Contacts', sms: 'Messages', calls: 'Phone', call: 'Phone', calendar: 'Calendar', clock: 'Clock', maps: 'Maps', alarm: 'Clock', alarms: 'Clock', device: 'Settings', media: 'Media' }[m[1]];
         const arg = short(String(e.target || '').replace(e.tool, '').trim(), 30), t = (e.target || '').startsWith(e.tool) ? '' : short(e.target, 34);
         const what = m[2] === 'list' ? `Read recent ${m[1] === 'sms' ? 'texts' : m[1]}` : m[2] === 'find' ? `Looked up ${arg || 'a ' + m[1].replace(/s$/, '')}` : m[2] === 'send' ? `${t || 'Sent a text'}${e.text ? ` · "${short(e.text, 24)}"` : ''}` : m[1] === 'media' ? ({ pause: 'Paused playback', play: 'Resumed playback', next: 'Skipped a track', previous: 'Went back a track', status: 'Checked what is playing' })[arg] || `Media ${arg}` : m[2] === 'status' ? 'Checked phone status' : m[1] === 'device' ? `Set ${short(e.target, 30)}` : t || `${m[2].replace(/^\w/, (ch) => ch.toUpperCase())} ${arg}`;
         return [`${what} · ${where}`, c];
@@ -224,7 +225,7 @@ function renderSugg() {
   swap($('#sugg'), ...items.slice(0, 4).map((it, i) => {
     const b = el('button', 'glass sg' + (it.view === 'know' ? ' same' : '')); b.style.animationDelay = i * .05 + 's';
     const ic = it.app && S.names[it.app] ? `<span class="appic">${ICOHTML(it.app)}</span>` : `<span class="appic" style="background:${it.icon === 'eye' || it.icon === 'shield' ? 'var(--green)' : it.icon === 'car' ? 'var(--blue)' : 'var(--purple)'}"><svg width="18" height="18"><use href="${SICON[it.icon] || '#i-spark'}"/></svg></span>`;
-    b.innerHTML = `${ic}<div><div class="t">${esc(it.title)}</div><div class="s">${esc(it.detail || '')}</div></div><span class="orb working sm"></span><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg>`;
+    b.innerHTML = `${ic}<div><div class="t">${esc(it.title)}</div><div class="s">${esc(one(it.detail || ''))}</div></div><span class="orb working sm"></span><svg width="16" height="16" class="chev"><use href="#i-chev"/></svg>`;
     b.onclick = () => startSuggestion(it, b); return b;
   }));
 }
@@ -540,7 +541,7 @@ function renderKnow() {
   const parts = [];
   if (pend.length) { const m = el('div', 'mod', `<div class="k">Same person?<span>${pend.length}</span></div><div class="provnote" style="margin-bottom:8px">Your answer settles it; I never guess before sending</div>`); m.append(...pend.map((c) => sameCard(c))); parts.push(m); }
   const groups = new Map(); for (const f of k.facts) (groups.get(GROUP(f)) ?? groups.set(GROUP(f), []).get(GROUP(f))).push(f);
-  const about = el('div', 'mod', '<div class="k">About you<span>tap Fix or x · each line says where it came from</span></div>');
+  const about = el('div', 'mod', '<div class="k">About you<span>Fix or forget any line</span></div>');
   for (const g of ['Favorites', 'People', 'Plans', 'Routines & life']) if (groups.get(g)) about.append(Object.assign(el('div', 'k', g), { style: 'margin:10px 0 2px;color:var(--l2)' }), ...groups.get(g).map(factRow));
   if (!k.facts.length) about.append(el('div', 'empty', k.v2 ? 'Nothing durable yet. Tell me things, or let the connectors read a little.' : 'Memory v2 is off on this phone (MEMORY_V2=1 in agentd.env)'));
   parts.push(about);
