@@ -8,14 +8,14 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | # | Track | Who | State |
 |---|---|---|---|
 | 1 | Codex action speed hill-climb (cross-app tasks, screen format, round trips, tools-first) | Claude Opus | running |
-| 2 | Island below the camera hole, then UI polish pass 1 | Claude Fable | running |
+| 2 | Island below the camera hole, then UI polish pass 1 | Claude Fable | done (8e56541) |
 | 3 | Keyboard autocomplete latency hill-climb | Claude Opus | running |
 | S1 | Live notifications + reply actions + official APIs (fresh messages, Slack/IG/LinkedIn) | GPT-6.1 Sol | running |
 | S2 | Deep-mod engine research + design on our own apps | GPT-6.1 Sol | done (DEEP-MODS.md: cooperative signed spec, no injection or reboot) |
-| 4 | Wake word (Porcupine): everything except the key | Claude | queued |
+| 4 | Wake word (Porcupine): everything except the key | Claude | running |
 | 5 | Voice/GPT Live latency hill-climb | Claude | queued |
 | 6 | Reviewer light polish | Claude | queued |
-| 7 | Bug hunt across demo flows | Claude | queued |
+| 7 | Bug hunt across demo flows (incl. Home tracker card naming Duolingo; tools-client.py card tap spots moved +77 px) | Claude | queued |
 | 8 | UI polish pass 2 | Claude Fable | queued |
 | 9 | Research: impressive additions that fit existing demo beats | Claude | queued |
 | S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot, so low risk) | GPT-6.1 Sol | running |
