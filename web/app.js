@@ -514,10 +514,16 @@ function sameCard(c, cls = 'glass pw same') {
     setTimeout(() => { S.pending = S.pending.filter((x) => x !== c); renderKnow(); renderSugg(); }, 350); };
   return r;
 }
+// The owner's own facts in second person: "You work at Mindsmith", a routine or plan as itself ("Gym Tuesday and Thursday").
+const YOU = { lives_in: 'You live in', works_at: 'You work at', likes: 'You like', dislikes: "You don't like", prefers: 'You prefer', wants: 'You want', allergic_to: "You're allergic to", project: "You're working on", occupation: "You're a" };
+function mine(f) {
+  const t = f.text.replace(/ \(since [^)]*\)$/, ''), obj = t.split(': ').slice(1).join(': ');
+  return f.name !== 'you' || !obj ? t : /^(routine|plan)$/.test(f.pred) ? sent(obj) : YOU[f.pred] ? `${YOU[f.pred]} ${obj}` : sent(t.replace(/^You /, ''));
+}
 function factRow(f) {
   const old = f.status !== 'active', ed = S.edit?.id === f.id, r = el('div', 'rowi fact' + (old ? ' old' : ''));
   r.innerHTML = ed ? `<div><input value="${esc(S.edit.value)}" autocomplete="off"><span class="s">${esc(f.name === 'you' ? 'You' : f.name)} · ${esc(f.pred.replace(/^favorite:/, 'favorite ').replace(/_/g, ' '))}</span></div><div class="r"><button class="tag b" data-a="save">Save</button><button class="ib" data-a="cancel"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`
-    : `<div>${esc(f.text.replace(/ \(since [^)]*\)$/, ''))}<span class="s">${esc(SRC(f.source))} · ${day(f.at)}${f.by === 'owner' ? ' · you fixed it' : ''}</span></div>` + (old ? '' : `<div class="r"><button class="tag" data-a="fix">Fix</button><button class="ib" data-a="forget" aria-label="Forget"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`);
+    : `<div>${esc(mine(f))}<span class="s">${esc(SRC(f.source))} · ${day(f.at)}${f.by === 'owner' ? ' · you fixed it' : ''}</span></div>` + (old ? '' : `<div class="r"><button class="tag" data-a="fix">Fix</button><button class="ib" data-a="forget" aria-label="Forget"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`);
   if (ed) { const i = $('input', r); i.oninput = () => { S.edit.value = i.value; }; i.onkeydown = (k) => k.key === 'Enter' && $('[data-a=save]', r).click(); setTimeout(() => i.focus(), 0); }
   r.onclick = (e) => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; hap();
     if (a === 'forget') { r.classList.add('gone'); return send({ type: 'memory.correct', id: f.id, retract: true }); }
