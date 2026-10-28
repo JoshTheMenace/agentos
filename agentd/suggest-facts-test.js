@@ -88,7 +88,7 @@ test('injected calendar titles are withheld; flight end never becomes landing ti
 });
 test('empty drafts get grounded local replies; drafted text stays with the model', () => {
   const free = { free: 'Thursday 3 PM–5 PM' };
-  assert.match(calendarReplies(free, request, ['Free Thursday?'])[1], /Thursday 3 PM to 5 PM/);
+  assert.match(calendarReplies(free, request, ['Free Thursday?'])[0], /free Thursday 3–5 PM/);
   assert.equal(calendarReplies(free, { ...request, before: "I'm" }, ['Free Thursday?']), null);
   assert.equal(calendarReplies(free, { ...request, after: 'later' }, ['Free Thursday?']), null);
   const event = { event: { title: 'Judging', start: 'Wed, Oct 28, 5:00 PM', place: 'Town Hall' } };

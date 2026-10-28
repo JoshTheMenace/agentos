@@ -16,10 +16,14 @@ export function calendarReplies(facts, m, lines) {
   if (!facts || m.before || m.after) return null;
   const q = question(lines);
   if (facts.free) {
+    // Speak as the person replying: "tomorrow" when they asked about tomorrow, else the day name from the gap.
+    const day = q.match(/\b(today|tomorrow|tonight)\b/)?.[1];
     if (facts.free.startsWith('Unknown')) return ["I'll check.", "Let me check my calendar.", 'What time did you have in mind?'];
-    if (facts.free.startsWith('No gaps')) return ['Looks busy then.', 'No hour-long gaps then.', 'Could we try another day?'];
-    const slot = facts.free.split(';')[0].split(',')[0].replaceAll('–', ' to ');
-    return ['Looks free then.', `${slot} looks free.`, `Would ${slot} work?`];
+    const [, name, from, to] = facts.free.split(';')[0].split(',')[0].match(/^(\w+) (\d[\d:]* [AP]M)–(\d[\d:]* [AP]M)/) || [];
+    const when = day || name?.toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) || 'then';
+    if (!from) return [`I'm pretty booked ${when}.`, `No real gaps ${when}, sorry.`, 'Could we try another day?'];
+    const range = from.slice(-2) === to.slice(-2) ? `${from.slice(0, -3)}–${to}` : `${from}–${to}`; // 4 PM–5 PM → 4–5 PM
+    return [`I'm free ${when} ${range}`, `I could do ${range} ${when}`, `How about ${from} ${when}?`];
   }
   if (/\b(land|landing|arrive|arrival)\b/.test(q)) return facts.arrival?.start
     ? ['Found my arrival.', `I arrive ${facts.arrival.start}.`, "I'll confirm my arrival time."]

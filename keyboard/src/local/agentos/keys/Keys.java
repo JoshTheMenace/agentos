@@ -301,7 +301,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         List<String> instant = new ArrayList<>(); String draft = (b + a).trim().toLowerCase(); // QuickType-style: keep what still fits the draft
         strip.setTyped(mode == MODE_REPLY ? (b + a).trim() : "");
         if (mode == MODE_REPLY && !draft.isEmpty()) for (String s : shown) if (s.toLowerCase().startsWith(draft) && s.length() > draft.length()) instant.add(s);
-        if (instant.isEmpty()) strip.setLoading(); else { strip.setItems(instant, true); lat(trig, trigAt, now(), now(), now(), now(), "instant " + instant.size()); }
+        if (instant.isEmpty()) strip.setLoading(loadLabel(lastScreen)); else { strip.setItems(instant, true); lat(trig, trigAt, now(), now(), now(), now(), "instant " + instant.size()); }
         final boolean reuse = trig.equals("type") && !draft.isEmpty() && lastScreen != null && System.currentTimeMillis() - lastScreenAt < 30000; // typing doesn't change the chat; an empty draft (just sent) re-reads
         agent.cancel();
         final long t0 = trigAt, t1 = now(); final String why = trig;
@@ -310,6 +310,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
             final Agent.Screen sc = reuse ? lastScreen : agent.screenRead(); // 0.3-1 s; what the other person said
             final long t3 = now();
             if (!reuse) { lastScreen = sc; lastScreenAt = System.currentTimeMillis(); }
+            ui.post(() -> { if (g == gen) strip.setLoadingLabel(loadLabel(sc)); });
             ui.post(() -> strip.setActions(sc.lines.isEmpty() ? null : Strip.ACT_TRANSLATE, sc.lines.size() >= 8 ? Strip.ACT_CATCH_UP : null));
             if (g != gen) return;
             int[] red = {0};
@@ -350,6 +351,11 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         });
     }
 
+    /** What the shimmer says: a calendar-ish last message means agentd will look at the calendar. */
+    private static String loadLabel(Agent.Screen sc) {
+        String last = sc == null || sc.lines.isEmpty() ? "" : sc.lines.get(sc.lines.size() - 1).toLowerCase();
+        return last.matches(".*\\b(free|available|availability|busy|what time|when)\\b.*") ? "Checking your calendar…" : "Thinking…";
+    }
     /** One line per shown suggestion set: trigger → debounce → bg queue → screen.read → agentd → on screen (adb logcat -s AgentKeys | grep lat). */
     private static void lat(String why, long t0, long t1, long t2, long t3, long t4, String how) {
         long t5 = now();

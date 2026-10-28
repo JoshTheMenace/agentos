@@ -56,7 +56,7 @@ final class Strip extends View {
     private final Runnable longPress = () -> { heldRow = this.pressedCell; this.pressedCell = -1; expand(true); }; // preview: the held chip's row lit, nothing inserted
     private final List<String> items = new ArrayList<>();
     private String typed = ""; // Reply mode: the draft every chip starts with; chips show only what they add ("…tonight?")
-    private String detail = "";
+    private String detail = "", loadingLabel = "Thinking…";
     private int orb = Theme.IDLE, mode;
     private boolean loading, tappable = true;
     private long shownAt, detailUntil;
@@ -84,7 +84,9 @@ final class Strip extends View {
     boolean hasNotice() { return notice != null; }
     /** Actions offered on the detail line (null = hidden): translate the last incoming message, catch me up. */
     void setActions(String translate, String catchUp) { acts[0] = translate; acts[1] = catchUp; }
-    void setLoading() { loading = true; items.clear(); expand(false); invalidate(); }
+    void setLoading(String label) { loading = true; loadingLabel = label; items.clear(); expand(false); invalidate(); }
+    /** Swap the loading label (e.g. once the screen read shows a calendar question) without restarting the shimmer. */
+    void setLoadingLabel(String label) { if (loading) { loadingLabel = label; invalidate(); } }
     void setTyped(String draft) { typed = draft == null ? "" : draft; }
     /** Replace the suggestions; tappable=false shows a plain message (e.g. "Type a draft to rewrite"). */
     void setItems(List<String> list, boolean tappable) {
@@ -222,6 +224,12 @@ final class Strip extends View {
             fill.setShader(g);
             float[] widths = {.9f, 1f, .75f};
             for (int i = items.size(); i < 3; i++) {
+                if (i == 1 && items.isEmpty()) { // the middle cell says what we're waiting on, so the strip never reads as empty
+                    text.setTextSize(Theme.MODE_TEXT * d); text.setTypeface(Theme.font(getContext(), Theme.W_CTX)); text.setColor(Theme.TEXT2);
+                    c.drawText(loadingLabel, left + w * 1.5f, baseline(cy), text);
+                    text.setTextSize(Theme.CHIP_TEXT * d); text.setTypeface(Theme.font(getContext(), Theme.W_CHIP));
+                    continue;
+                }
                 float sw = w * Theme.SKELETON_W * widths[i], sh = Theme.SKELETON_H * d, cx = left + w * (i + .5f);
                 tmp.set(cx - sw / 2, cy - sh / 2, cx + sw / 2, cy + sh / 2);
                 c.drawRoundRect(tmp, sh / 2, sh / 2, fill);
