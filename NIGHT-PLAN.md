@@ -11,14 +11,14 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 2 | Island below the camera hole, then UI polish pass 1 | Claude Fable | running |
 | 3 | Keyboard autocomplete latency hill-climb | Claude Opus | running |
 | S1 | Live notifications + reply actions + official APIs (fresh messages, Slack/IG/LinkedIn) | GPT-6.1 Sol | running |
-| S2 | Deep-mod engine research + design on our own apps (no device changes yet) | GPT-6.1 Sol | running |
+| S2 | Deep-mod engine research + design on our own apps | GPT-6.1 Sol | done (DEEP-MODS.md: cooperative signed spec, no injection or reboot) |
 | 4 | Wake word (Porcupine): everything except the key | Claude | queued |
 | 5 | Voice/GPT Live latency hill-climb | Claude | queued |
 | 6 | Reviewer light polish | Claude | queued |
 | 7 | Bug hunt across demo flows | Claude | queued |
 | 8 | UI polish pass 2 | Claude Fable | queued |
 | 9 | Research: impressive additions that fit existing demo beats | Claude | queued |
-| S3 | Deep-mod implementation on our own apps (LAST; may need Zygisk/reboot) | GPT-6.1 Sol | queued, last |
+| S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot, so low risk) | GPT-6.1 Sol | running |
 
 ## Oversight
 - `scripts/night-watch.py` (read-only) runs every 40 min from the orchestrator. It flags real-app sends/posts/replies, calendar adds/edits/deletes or shrinkage (baseline 1780 events at 01:03), calls, firewall/vault/plugin/auto-reply changes. Alerts accumulate in `/tmp/night-watch/alerts.log`.
