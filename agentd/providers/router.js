@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 const CONNECTION = /dns|lookup|resolve|ENOTFOUND|EAI_AGAIN|error sending request|stream disconnected|connect|timed? ?out|network|unreachable|routing discovery failed/i;
 export function reachability({ probe = () => Promise.any(['https://chatgpt.com/', 'https://connectivitycheck.gstatic.com/generate_204'].map(async (url) => {
-  const r = await fetch(url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(1000) });
+  const r = await fetch(url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(2500) }); // a cold TLS handshake can pass 1 s (bug hunt 2: back online, 2 of 7 asks went to the local model)
   await r.body?.cancel(); // any HTTP response (even 403/503) proves connectivity; a cloud outage is not offline
   return true;
 })), interfaces = networkInterfaces, forced = () => process.env.AGENTD_FORCE_OFFLINE === '1'
