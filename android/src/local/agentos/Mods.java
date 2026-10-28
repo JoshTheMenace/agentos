@@ -21,6 +21,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -82,6 +83,7 @@ final class Mods {
     private final Runnable clearPreview = this::clearPreview;
     private volatile boolean watching, closed;
     private Process watcher;
+    private int barTop = Integer.MAX_VALUE; // the assistant bar's top edge at the last refresh (Integer.MAX_VALUE: no bar)
     private String fgPkg = ""; private long fgSince, scrollUntil; // fgSince: sample colors only after the app's launch animation has settled; scrollUntil: a fling is still moving, re-place masks every frame
 
     Mods(AgentA11y svc, Audit audit) {
@@ -122,7 +124,7 @@ final class Mods {
                 String pkg = root == null ? "" : String.valueOf(root.getPackageName());
                 if (!pkg.equals(fgPkg)) { clearPreview(); hideAll(); }
                 if (root != null && (e.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_WINDOWS_CHANGED
-                        ? e.getWindowId() != root.getWindowId() : !pkg.equals("local.agentos"))) return;
+                        ? e.getWindowId() != root.getWindowId() && barTop() == barTop : !pkg.equals("local.agentos"))) return; // another window: only the bar's edge moving matters
             } catch (RuntimeException error) { hideAll(); return; }
         }
         recheck = true; windowEpoch++; // secure flags can change without a new window id: re-ask root, keep the last verdict meanwhile
@@ -535,6 +537,8 @@ final class Mods {
                 List<Rect> rects = ModMask.bounds(root, m.spec, scrollUntil > SystemClock.uptimeMillis(), m.track);
                 Integer fill = rects.isEmpty() ? null : fill(m, rects.get(0));
                 if (fill == null) { hide(m); continue; } // nothing to cover, or the app's background is still being sampled
+                barTop = barTop(); // the bar is a lower layer than our masks, so they stop at its edge; it covers the rest of the item itself
+                for (Iterator<Rect> it = rects.iterator(); it.hasNext(); ) { Rect r = it.next(); r.bottom = Math.min(r.bottom, barTop); if (r.height() <= 0) it.remove(); }
                 boolean peek = m.peekUntil > SystemClock.uptimeMillis();
                 if (m.masks.size() != rects.size() || m.peeking != peek) { ModMask.clear(wm, m.masks); m.peeking = peek; }
                 for (int i = 0; i < rects.size(); i++) {
@@ -546,6 +550,7 @@ final class Mods {
                     int w = r.width(), hh = r.height(), x = r.left, y = r.top;
                     if (peek) { v.measure(0, 0); w = v.getMeasuredWidth(); hh = v.getMeasuredHeight(); x = r.centerX() - w / 2; y = r.centerY() - hh / 2; }
                     boolean changed = move(lp, x, y, w, hh);
+                    ((android.widget.FrameLayout) v).getChildAt(0).setVisibility(!peek && hh < px(28) ? View.GONE : View.VISIBLE); // a sliver above the bar: no chip
                     if (fresh) { wm.addView(v, lp); m.masks.add(v); }
                     else if (changed) wm.updateViewLayout(v, lp);
                     v.postOnAnimation(() -> {
@@ -698,6 +703,19 @@ final class Mods {
         } else { x = a.centerX() - w / 2; y = a.centerY() - hh / 2; }
         x += px(s.optDouble("dx", 0)); y += px(s.optDouble("dy", 0));
         return new Rect(x, y, x + w, y + hh);
+    }
+
+    /** The assistant bar's top edge (launcher/Bar.java: a wide TYPE_APPLICATION_OVERLAY window of the launcher at the bottom;
+     *  the edge handle is taller than wide). Our masks are TYPE_ACCESSIBILITY_OVERLAY, a layer above it, so they clip to this. */
+    private int barTop() {
+        int top = Integer.MAX_VALUE; Rect b = new Rect();
+        for (AccessibilityWindowInfo w : svc.getWindows()) {
+            if (w.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
+            w.getBoundsInScreen(b); if (b.width() <= b.height()) continue;
+            AccessibilityNodeInfo r = w.getRoot();
+            if (r != null && "local.agentos.home".contentEquals(r.getPackageName())) top = Math.min(top, b.top);
+        }
+        return top;
     }
 
     private static WindowManager.LayoutParams params() {

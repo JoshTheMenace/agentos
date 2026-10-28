@@ -120,7 +120,8 @@ card with a mic, a text field, a two-line transcript and ×. The app underneath 
 - **Windows:** two `TYPE_APPLICATION_OVERLAY` windows from a foreground service (microphone type, one silent minimised
   notification; a cached launcher process got killed by lmkd, which took the handle with it). The bar window is cut to the card's
   height (`Native.size`) so taps around it reach the app. It is below the native island and approval cards
-  (`TYPE_ACCESSIBILITY_OVERLAY` is a higher layer), so it can never obscure a card (HumanTouch). The agent never sees or taps
+  (`TYPE_ACCESSIBILITY_OVERLAY` is a higher layer), so it can never obscure a card (HumanTouch). App-mod masks (same higher layer) clip
+  themselves at the bar's top edge (android `Mods.barTop()`), so the bar always reads on top of a hidden ad. The agent never sees or taps
   it: `screen.read` skips windows of `local.agentos.home` (android `Guard.offLimits`), checked with the bar open over Chrome.
 - **Keyboard:** the window starts `FLAG_NOT_FOCUSABLE`, so the app underneath keeps its own keyboard behaviour. Tapping the field
   flips the flag (`Native.focus(true)`), the keyboard (AgentOS keys) comes up under the bar (`ADJUST_RESIZE` lifts the card),
