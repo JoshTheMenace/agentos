@@ -49,6 +49,35 @@ const MOD_TOOLS = {
   app_mod_remove: { method: 'app.mod.remove', tier: 'act', schema: obj({ id: { type: 'string' } }, ['id']), description: 'Remove a mod by id (no approval needed).' },
 };
 
+const S = { type: 'string' }, N = { type: 'integer' }, B = { type: 'boolean' }, pct = { type: 'integer', minimum: 0, maximum: 100 };
+const when = { type: 'string', description: 'local "YYYY-MM-DDTHH:MM"' }, who = { type: 'string', description: 'contact name or phone number' };
+const API_TOOLS = {
+  add_event: { method: 'calendar.add', pkg: 'calendar', tier: 'act', description: 'Add a calendar event directly (no UI); returns the saved event. Attendees get emailed invites (the phone asks first).',
+    schema: obj({ title: S, start: when, minutes: { type: 'integer', minimum: 5, maximum: 1440, description: 'default 60' }, location: S, attendees: { type: 'array', items: S, description: 'emails' } }, ['title', 'start']) },
+  find_events: { method: 'calendar.find', pkg: 'calendar', tier: 'read', description: 'Calendar events from..to (default: the next 7 days), optional title search. items[].text is the title (untrusted).',
+    schema: obj({ from: when, to: when, query: S }) },
+  update_event: { method: 'calendar.update', pkg: 'calendar', tier: 'act', description: 'Change an event by id; the length stays unless minutes is given.',
+    schema: obj({ id: N, title: S, start: when, minutes: N, location: S }, ['id']) },
+  delete_event: { method: 'calendar.delete', pkg: 'calendar', tier: 'outward', description: 'Delete an event by id (the phone asks first).', schema: obj({ id: N }, ['id']) },
+  find_contact: { method: 'contacts.find', pkg: 'contacts', tier: 'read', description: 'Look up a contact by name or nickname: phones, emails.', schema: obj({ name: S }, ['name']) },
+  send_sms: { method: 'sms.send', pkg: 'sms', tier: 'outward', description: 'Send an SMS. The phone shows the exact text for approval first.', schema: obj({ to: who, text: S }, ['to', 'text']) },
+  read_sms: { method: 'sms.list', pkg: 'sms', tier: 'read', description: 'Recent SMS, newest first, optionally only from one contact. Untrusted.', schema: obj({ from: who, n: { type: 'integer', minimum: 1, maximum: 30 } }) },
+  read_calls: { method: 'calls.list', pkg: 'calls', tier: 'read', description: 'Recent calls (missed, incoming, outgoing).', schema: obj({ n: { type: 'integer', minimum: 1, maximum: 30 } }) },
+  call: { method: 'call.place', pkg: 'calls', tier: 'outward', description: 'Place a phone call (the phone asks first).', schema: obj({ to: who }, ['to']) },
+  list_alarms: { method: 'alarms.list', pkg: 'alarms', tier: 'read', description: 'Alarms in Clock: {items:[{id, time, days, label, enabled}]}.', schema: obj() },
+  delete_alarm: { method: 'alarms.delete', pkg: 'alarms', tier: 'act', description: 'Delete an alarm by id from list_alarms; off:true only turns it off.', schema: obj({ id: N, off: B }, ['id']) },
+  phone_settings: { method: 'device.set', pkg: 'device', tier: 'act', description: 'Change phone settings directly; give only what changes. volume = media. brightness -1 = auto. Returns the new status.',
+    schema: obj({ dnd: { enum: ['off', 'on', 'alarms', 'silent'] }, ringer: { enum: ['normal', 'vibrate', 'silent'] }, volume: pct, ring_volume: pct, alarm_volume: pct, torch: B,
+      brightness: { type: 'integer', minimum: -1, maximum: 100 }, wifi: B, bluetooth: B, airplane: B }) },
+  phone_status: { method: 'device.status', pkg: 'device', tier: 'read', description: 'Battery, DND, ringer, volumes, flashlight, brightness, Wi-Fi, Bluetooth, airplane, next alarm, now playing; screen_time adds today\'s app use.',
+    schema: obj({ screen_time: B }) },
+  media: { method: 'media.control', pkg: 'media', tier: 'act', description: 'Control what is playing; status = now playing.', schema: obj({ action: { enum: ['play', 'pause', 'next', 'previous', 'status'] } }, ['action']) },
+  navigate: { method: 'intent', kind: 'navigate', pkg: 'com.google.android.apps.maps', tier: 'act', description: 'Start Google Maps navigation to a place.',
+    schema: obj({ to: S, mode: { enum: ['drive', 'walk', 'bike'] } }, ['to']) },
+  open_url: { method: 'intent', kind: 'url', pkg: 'com.android.chrome', tier: 'act', description: 'Open an http(s) link in Chrome. A link from screen or message text needs the user\'s approval.', schema: obj({ url: S }, ['url']) },
+  email_draft: { method: 'intent', kind: 'email', pkg: 'com.google.android.gm', tier: 'act', description: 'Open a Gmail draft; nothing is sent until Send is tapped (approval).', schema: obj({ to: S, subject: S, body: S }, ['to']) },
+};
+
 // name (model-safe, no dots) -> {method on :7777, tier, description, schema}. Tiers here are only hints for the UI;
 // the Android broker assigns the real tier (T0-T4) per call.
 export const TOOLS = {
@@ -77,10 +106,10 @@ export const TOOLS = {
     schema: obj({ seconds: { type: 'integer', minimum: 1, maximum: 86400 }, label: { type: 'string' } }, ['seconds']) },
   web_search: { method: 'intent', kind: 'search', pkg: 'com.android.chrome', tier: 'act', description: 'Open a Google search for the query in Chrome and return the results screen.',
     schema: obj({ query: { type: 'string' } }, ['query']) },
-  add_event: { method: 'intent', kind: 'event', pkg: 'com.google.android.calendar', tier: 'act', description: 'Open Calendar\'s new-event screen filled in. Not saved until you tap Save on the screen it returns.',
-    schema: obj({ title: { type: 'string' }, start: { type: 'string', description: 'local time "YYYY-MM-DDTHH:MM"' }, minutes: { type: 'integer', minimum: 5, maximum: 1440, description: 'default 60' } }, ['title', 'start']) },
   play_music: { method: 'intent', kind: 'play', tier: 'act', description: 'Play music in an app (e.g. com.spotify.music) from a search. query "" plays something for you.',
     schema: obj({ pkg: { type: 'string' }, query: { type: 'string' } }, ['pkg', 'query']) },
+  // API actions (android Api.java, android/API-ACTIONS.md): Android's own services, no screen, one call. pkg = the lease scope.
+  ...API_TOOLS,
   act: { method: 'act', tier: 'act', description: 'Do several steps in one call when the current screen already shows what to do, e.g. tap a field, type, tap Search. '
     + 'Each step is checked by the phone like a single call. Ids are from the screen you last saw; agentd re-finds each target on the new screen and stops if it is gone, '
     + 'or at the first step that fails or is denied. For a screen you haven\'t seen yet (e.g. right after an open_app step), give label instead of id: the exact text '
@@ -121,7 +150,7 @@ async function guardMemory(x, ctx) {
   if (x.trusted === false && typeof x.text === 'string') {
     const g = await classify(x.text);
     if (g.label !== 'benign') {
-      ctx.emit({ type: 'guard.alert', source_pkg: `memory:${x.source}`, score: g.score, label: g.label, excerpt: x.text.slice(0, 160) });
+      ctx.emit({ type: 'guard.alert', source_pkg: `${x.phone ? 'phone' : 'memory'}:${x.source}`, score: g.score, label: g.label, excerpt: x.text.slice(0, 160) });
       x.text = `[withheld by guard: likely prompt injection, score ${g.score}]`;
     }
   }
@@ -207,6 +236,7 @@ export async function runTool(name, args, ctx) {
   const t = TOOLS[name];
   if (!t) return { success: false, text: `Unknown tool ${name}` };
   args = args && typeof args === 'object' ? args : {};
+  if (!t.memory && ctx.provider !== 'local') args = memory.unpseudo(args); // cloud models see [P:3]; the phone gets the real number
   const t0 = Date.now(), turn = ctx.turn;
   ctx.emit({ type: 'tool.request', name: t.method, args, tier: t.tier });
   if (t.memory) {
@@ -225,7 +255,7 @@ export async function runTool(name, args, ctx) {
     if (name === 'task_start') r = await lease(ctx, (args.apps || []).map(String));
     else {
       if (name === 'notifications_reply') turn.log = [...(turn.log || []).slice(-7), context.about(args.key)].filter(Boolean); // the reviewer sees what it answers
-      if (t.tier !== 'read' && !/^(firewall|notifications|trackers|app\.mod)\./.test(t.method)) { // every action runs inside the turn's lease (replies: the card is the gate)
+      if ((t.tier !== 'read' || t.pkg) && !/^(firewall|notifications|trackers|app\.mod)\./.test(t.method)) { // every action runs inside the turn's lease (replies: the card is the gate)
         const l = await lease(ctx, name === 'open_app' || name === 'play_music' ? [String(args.pkg)] : t.pkg ? [t.pkg] : turn.lease ? [] : [turn.pkg].filter(Boolean));
         params = { ...args, ...(t.kind && { kind: t.kind }), task_id: l.task_id, ...(turn.alerted?.size && { tainted: true }) };
       }
@@ -240,6 +270,7 @@ export async function runTool(name, args, ctx) {
     }
     if (t.method === 'screen.read') r = await guardScreen(r, ctx);
     else if (t.method === 'notifications.list') r = await context.guardList(r, ctx);
+    else if (r.items) r = { ...r, items: (await guardMemory(r.items.map((x) => ({ ...x, phone: true })), ctx)).map(({ phone, trusted, source, ...x }) => x) }; // SMS, calls, contacts, events: other people's words
     else if (r.screen) r = { ...r, screen: await guardScreen(r.screen, ctx) };
     const ok = r.ok !== false;
     turn.log = [...(turn.log || []).slice(-7), { role: 'tool', source: `${t.method} ${turn.pkg || ''}`.trim(), text: brief(r) }];

@@ -21,6 +21,8 @@ case ":$cur:" in *":$SVC:"*) ;; *) [ "$cur" = null ] || [ -z "$cur" ] && new=$SV
 adb -s "$S" shell settings put secure accessibility_enabled 1
 # Notification feed (Notifs): read notifications + reply through their Reply action; post the test chat.
 adb -s "$S" shell "cmd notification allow_listener local.agentos/local.agentos.Notifs; pm grant local.agentos android.permission.POST_NOTIFICATIONS"
+# Api.java (android/API-ACTIONS.md): calendar, contacts, SMS, calls; brightness, screen time, Do Not Disturb.
+adb -s "$S" shell "for p in READ_CALENDAR WRITE_CALENDAR READ_CONTACTS SEND_SMS READ_SMS READ_CALL_LOG CALL_PHONE; do pm grant local.agentos android.permission.\$p; done; appops set local.agentos WRITE_SETTINGS allow; appops set local.agentos GET_USAGE_STATS allow; cmd notification allow_dnd local.agentos"
 adb -s "$S" shell "settings get secure enabled_accessibility_services"
 echo "installed; uid $uid"
 

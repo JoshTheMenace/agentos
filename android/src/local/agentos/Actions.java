@@ -78,10 +78,12 @@ final class Actions {
 
     /**
      * Allow-listed direct intents: one call instead of a string of taps. Only these kinds; never arbitrary intents
-     * (no SMS/call/share intents, no URLs: an injected page can't make the agent open evil.com?data=...).
+     * (no SMS/call/share intents: those are Api.java T3 actions). A url is plain http(s) only, and the Broker sends a link
+     * that came from text the agent read to a person first (so an injected page can't make it open evil.com?data=...).
      * kind alarm {hour, minute, label?} · timer {seconds, label?} · search {query} (Google in the browser) ·
      * event {title, start "YYYY-MM-DDTHH:MM" local, minutes?} (Calendar's new-event screen, filled in; nothing is saved
-     * until Save is tapped) · play {pkg, query} (play music from a search in that app; "" = anything).
+     * until Save is tapped) · play {pkg, query} (play music from a search in that app; "" = anything) ·
+     * navigate {to, mode? drive|walk|bike} (Maps turn-by-turn) · url {url} (Chrome) · email {to, subject?, body?} (a draft; Send is a tap).
      */
     static Intent intent(JSONObject p) throws JSONException {
         String label = p.optString("label", "");
@@ -98,7 +100,15 @@ final class Actions {
             }
             case "play": return new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).putExtra(SearchManager.QUERY, p.optString("query", ""))
                     .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*");
-            default: throw new IllegalArgumentException("kind must be alarm, timer, search, event or play");
+            case "navigate": return new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=" + Uri.encode(p.getString("to")) + "&mode=" + p.optString("mode", "drive").charAt(0)));
+            case "url": {
+                String u = p.getString("url");
+                if (!u.matches("(?i)https?://[^\\s@/?#]+([/?#]\\S*)?") || u.length() > 2000) throw new IllegalArgumentException("only plain http(s) links (no user@, max 2000 chars)");
+                return new Intent(Intent.ACTION_VIEW, Uri.parse(u)).addCategory(Intent.CATEGORY_BROWSABLE);
+            }
+            case "email": return new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:" + Uri.encode(p.getString("to"), "@,+") + "?subject=" + Uri.encode(p.optString("subject"))
+                    + "&body=" + Uri.encode(p.optString("body"))));
+            default: throw new IllegalArgumentException("kind must be alarm, timer, search, event, play, navigate, url or email");
         }
     }
 

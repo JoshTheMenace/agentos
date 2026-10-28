@@ -81,13 +81,17 @@ wss.on('connection', (ws) => {
     turn.asks = session.asks = [...(session.asks || []), turn.goal].slice(-4); // the reviewer reads "block them" with the question before it
     let said = '';
     active = { p, abort };
-    const ctx = { provider: p.id, emit: (m) => { if (m.type === 'text.delta') said += m.text; emit(m); }, signal: abort.signal, turn };
+    const unp = p.id === 'local' ? null : memory.unpseudoStream(); // the model writes [P:3]; the user sees the real number (it never leaves the phone)
+    const ctx = { provider: p.id, emit: (m) => { if (m.type === 'text.delta') { if (unp) m = { ...m, text: unp.push(m.text) }; if (!m.text) return; said += m.text; } emit(m); }, signal: abort.signal, turn };
     let r;
-    const c = p.id === 'local' ? null : await context.block(); // "what's going on" (untrusted notifications etc.)
+    const c = p.id === 'local' ? null : await context.block({ goal: turn.goal }); // "what's going on" (untrusted notifications etc.)
     if (c) turn.log = c.log; // the reviewer sees which message "reply back" answers
     try { r = await p.run(session, c ? `${c.text}\n\n${turn.goal}` : turn.goal, ctx); }
     catch (e) { r = { status: abort.signal.aborted ? 'interrupted' : 'failed', error: e.message }; }
     await endTurn(turn);
+    const rest = unp?.flush();
+    if (rest) { said += rest; emit({ type: 'text.delta', text: rest }); }
+    if (unp && r.text) r.text = memory.unpseudo(r.text);
     active = null;
     if (r.error) send({ type: 'error', code: 'turn_failed', message: r.error, retryable: true });
     send({ type: 'turn.done', provider: p.id, status: r.status, usage: r.usage ?? null, ms: Date.now() - t0 });

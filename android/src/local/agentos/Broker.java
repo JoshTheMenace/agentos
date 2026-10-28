@@ -85,6 +85,7 @@ final class Broker {
     static Object[] channels(History h, String tool, String target, boolean untrusted, boolean priv, boolean outward, boolean copied) {
         if (tool.startsWith("vault.")) return new Object[]{FINGERPRINT_ONLY, "uses a saved password"};
         if (tool.equals("trackers.unblock")) return new Object[]{HUMAN, "undoing a protection needs a person"};
+        if (tool.matches("sms\\.send|call\\.place|calendar\\.add")) return new Object[]{HUMAN, "a text, call or invite to a person needs a person"}; // never the reviewer
         if (MONEY.matcher(target).find()) return new Object[]{FINGERPRINT_ONLY, "money or an install"};
         if (h != null && h.flagged) return new Object[]{HUMAN, "Prompt Guard flagged text in this task"};
         if (copied || h != null && h.copied) return new Object[]{HUMAN, "the text was copied from untrusted content"};
@@ -128,11 +129,13 @@ final class Broker {
         PromptGuard.init(svc);
         Trackers.start(svc);
         Wake.listen(svc);
+        Api.init(svc);
         self = this;
     }
 
     /** uid: the calling app's uid for task.start and approval.confirm (-1 if unknown or not looked up). */
     JSONObject call(String m, JSONObject p, int uid) throws Exception {
+        if (Api.SPECS.containsKey(m)) synchronized (actLock) { return act(m, p, uid); } // Android's own APIs (Api.java): the same gate as a tap
         switch (m) {
             case "screen.read": return read();
             case "guard.classify": return PromptGuard.classify(p.getString("text"));
@@ -305,19 +308,23 @@ final class Broker {
     /** uid: the caller (only looked up for trackers.*): the launcher's own uid is the owner's tap, which needs no card. */
     private JSONObject act(String tool, JSONObject p, int uid) throws Exception {
         Lease l = lease;
+        Api.Spec api = Api.SPECS.get(tool);
         boolean fw = tool.startsWith("firewall.") || tool.startsWith("trackers."), reply = tool.equals("notifications.reply"), free = fw || tool.startsWith("notifications.");
         // Tracker blocks: the owner's tap in Blockers (launcher uid) is the approval; an agent's block is protective (tracker-list names only,
         // the app keeps working) so it needs no card either. Unblocking from an agent still needs a person (channels()).
         boolean owner = tool.startsWith("trackers.") && callerIn(uid, "owner_callers"), protective = tool.equals("trackers.block");
         boolean scoped = !free && !tool.equals("press"); // free: the card itself is the gate (no lease needed)
-        AccessibilityNodeInfo node = p.has("id") ? svc.screen.node(p.getInt("id")) : null;
+        AccessibilityNodeInfo node = api == null && p.has("id") ? svc.screen.node(p.getInt("id")) : null; // an API id is an event/alarm id
         if (node == null && (tool.equals("tap") || tool.equals("type"))) throw new IllegalArgumentException(tool + " needs an id from screen.read");
-        boolean secure = !free && svc.screen.secure();
+        boolean secure = !free && api == null && svc.screen.secure();
         Notifs.Rec nr = reply ? Notifs.get(p.optString("key")) : null;
         if (reply && nr == null) throw new IllegalArgumentException("no such notification key (call notifications.list)");
         String text = p.optString("text", ""), pkg, target, why;
         int tier;
-        switch (tool) {
+        if (api != null) { // scope = the lease name ("calendar", "sms", ...); describe() resolves a contact to the number the card shows
+            String[] d = Api.describe(svc, tool, p);
+            pkg = api.scope; target = d[0]; text = d[1]; tier = Api.tier(tool, p); why = "API " + tool;
+        } else switch (tool) {
             case "tap": {
                 String risky = Guard.riskyLabel(node);
                 pkg = pkg(node); target = Guard.label(node);
@@ -343,8 +350,10 @@ final class Broker {
                 break;
             case "intent": // allow-listed: alarm, timer, web search, calendar draft, play music (Actions.intent). Words that leave the phone or go into an app are a draft
                 pkg = Actions.intentPkg(svc, p); target = p.getString("kind") + " " + (p.has("query") ? p.getString("query") : p.has("title") ? p.getString("title") + " " + p.getString("start")
-                        : p.has("seconds") ? p.getInt("seconds") + " s" : String.format(java.util.Locale.US, "%02d:%02d", p.optInt("hour"), p.optInt("minute")));
-                text = p.optString("query", p.optString("title", "")); tier = p.getString("kind").matches("alarm|timer") ? 1 : 2; why = "direct " + p.getString("kind");
+                        : p.has("url") ? p.getString("url") : p.has("to") ? p.getString("to") : p.has("seconds") ? p.getInt("seconds") + " s" : String.format(java.util.Locale.US, "%02d:%02d", p.optInt("hour"), p.optInt("minute")));
+                text = String.join(" ", p.optString("query"), p.optString("title"), p.optString("url"), p.optString("to"), p.optString("subject"), p.optString("body")).trim();
+                tier = p.getString("kind").matches("alarm|timer") ? 1 : 2; why = "direct " + p.getString("kind");
+                if (p.getString("kind").equals("url") && linked(l, p.getString("url"))) { tier = 3; why = "a link that came from text the agent read"; } // a slipped-in link: a person looks first
                 break;
             case "firewall.set": {
                 JSONArray d = p.optJSONArray("domains");
@@ -376,13 +385,13 @@ final class Broker {
         else if (tier == 4) block = "T4 forbidden: " + why;
         else if (text.trim().isEmpty() && free && !fw) block = "text is empty";
         else if (reply && nr.reply == null) block = "this notification has no reply action: open the app instead";
-        else if ((tool.equals("type") || tool.equals("intent") || free) && (l != null && leaksSecret(l.h, text) || Notifs.leaks(text)))
+        else if ((tool.equals("type") || tool.equals("intent") || free || api != null) && (l != null && leaksSecret(l.h, text) || Notifs.leaks(text)))
             block = "T4 forbidden: text contains a code/canary read from the screen or a notification (P3)";
         else if (node != null && Guard.offLimits(node)) block = "T4 forbidden: AgentOS's own window";
         else if (scoped && Guard.forbidden(pkg)) block = "T4 forbidden: " + pkg + " is a protected system surface";
         else if (scoped && !l.apps.contains(pkg)) block = pkg + " is not in this task's lease " + l.apps;
 
-        boolean untrusted = l != null && l.h.untrusted || reply, priv = Guard.privateApp(pkg) || secure || nr != null && nr.test, outward = tier == 3; // a reply answers a stranger's text
+        boolean untrusted = l != null && l.h.untrusted || reply, priv = Guard.privateApp(pkg) || secure || nr != null && nr.test || api != null && api.priv, outward = tier == 3; // a reply answers a stranger's text
         JSONObject r2 = new JSONObject().put("untrusted", untrusted).put("private", priv).put("outward", outward);
         JSONObject log = entry(tool, l).put("pkg", pkg).put("target", target).put("text", Guard.clip(text, 200))
                 .put("tier", TIER[tier]).put("rule_of_two", r2);
@@ -396,8 +405,9 @@ final class Broker {
         else if (protective) { log.put("approver", "policy").put("rationale", "protective: only tracker-list domains, the app keeps working"); decision = "approved"; }
         else if (tier == 3 || (tier == 2 && untrusted && priv)) {
             if (tier == 2) why += " after reading untrusted content in a private app (Rule of Two)";
-            boolean copy = free && !fw && copied(Notifs.seen, text);
+            boolean copy = (free && !fw || api != null) && copied(Notifs.seen, text) || api != null && copied(l.h, text);
             Object[] pol = channels(l == null ? null : l.h, tool, target, untrusted, priv, outward, copy);
+            if (tool.equals("intent") && tier == 3) pol = new Object[]{HUMAN, why}; // a slipped-in link
             if (reply && "MALICIOUS".equals(nr.label) && pol[1] == null) pol = new Object[]{HUMAN, "Prompt Guard flagged this message"};
             if (tool.equals("notifications.autoreply")) pol = new Object[]{HUMAN, "a standing grant needs a person"};
             @SuppressWarnings("unchecked") List<String> channels = (List<String>) pol[0];
@@ -418,9 +428,11 @@ final class Broker {
 
         if (tool.equals("type")) { l.h.typed.add(norm(text)); l.field = node; }
         long t0 = SystemClock.uptimeMillis();
-        boolean done = reply ? Notifs.reply(svc, nr, text) : execute(tool, p, node);
+        JSONObject out = null;
+        boolean done = reply ? Notifs.reply(svc, nr, text) : api != null ? (out = Api.run(svc, tool, p)).getBoolean("ok") : execute(tool, p, node);
         if (!free && l != null) l.h.steps++;
         JSONObject res = ok(done).put("tier", TIER[tier]).put("rule_of_two", r2);
+        if (api != null) return finish(log, absorb(l, api, out, res, log), decision, done ? why : out.optString("reason", "failed"), null); // the data is the answer: no screen
         if (fw) Events.emit("firewall.changed", new JSONObject().put("tool", tool).put("pkg", pkg).put("target", target).put("ok", done));
         if (free) return finish(log, res, decision, done ? why : "failed", null);
         if (done && (tool.equals("open_app") || tool.equals("intent"))) awaitApp(pkg);
@@ -494,7 +506,7 @@ final class Broker {
             List<String> channels, String fp, long timeoutMs) throws Exception {
         ApprovalCard.Model m = new ApprovalCard.Model();
         m.title = tool.equals("type") ? "type into \"" + target + "\"" : tool.equals("tap") ? "tap \"" + target + "\""
-                : tool.startsWith("notifications.") || tool.startsWith("trackers.") || tool.startsWith("app.") ? target : tool + " " + target;
+                : tool.startsWith("notifications.") || tool.startsWith("trackers.") || tool.startsWith("app.") || tool.equals("intent") || Api.SPECS.containsKey(tool) ? target : tool + " " + target;
         m.app = pkg; m.target = target; m.text = text; m.tier = tier; m.reason = why;
         m.task = l == null ? "(no task)" : l.id + " · " + l.goal;
         m.untrusted = r2.getBoolean("untrusted"); m.priv = r2.getBoolean("private"); m.outward = r2.getBoolean("outward");
@@ -724,6 +736,7 @@ final class Broker {
     }
 
     private String stepLabel(String tool, String pkg, String target) {
+        if (Api.SPECS.containsKey(tool)) return Api.SPECS.get(tool).step;
         switch (tool) {
             case "tap": return "Tapping “" + Guard.clip(target, 24) + "”";
             case "type": return "Typing in " + labels(Collections.singleton(pkg));
@@ -748,6 +761,41 @@ final class Broker {
         if (n == null || out.size() > 1) return;
         if (n.isEditable()) out.add(n);
         for (int i = 0; i < n.getChildCount(); i++) editables(n.getChild(i), out);
+    }
+
+    /**
+     * An API result into the reply. Reads of other people's text (SMS, calls, contacts, events) count like screen text:
+     * the task becomes untrusted, codes go to the P3 secrets, the text joins the copy check, and Prompt Guard scores each
+     * item (flagged text is withheld and flags the task).
+     */
+    private JSONObject absorb(Lease l, Api.Spec api, JSONObject out, JSONObject res, JSONObject log) throws Exception {
+        JSONArray items = out.optJSONArray("items");
+        if (api.reads && l != null) l.h.untrusted = true;
+        for (int i = 0; api.reads && items != null && i < items.length(); i++) {
+            JSONObject it = items.getJSONObject(i);
+            String t = it.optString("text");
+            java.util.regex.Matcher m = SECRET.matcher(t);
+            while (l != null && m.find()) l.h.secrets.add(m.group().replaceAll("[ -]", ""));
+            if (l != null && norm(t).length() >= 3 && l.h.seen.size() < 4000) l.h.seen.add(norm(t));
+            JSONObject g = t.length() >= 12 ? PromptGuard.classify(t) : null;
+            if (g == null || !"MALICIOUS".equals(g.optString("label"))) continue;
+            if (l != null) l.h.flagged = true;
+            flag(l, api.scope, it.optString("from"), t, g.opt("score"), null);
+            it.put("text", "[withheld by guard: likely prompt injection, score " + g.opt("score") + "]");
+        }
+        if (items != null) log.put("items", items.length());
+        for (java.util.Iterator<String> k = out.keys(); k.hasNext(); ) { String key = k.next(); if (!key.equals("ok")) res.put(key, out.get(key)); }
+        return res;
+    }
+
+    /** open_url: did this link (or its host) come from text the task read (screen, notification, SMS), or is the task flagged? */
+    private static boolean linked(Lease l, String url) {
+        String host = String.valueOf(android.net.Uri.parse(url).getHost()).toLowerCase(java.util.Locale.ROOT).replaceFirst("^www\\.", "");
+        if (l != null && (l.h.flagged || copied(l.h, url))) return true;
+        if (copied(Notifs.seen, url)) return true;
+        for (Set<String> seen : l == null ? Collections.singletonList(Notifs.seen) : Arrays.asList(l.h.seen, Notifs.seen))
+            synchronized (seen) { for (String x : seen) if (host.length() >= 4 && x.contains(host)) return true; }
+        return false;
     }
 
     private static boolean leaksSecret(History h, String text) {

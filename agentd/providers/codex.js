@@ -14,7 +14,8 @@ const OFF = ['shell_tool', 'unified_exec', 'apps', 'plugins', 'browser_use', 'br
 const ARGS = ['app-server', ...OFF.flatMap((f) => ['-c', `features.${f}=false`]), '-c', 'web_search="disabled"',
   '-c', 'sandbox_mode="read-only"', '-c', 'approval_policy="never"', '-c', 'mcp_servers={}'];
 // Errors worth retrying (the hotspot's DNS is flaky; a crashed app-server is restarted below).
-const TRANSIENT = /dns|lookup|resolve|ENOTFOUND|EAI_AGAIN|error sending request|stream disconnected|connection (reset|refused|closed)|timed? ?out|network|unreachable|exited/i;
+// "workspace routing discovery failed" is Codex's auth manager failing to reach the ChatGPT backend (not the tier).
+const TRANSIENT = /dns|lookup|resolve|ENOTFOUND|EAI_AGAIN|error sending request|stream disconnected|connection (reset|refused|closed|failed)|timed? ?out|network|unreachable|exited|routing discovery failed/i;
 const STALL_MS = 45_000;
 const SUGGEST_SCHEMA = { type: 'object', properties: { items: { type: 'array', items: { type: 'string' } } }, required: ['items'], additionalProperties: false };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -207,17 +208,28 @@ export class Codex {
 
   // Voice: a separate thread with NO tools. Delegations are handed to agentd (onEvent gets every realtime
   // notification, including itemAdded/handoff_request), which runs them as normal turns and answers with voiceSay.
+  // Codex sends the realtime call once, with no retry: one network blip ("Connection failed: error sending request")
+  // used to leave the page on "Connecting". So an error before the SDP answer fails fast and we retry (3 tries).
   async voiceStart(sdp, on, extra = {}) { // extra: more thread/realtime/start params (voice.js passes its prompt)
+    for (let i = 0; ; i++) {
+      try { return await this.#voiceStartOnce(sdp, on, extra); }
+      catch (e) { if (i >= 2 || !TRANSIENT.test(e.message)) throw e; log(`voice start failed (${e.message}); retry ${i + 1}/2`); await sleep(500 * 2 ** i); }
+    }
+  }
+  async #voiceStartOnce(sdp, on, extra) {
     await this.ready();
     const { thread } = await this.#req('thread/start', { cwd: cfg.codexCwd, ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never',
       baseInstructions: 'You relay spoken requests. You have no tools; another agent does the work.', dynamicTools: [] });
-    const answer = new Promise((ok, no) => { this.#voice.set(thread.id, { on, answer: ok }); setTimeout(() => no(new Error('no SDP answer within 60 s')), 60_000); });
+    let fail;
+    const answer = new Promise((ok, no) => { fail = no; setTimeout(() => no(new Error('SDP answer timed out (20 s)')), 20_000);
+      this.#voice.set(thread.id, { answer: (s) => { fail = null; ok(s); }, // after the answer, every notification goes to voice.js
+        on: (m) => fail && /realtime\/(error|closed)$/.test(m.method) ? fail(new Error(m.params?.message || m.params?.reason || m.method)) : on(m) }); });
     answer.catch(() => {});
     try {
       await this.#req('thread/realtime/start', { threadId: thread.id, outputModality: 'audio', version: 'v3', clientManagedHandoffs: true,
         includeStartupContext: false, transport: { type: 'webrtc', sdp }, ...extra });
       return { threadId: thread.id, sdp: await answer };
-    } catch (e) { this.#voice.delete(thread.id); throw e; }
+    } catch (e) { this.#voice.delete(thread.id); this.#req('thread/realtime/stop', { threadId: thread.id }).catch(() => {}); throw e; }
   }
   voiceSay(threadId, text) { return this.#req('thread/realtime/appendSpeech', { threadId, text }); }
   voiceText(threadId, text, role = 'user') { return this.#req('thread/realtime/appendText', { threadId, text, role }); }
