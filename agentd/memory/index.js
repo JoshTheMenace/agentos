@@ -305,7 +305,9 @@ export function person(idOrName, ctx = {}) {
   const ids = S.flags.v2 ? [card.id, ...(card.also || []), ...(card.maybe || [])].map((n) => (typeof n === 'number' ? n : findEntity(db, { name: n })?.id)).filter(Boolean) : [card.id];
   const fs = F.list(db, { about: ids, cloud, history: true, srcs: S.readable(db, cloud) });
   const pend = S.flags.v2 ? brain.v2.pending(db, 50).filter((p) => ids.includes(p.a.id) || ids.includes(p.b.id)) : [];
-  return { ...card, relationship: fs.find((f) => f.pred === 'relationship' && f.status === 'active')?.obj, facts: fs.filter((f) => f.status === 'active'), history: fs.filter((f) => f.status !== 'active'), identity: { pending: pend } };
+  const from = (id, apps) => (db.prepare(`SELECT 1 FROM alias WHERE entity_id=? AND source='contacts'`).get(id) ? 'Contacts' : apps?.[0] || null); // where this card comes from (the UI says "Alex on Discord")
+  return { ...card, from: from(card.id, card.apps), maybe_from: (card.maybe || []).map((n) => { const id = findEntity(db, { name: n })?.id; return from(id, id && brain.recall(db, n, { cloud, k: 0 }).people.find((p) => p.id === id)?.apps); }),
+    relationship: fs.find((f) => f.pred === 'relationship' && f.status === 'active')?.obj, facts: fs.filter((f) => f.status === 'active'), history: fs.filter((f) => f.status !== 'active'), identity: { pending: pend } };
 }
 // facts({q, about, history}) -> [{id, name, pred, obj, text, since, until, status, event_id, by}]
 export function facts({ q, about, history = false } = {}, ctx = {}) {

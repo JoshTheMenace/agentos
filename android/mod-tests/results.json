@@ -58,5 +58,135 @@
   },
   "apk_sha256": "ef0b0fb456c294db5a1082f540bbcac995bd75dcd4529133ed48931a6abc01b6",
   "measurement": "apply to next-frame callback; screenshot timings include 350ms deliberate wait and capture/PNG; excludes model, voice and owner wait",
-  "approval_window_regression": "window-results.txt: PASS, no touch dispatched"
+  "approval_window_regression": "window-results.txt: PASS, no touch dispatched",
+  "policy_cases": 14,
+  "policy_result": "PASS; no approval dispatched",
+  "live_linkedin": {
+    "status": "applied",
+    "timings": [
+      {
+        "ms": 6511,
+        "type": "tool.request",
+        "name": "open_app"
+      },
+      {
+        "ms": 15647,
+        "type": "tool.result",
+        "name": "open_app",
+        "ok": true,
+        "decision": "auto",
+        "reason": "open app in lease"
+      },
+      {
+        "ms": 17440,
+        "type": "tool.request",
+        "name": "scroll"
+      },
+      {
+        "ms": 21062,
+        "type": "tool.result",
+        "name": "scroll",
+        "ok": true,
+        "decision": "auto",
+        "reason": "scroll"
+      },
+      {
+        "ms": 22754,
+        "type": "tool.request",
+        "name": "scroll"
+      },
+      {
+        "ms": 24879,
+        "type": "tool.result",
+        "name": "scroll",
+        "ok": true,
+        "decision": "auto",
+        "reason": "scroll"
+      },
+      {
+        "ms": 29179,
+        "type": "tool.request",
+        "name": "app.mod.preview"
+      },
+      {
+        "ms": 29476,
+        "type": "tool.result",
+        "name": "app.mod.preview",
+        "ok": true
+      },
+      {
+        "ms": 34015,
+        "type": "tool.request",
+        "name": "app.mod.apply"
+      },
+      {
+        "ms": 34269,
+        "type": "approval.shown",
+        "tool": "app.mod.apply",
+        "reason": "changes the appearance of LinkedIn"
+      },
+      {
+        "ms": 36713,
+        "type": "review",
+        "tool": "app.mod.apply",
+        "decision": "auto",
+        "rationale": "Applies the requested removable visual mask to hide LinkedIn posts labeled \u201cPromoted.\u201d"
+      },
+      {
+        "ms": 36716,
+        "type": "approval.resolved",
+        "tool": "app.mod.apply",
+        "decision": "approved",
+        "reason": "approved by reviewer"
+      },
+      {
+        "ms": 37791,
+        "type": "tool.result",
+        "name": "app.mod.apply",
+        "ok": true,
+        "decision": "approved",
+        "reason": "mod added"
+      },
+      {
+        "ms": 47356,
+        "type": "turn.done"
+      }
+    ],
+    "approval_id": "794486f21dfcc496",
+    "card_ms": 34269,
+    "screenshot_visible_ms": 38388,
+    "reference_spec": {
+      "id": "linkedin-promoted",
+      "package": "com.linkedin.android",
+      "label": "Hide promoted",
+      "action": {
+        "type": "mask",
+        "match": {
+          "text": "Promoted"
+        },
+        "scope": "item",
+        "color": "#101820"
+      }
+    },
+    "applied_spec": {
+      "id": "linkedin_promoted",
+      "package": "com.linkedin.android",
+      "label": "Hide Promoted posts",
+      "action": {
+        "type": "mask",
+        "match": {
+          "text": "Promoted"
+        },
+        "scope": "item",
+        "color": "#101820"
+      }
+    },
+    "saved_id": "linkedin_promoted",
+    "saved_shown": true,
+    "approver": "reviewer",
+    "agentos_windows_during_review": 1,
+    "human_or_synthetic_approval_taps": 0
+  },
+  "final_apk_sha256": "1e7c7deb6ead23425df872180da8cd42b7de5ab791d615aec67c6bfce702fce3",
+  "reviewer_regression": "17/19 expected outcomes; Maps address and unrequested Buy differ"
 }

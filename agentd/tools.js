@@ -30,7 +30,7 @@ Example 2, "add a focus 25 minute button to my timer" (Clock, Timers tab):
   "timer_setup_delete","timer_setup_digit_2","timer_setup_digit_5","timer_setup_digit_0","timer_setup_digit_0",["timer_start_button","add_timer_button"]]}}`;
 const sel = { description: 'a view id ("op_div"), {"id":...}, {"text":"exact text"}, or a list of these (first one on screen wins)' };
 const MOD_TOOLS = {
-  app_mod_apply: { method: 'app.mod.apply', tier: 'outward', description: 'Add a button to an app (a "mod"): it sits next to one of the app\'s buttons, looks native, '
+  app_mod_apply: { method: 'app.mod.apply', tier: 'act', description: 'Add a button to an app (a "mod"): it sits next to one of the app\'s buttons, looks native, '
     + 'and when tapped presses the app\'s own buttons. Only two behaviours: action.type "press" (press buttons in order) or "compute" (read a number from the display, '
     + 'show chips = number × factor, and on a chip tap press onChip, where "$value" types the chip\'s result via keys). The user approves it with one tap; the app opens '
     + 'and the button appears. For Calculator and Clock use the examples as they are (ids are real). For other apps open the app, call app_mod_targets for view ids '
@@ -59,8 +59,8 @@ MOD_TOOLS.mod_remove = MOD_TOOLS.app_mod_remove;
 const modSpec = { type: 'object', description: 'Strict declarative spec. Mask: {id,package,label,action:{type:"mask",match:{text:"Promoted"},scope:"item",color:"#101820"}}. Match exactly one of text (exact, case-insensitive), id (short view id), class. scope node or item (containing scroll item). No code/regex. Button specs: see mod_apply examples.' };
 MOD_TOOLS.mod_preview = { method: 'app.mod.preview', tier: 'read', schema: obj({ spec: modSpec }, ['spec']),
   description: 'Dry-run a mod in the foreground app: highlight matched rectangles for 3 seconds. No app actions. Required before apply; receipt binds this exact spec for 5 minutes. Zero matches cannot apply.' };
-MOD_TOOLS.mod_apply = { method: 'app.mod.apply', tier: 'outward', schema: obj({ spec: modSpec }, ['spec']),
-  description: 'Apply the exact spec after mod_preview with visible matches; owner approval card required. Masks cover content, do not collapse layout. LinkedIn allows passive masks only. No banking/security/system apps. Mods persist across app restarts. Calculator button examples: ' + MOD_EXAMPLES };
+MOD_TOOLS.mod_apply = { method: 'app.mod.apply', tier: 'act', schema: obj({ spec: modSpec }, ['spec']),
+  description: 'Apply the exact spec after mod_preview with visible matches; Clean owner-requested masks go through the low-risk reviewer automatically; remote/tainted/unbound requests and buttons require a person. Masks cover content, do not collapse layout. LinkedIn allows passive masks only. No banking/security/system apps. Mods persist across app restarts. Calculator button examples: ' + MOD_EXAMPLES };
 MOD_TOOLS.mod_disable = { method: 'app.mod.disable', tier: 'act', schema: obj({ package: { type: 'string' } }),
   description: 'Kill switch: disable every mod, or all mods for package. No approval required. Re-enable only by preview and approved apply.' };
 
@@ -286,8 +286,8 @@ export async function runTool(name, args, ctx) {
     if (name === 'task_start') r = await lease(ctx, (args.apps || []).map(String));
     else {
       if (name === 'notifications_reply') turn.log = [...(turn.log || []).slice(-7), context.about(args.key)].filter(Boolean); // the reviewer sees what it answers
-      if ((t.tier !== 'read' || t.pkg) && !/^(firewall|notifications|trackers|app\.mod)\./.test(t.method)) { // every action runs inside the turn's lease (replies: the card is the gate)
-        const l = await lease(ctx, name === 'open_app' || name === 'play_music' ? [String(args.pkg)] : t.pkg ? [t.pkg] : turn.lease ? [] : [turn.pkg].filter(Boolean));
+      if (t.method === 'app.mod.apply' || (t.tier !== 'read' || t.pkg) && !/^(firewall|notifications|trackers|app\.mod)\./.test(t.method)) { // every action runs inside the turn's lease (replies: the card is the gate)
+        const l = await lease(ctx, t.method === 'app.mod.apply' ? [String(args.spec?.package)] : name === 'open_app' || name === 'play_music' ? [String(args.pkg)] : t.pkg ? [t.pkg] : turn.lease ? [] : [turn.pkg].filter(Boolean));
         params = { ...args, ...(t.kind && { kind: t.kind }), task_id: l.task_id, ...(turn.alerted?.size && { tainted: true }) };
       }
       if (needsApproval(name, args, turn)) {

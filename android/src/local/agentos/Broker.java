@@ -181,7 +181,7 @@ final class Broker {
             case "app.mod.preview": return mods.preview(p.getJSONObject("spec"));
             case "app.mod.disable": return mods.disable(p.optString("package"), "kill switch");
             case "app.mod.remove": return mods.remove(p.getString("id"), p.optString("by", "agent"));
-            case "app.mod.apply": synchronized (actLock) { return mod(p); }
+            case "app.mod.apply": synchronized (actLock) { return mod(p, uid); }
             case "approval.confirm": return confirm(p, uid);
             case "vault.list": return vault.list();
             case "vault.fill": synchronized (actLock) { return vault.fill(p, lease); }
@@ -478,11 +478,17 @@ final class Broker {
     }
 
     /**
-     * app.mod.apply {spec}: strict schema (Mods.validate: press/compute buttons or passive masks), then a person
-     * approves on the card (tap or voice; never the reviewer: they should see what is added to their app), audited with the
+     * app.mod.apply {spec}: strict schema, then the reviewer for clean owner-requested masks, otherwise a person.
+     * Matching screen labels are selectors, not copied outward content. Every apply is audited with the
      * full spec. The app is brought to the front so the mod shows up at once.
      */
-    private JSONObject mod(JSONObject p) throws Exception {
+    static List<String> modChannels(Lease l, JSONObject p, String pkg, boolean mask, boolean caller) {
+        return mask && caller && l != null && l.asked && l.granted && !l.paused && System.currentTimeMillis() < l.expires
+                && l.id.equals(p.optString("task_id")) && l.apps.contains(pkg) && Arrays.asList("typed", "voice").contains(l.origin)
+                && !l.h.flagged && !l.h.copied && !p.optBoolean("tainted") ? ORDINARY : HUMAN;
+    }
+
+    private JSONObject mod(JSONObject p, int uid) throws Exception {
         Lease l = lease;
         JSONObject spec = p.optJSONObject("spec");
         String pkg = spec == null ? "" : spec.optString("package"), bad = null;
@@ -499,8 +505,10 @@ final class Broker {
         log.put("id", spec.getString("id")).put("label", spec.getString("label")).put("text", text)
                 .put("spec_sha256", Audit.sha256(spec.toString())).put("spec", spec);
         JSONObject r2 = new JSONObject().put("untrusted", l != null && l.h.untrusted).put("private", false).put("outward", false);
-        Approvals.Pending a = approve("app.mod.apply", pkg, target, text, l, "T2 UI change", "changes the appearance of " + app, r2, HUMAN,
-                "a person should see what is added to their app", Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
+        if (l != null && p.optBoolean("tainted")) l.h.flagged = true;
+        List<String> channels = modChannels(l, p, pkg, ModMask.is(spec), l != null && callerIn(uid, "lease_callers") && l.caller.equals(who(uid)));
+        Approvals.Pending a = approve("app.mod.apply", pkg, target, text, l, "T2 UI change", "changes the appearance of " + app, r2, channels,
+                channels == ORDINARY ? null : "remote, tainted, unbound or button mods need a person", Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
         log.put("allowed_channels", new JSONArray(a.channels));
         if (a.channel.isEmpty()) return finish(log, ok(false), "denied", a.reason, null);
         if (!mods.previewed(spec)) return finish(log, ok(false), "blocked", "preview expired or mods disabled/removed during approval; preview again", null);

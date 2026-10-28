@@ -21,14 +21,14 @@ const APPROACHES = arg('approach', useLLM ? 'A,B,C,D' : 'A,C').split(',');
 const CACHE = new URL('./results/llm-facts.json', import.meta.url).pathname;
 const DESC = { A: 'v1 store+brain', B: 'v2 identity + LLM facts', C: 'v2 identity + rule facts', D: 'v2 identity + rules + LLM facts' };
 
-function setup(ap) {
+async function setup(ap) {
   S.flags.v2 = ap !== 'A';
   const db = S.open(':memory:');
   build(db);
   F.ensure(db);
   if (ap === 'C' || ap === 'D') F.sync(db);
   let llm = null;
-  if (ap === 'B' || ap === 'D') llm = L.run(db, { cache: CACHE, log: verbose ? console.log : () => {} });
+  if (ap === 'B' || ap === 'D') llm = await L.run(db, { cache: CACHE, log: verbose ? console.log : () => {} });
   if (S.flags.v2) I.relink(db);
   return { db, llm };
 }
@@ -57,8 +57,8 @@ function identityMetrics(db, ap) {
     pending_cards: S.flags.v2 ? I.pending(db, 20).length : 0, rows };
 }
 
-function run(ap) {
-  const { db, llm } = setup(ap);
+async function run(ap) {
+  const { db, llm } = await setup(ap);
   const ctx = { db, cloud: true };
   const per = {}, rows = []; let chars = 0, ms = 0;
   for (const q of QUESTIONS2) {
@@ -90,5 +90,5 @@ function run(ap) {
   return out;
 }
 
-const results = APPROACHES.map(run);
+const results = []; for (const ap of APPROACHES) results.push(await run(ap));
 for (const r of results) console.log(JSON.stringify(r));

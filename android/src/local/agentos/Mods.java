@@ -534,7 +534,11 @@ final class Mods {
                     View v = new View(svc); ModMask.paint(v, m.spec, false);
                     WindowManager.LayoutParams lp = params();
                     float[] down = new float[2];
+                    android.view.GestureDetector gestures = new android.view.GestureDetector(svc, new android.view.GestureDetector.SimpleOnGestureListener() {
+                        @Override public void onLongPress(android.view.MotionEvent e) { if (!m.shown || !m.disabled.isEmpty() || approving) return; new Thread(() -> { try { remove(m.id, "long-press"); } catch (Exception ignored) {} }).start(); }
+                    });
                     v.setOnTouchListener((view, event) -> {
+                        gestures.onTouchEvent(event);
                         if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) { down[0] = event.getRawX(); down[1] = event.getRawY(); }
                         if (event.getAction() == android.view.MotionEvent.ACTION_UP && Math.abs(event.getRawY() - down[1]) > px(48)) {
                             try {

@@ -502,10 +502,13 @@ $('#promisesBack').onclick = () => close('promises');
 const SRC = (s) => ({ calllog: 'Call log', sms: 'Texts', user: 'You told me', notifications: 'Notifications', contacts: 'Contacts' })[s] || String(s || '').replace(/^\w/, (c) => c.toUpperCase());
 const day = (ts) => ts ? new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
 const GROUP = (f) => f.name !== 'you' || f.pred === 'relationship' ? 'People' : /^(favorite|likes|dislikes|prefers|diet|allergic)/.test(f.pred) ? 'Favorites' : /^(plan|wants|project)$/.test(f.pred) ? 'Plans' : 'Routines & life';
-const sameQ = (c) => `Is ${c.a.name}${c.a.apps?.[0] ? ` on ${c.a.apps[0]}` : ''} the same as ${c.b.name}${c.b.rel ? ` (your ${c.b.rel})` : c.b.apps?.[0] ? ` in ${c.b.apps[0]}` : ''}?`;
+const cap = (s) => String(s || '').replace(/(^|[\s("])\p{Ll}+(?=[\s)".]|$)/gu, (m) => m[0] === m[0].toLowerCase() && /^[\s("]/.test(m[0]) ? m[0] + m[1].toUpperCase() + m.slice(2) : m[0].toUpperCase() + m.slice(1)); // "dennis" -> "Dennis"; "TJ Maxwell" untouched
+const sent = (s) => String(s || '').replace(/^\p{Ll}/u, (c) => c.toUpperCase()); // "only the first name matches" -> "Only the first name matches"
+const where = (x) => x.from ? (x.from === 'Contacts' ? ' in Contacts' : ` on ${x.from}`) : x.apps?.[0] ? ` on ${x.apps[0]}` : '';
+const sameQ = (c) => `Is ${cap(c.a.name)}${where(c.a)} the same as ${cap(c.b.name)}${c.b.rel ? ` (your ${c.b.rel})` : where(c.b)}?`;
 const later = new Set(); // "Not sure": hidden until the launcher restarts
 function sameCard(c, cls = 'glass pw same') {
-  const r = el('div', cls, `<div class="qq">${esc(sameQ(c))}</div><span class="s">${esc(c.why.join(' · '))}</span><div class="acts"><button class="tag" data-a="yes">Yes, same person</button><button class="tag" data-a="no">No</button><button class="tag ghost" data-a="later">Not sure</button></div>`);
+  const r = el('div', cls, `<div class="qq">${esc(sameQ(c))}</div><span class="s">${esc(c.why.map(sent).join(' · '))}</span><div class="acts"><button class="tag" data-a="yes">Yes, same person</button><button class="tag" data-a="no">No</button><button class="tag ghost" data-a="later">Not sure</button></div>`);
   r.onclick = (e) => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; hap(); e.target.classList.add('on'); r.classList.add('gone');
     if (a === 'later') later.add(c.a.id + ':' + c.b.id); else send({ type: 'memory.identity.confirm', a: c.a.id, b: c.b.id, same: a === 'yes' });
     setTimeout(() => { S.pending = S.pending.filter((x) => x !== c); renderKnow(); renderSugg(); }, 350); };
@@ -536,8 +539,9 @@ function renderKnow() {
   if (!k.facts.length) about.append(el('div', 'empty', k.v2 ? 'Nothing durable yet. Tell me things, or let the connectors read a little.' : 'Memory v2 is off on this phone (MEMORY_V2=1 in agentd.env)'));
   parts.push(about);
   const people = el('div', 'mod', `<div class="k">People<span>${k.people.length ? 'linked cards per person' : ''}</span></div>`);
-  people.append(...k.people.map((p) => { const why = (p.linked || []).map((l) => l.replace(/^(same person|possibly the same person): /, '').replace(/ \(\d+%\)$/, '')).join(' · ');
-    return el('div', 'rowi', `<span class="appic" style="background:var(--${p.relationship ? 'purple' : 'blue'})">${esc(p.name[0])}</span><div>${esc(p.name)}${p.relationship ? ` <span class="tag">your ${esc(p.relationship)}</span>` : ''}<span class="s">${esc([p.apps.slice(0, 3).join(' + '), (p.also || []).filter((n) => !p.maybe?.includes(n)).length ? `also "${p.also.filter((n) => !p.maybe?.includes(n)).slice(0, 2).join('", "')}"` : '', p.maybe?.length ? `maybe "${p.maybe.slice(0, 2).join('", "')}"` : '', why].filter(Boolean).join(' · '))}</span></div>`); }));
+  people.append(...k.people.map((p) => { const why = (p.linked || []).map((l) => sent(l.replace(/^(same person|possibly the same person): /, '').replace(/ \(\d+%\)$/, ''))).join(' · ');
+    const maybe = (p.maybe || []).slice(0, 2).map((n, i) => `"${cap(n)}"${p.maybe_from?.[i] ? (p.maybe_from[i] === 'Contacts' ? ' in Contacts' : ` on ${p.maybe_from[i]}`) : ''}`);
+    return el('div', 'rowi', `<span class="appic" style="background:var(--${p.relationship ? 'purple' : 'blue'})">${esc(cap(p.name)[0])}</span><div>${esc(cap(p.name))}${p.relationship ? ` <span class="tag">your ${esc(p.relationship)}</span>` : ''}<span class="s">${esc([p.from === 'Contacts' ? 'Contacts' : '', p.apps.slice(0, 3).join(' + '), (p.also || []).filter((n) => !p.maybe?.includes(n)).length ? `also "${p.also.filter((n) => !p.maybe?.includes(n)).slice(0, 2).map(cap).join('", "')}"` : '', maybe.length ? `maybe ${maybe.join(', ')}` : '', why].filter(Boolean).join(' · '))}</span></div>`); }));
   if (!k.people.length) people.append(el('div', 'empty', 'No one yet'));
   parts.push(people);
   box.replaceChildren(...parts);

@@ -24,7 +24,7 @@ or `[]`.
   - `event_id` is the source event (show it as "why I remember this"); `by` is `rules | llm | owner`.
 - `memory.about(ctx)` → `{ lines: ["You: allergic to shellfish; …", "Mom: lives in Boise; your mom", …], tokens, total }`. Budget via `ctx.budget` (default 300 tokens).
 - `memory.correct(factId, { obj } | { retract: true }, ctx)`; `memory.syncFacts(ctx)` (rules, incremental, ~0.1 ms/message; runs automatically in `noteMessage` and `memory_remember`).
-- LLM pass: `node memory/cli.js facts-llm` or `extract-llm.run(db, { cache })` — off the request path (connector tick when charging/Wi-Fi), Claude CLI haiku, ~2 s and ~3k tokens per thread, cached by input hash.
+- LLM pass (`extract-llm.js`, by `llm`): one slice at a time (each chat, the owner's notes, and digests of the calendar as routines + upcoming plans, of web history and of app usage) goes to Codex gpt-6-luna at low effort, cloud-scoped sources only, redacted bodies. agentd runs it on Codex's warm `quick` thread: a backfill 90 s after start, then every 15 min for new events, at most 10 calls a run and 40 a day (`MEMORY_LLM=0` turns it off). `node memory/cli.js facts-llm [--force] [--max N]` does the same with `codex exec`. Outputs are cached by input hash in `~/.agentos/memory-llm-cache.json`, so an unchanged slice is never sent twice. On the founder's real data (10-28): 12 slices, ~20 facts (13 routines, 7 plans, sometimes works_at / lives_in); the model varies run to run at low effort, and relationship guesses from digests are dropped (a test run called Ashley the bishop).
 
 ## Commitments and plans (what the proactivity agent most likely wants)
 - `memory.facts({ q: 'plan' })`, `memory.facts({ q: 'wants' })`, `memory.facts({ about: 'Sam Patel' })` (birthday, diet, wants).

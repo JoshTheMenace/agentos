@@ -109,7 +109,7 @@ export function sync(db, { force = false } = {}) {
 // ---------------------------------------------------------------- reading
 const when = (t) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 export const PRED_TEXT = { lives_in: 'lives in', address: 'address', works_at: 'works at', relationship: 'is your', birthday: 'birthday', diet: 'diet', allergic_to: 'allergic to',
-  project: 'working on', wants: 'wants', plan: 'plan', prefers: 'prefers', likes: 'likes', dislikes: 'dislikes', rent: 'rent', status: 'status', occupation: 'is a' };
+  project: 'working on', routine: 'routine', wants: 'wants', plan: 'plan', prefers: 'prefers', likes: 'likes', dislikes: 'dislikes', rent: 'rent', status: 'status', occupation: 'is a' };
 export function say(f) { const p = f.pred.startsWith('favorite:') ? `favorite ${f.pred.slice(9)}` : f.pred.endsWith('_name') ? `${f.pred.slice(0, -5)} is` : PRED_TEXT[f.pred] || f.pred.replace(/_/g, ' '); return `${p}: ${f.obj}`; }
 
 // facts(db, {about:[ids], q, history, cloud, srcs}) -> [{id, subj, name, pred, obj, text, since, until, status, event_id, by}]

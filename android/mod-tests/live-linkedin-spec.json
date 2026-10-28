@@ -1,0 +1,13 @@
+{
+  "id": "linkedin_promoted",
+  "package": "com.linkedin.android",
+  "label": "Hide Promoted posts",
+  "action": {
+    "type": "mask",
+    "match": {
+      "text": "Promoted"
+    },
+    "scope": "item",
+    "color": "#101820"
+  }
+}

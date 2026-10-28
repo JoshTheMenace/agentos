@@ -69,8 +69,8 @@ export function compare(a, b, extra = []) {
   else if (la && lb && la[0] !== lb[0]) add('last_differ', `last initials differ (${la} / ${lb})`);
   else if (fullSame) add('full_name', `same full name "${a.t.join(' ')}"`);
   else if (la && lb && (la.length === 1 || lb.length === 1) && la[0] === lb[0] && (firstSame || nick)) add(firstSame ? 'first_initial' : 'nick_initial', `"${a.name}" = first name + last initial of "${b.name}"`);
-  else if (firstSame) add('first_only', `first name "${fa}" only`);
-  else if (nick) add('nick_only', `"${fa}" is a nickname of "${fb}"`);
+  else if (firstSame) add('first_only', 'only the first name matches');
+  else if (nick) add('nick_only', `"${fa}" is short for "${fb}"`);
   for (const [pkg, h] of a.plat) if (b.plat.has(pkg) && b.plat.get(pkg) !== h) { add('same_platform', `two different ${S.PLATFORM[pkg] || pkg} handles`); break; }
   if (share(a.groups, b.groups)) add('same_group', 'post as two different members of the same group chat');
   if (a.phone.size && b.phone.size && !share(a.phone, b.phone)) add('phones_differ', 'different phone numbers');
@@ -93,7 +93,7 @@ export function relink(db) {
   const weak = (x) => x.score < SAME, s0 = new Map(scored.map((l) => [l, l.score]));
   for (const l of scored.filter(weak)) {
     const rivals = scored.filter((o) => o !== l && weak(o) && (o.a === l.a || o.b === l.a || o.a === l.b || o.b === l.b) && Math.abs(s0.get(o) - s0.get(l)) < 1e-9);
-    if (rivals.length) l.why.push(['many_candidates', W.many_candidates, `${rivals.length + 1} equally likely matches`]), l.score += W.many_candidates;
+    if (rivals.length) l.why.push(['many_candidates', W.many_candidates, `${rivals.length + 1} people fit equally well`]), l.score += W.many_candidates;
   }
   db.exec('DELETE FROM identity_link');
   const ins = db.prepare('INSERT INTO identity_link(a,b,score,status,why) VALUES(?,?,?,?,?)');

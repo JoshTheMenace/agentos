@@ -10,7 +10,7 @@
 //   node cli.js graph [--out graph.json]           node cli.js serve [--port 8790]   (GET /graph.json, CORS on, localhost)
 //   node cli.js call <tool> '{"json":"args"}'      global: --db <path> (default ~/.agentos/memory.db)
 //   v2 (MEMORY_V2=1): facts [words] [--about Mom] [--history]   about   person Joe   pending   confirm <a> <b> --same|--different
-//                     correct <fact_id> --obj "..." | --retract    facts-sync [--force]   facts-llm [--force] (Claude CLI, haiku)
+//                     correct <fact_id> --obj "..." | --retract    facts-sync [--force]   facts-llm [--force] [--max N] (codex exec, gpt-6-luna; cache ~/.agentos/memory-llm-cache.json)
 process.removeAllListeners('warning'); // hide node:sqlite's "experimental" banner
 
 const argv = process.argv.slice(2), pos = [], flags = {};
@@ -55,7 +55,7 @@ switch (cmd) {
   case 'confirm': out(M.identity.confirm(+rest[0], +rest[1], !flags.different, { ...ctx, actor: 'user:owner' })); break;
   case 'correct': out(M.correct(+rest[0], { obj: flags.obj, retract: !!flags.retract }, ctx)); break;
   case 'facts-sync': out(M.syncFacts({ ...ctx, force: !!flags.force })); break;
-  case 'facts-llm': out((await import('./extract-llm.js')).run(db, { force: !!flags.force, log: console.error })); break;
+  case 'facts-llm': out(await (await import('./extract-llm.js')).run(db, { force: !!flags.force, log: console.error, maxCalls: flags.max || Infinity, cache: flags.cache || `${process.env.AGENTOS_HOME || `${process.env.HOME}/.agentos`}/memory-llm-cache.json` })); break;
   case 'stats': out({ fts: db.fts, ...Object.fromEntries(['entity', 'alias', 'event', 'relation', 'consent'].map((t) => [t, db.prepare(`SELECT count(*) n FROM ${t}`).get().n])),
     by_source: db.prepare('SELECT source, kind, count(*) n FROM event GROUP BY 1, 2').all(), entities_by_type: db.prepare('SELECT type, count(*) n FROM entity GROUP BY 1').all() }); break;
   case 'graph': {

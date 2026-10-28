@@ -10,9 +10,10 @@ cat > "$D/AndroidManifest.xml" <<'XML'
 <application android:label="AgentOS mod tests"/>
 <instrumentation android:name="local.agentos.ModTests" android:targetPackage="local.agentos"/>
 <instrumentation android:name="local.agentos.WindowTests" android:targetPackage="local.agentos"/>
+<instrumentation android:name="local.agentos.PolicyTests" android:targetPackage="local.agentos"/>
 </manifest>
 XML
-javac -source 8 -target 8 -Xlint:-options -bootclasspath "$ANDROID_JAR:$ANDROID_BUILD_TOOLS/core-lambda-stubs.jar" -cp build/classes -d "$D/classes" mod-tests/ModTests.java mod-tests/ModFixture.java mod-tests/WindowTests.java
+javac -source 8 -target 8 -Xlint:-options -bootclasspath "$ANDROID_JAR:$ANDROID_BUILD_TOOLS/core-lambda-stubs.jar" -cp build/classes -d "$D/classes" mod-tests/ModTests.java mod-tests/ModFixture.java mod-tests/WindowTests.java mod-tests/PolicyTests.java
 d8 --min-api 33 --lib "$ANDROID_JAR" --classpath build/classes --output "$D/dex" $(find "$D/classes" -name '*.class')
 aapt2 link -I "$ANDROID_JAR" --manifest "$D/AndroidManifest.xml" --min-sdk-version 33 --target-sdk-version 33 -o "$D/unsigned.apk"
 (cd "$D/dex" && zip -q "$D/unsigned.apk" classes.dex)

@@ -3,6 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { agentdToken, cfg, log, provisionClients } from './config.js';
@@ -11,6 +12,7 @@ import { endTurn, guardMemory, rpc, tasks } from './tools.js';
 import * as plugins from './plugins.js';
 import * as memory from './memory/index.js';
 import * as connectors from './memory/connectors/index.js';
+import * as factsLLM from './memory/extract-llm.js';
 import * as events from './events.js';
 import * as reviewer from './reviewer.js';
 import * as context from './context.js';
@@ -40,6 +42,14 @@ if (process.env.PROACTIVE === '1') proactive.init({ codex, rpc, publish: events.
 apps.init(codex, { publish: events.publish }); // micro-apps (apps.js): build_app writes ~/.agentos/apps, served below at GET /apps
 context.start(providers[cfg.provider], codex); // notification feed -> context block, memory, reply rules
 const memsync = connectors.start({ log }); // memory connectors: default grants, then whatever is due once a minute (see memory/SOURCES.md)
+if (process.env.MEMORY_V2 === '1' && process.env.MEMORY_LLM !== '0') { // LLM fact pass (memory/extract-llm.js) on Codex's warm thread: backfill once, then new events every 15 min, ≤ 10 calls a run, ≤ 40 a day
+  const call = async (input) => { const t0 = Date.now(); const r = await codex.quick('facts', { model: cfg.suggestModel, effort: 'low', prompt: factsLLM.SYSTEM, schema: factsLLM.SCHEMA, rotate: 10 }, input, AbortSignal.timeout(120_000));
+    return { text: JSON.stringify(r), tokens: (codex.lastUsage?.inputTokens || 0) + (codex.lastUsage?.outputTokens || 0), ms: Date.now() - t0 }; };
+  let busy = false;
+  const pass = async () => { if (busy) return; busy = true; try { const s = await factsLLM.run(memsync.db, { call, cache: join(dirname(cfg.tokenFile), 'memory-llm-cache.json'), maxCalls: 10, dailyMax: 40, log });
+    if (s.calls || s.facts) log(`memory llm facts: ${s.threads} slices, ${s.calls} calls (${s.cached} cached, ${s.skipped} over budget), +${s.facts} facts, ${s.ms} ms`); } catch (e) { log(`memory llm facts failed: ${e.message}`); } finally { busy = false; } };
+  setTimeout(pass, 90_000).unref(); setInterval(pass, 15 * 60_000).unref();
+}
 if (cfg.reviewModel !== 'off') events.setReviewer((a) => { // grade every approval card; see reviewer.js for what it may do
   const turn = tasks.get(a.task_id);
   reviewer.onApproval(codex, a, { turn, flagged: events.flagged.has(a.task_id) || !!turn?.alerted?.size, drafted: proactive.drafted(turn?.goal) }, events.publish);
@@ -215,7 +225,7 @@ wss.on('connection', (ws, req) => {
         // (web/app.js): facts with their source, one-tap fix/forget, linked cards per person, "same person?" cards. Owner only, reads
         // included: the facts go out raw (no [P:n]), and a model must never settle an identity or edit memory here (its tools need a card).
         if (!(owner ??= fromOwner(req.socket))) return send({ type: msg.type, ok: false, error: 'only the owner (launcher) can see or change memory' });
-        const ctx = { cloud: false, actor: 'user:owner' }, who = (x) => { const p = memory.person(x.id, ctx); return { ...x, apps: p?.apps || [], rel: p?.relationship }; };
+        const ctx = { cloud: false, actor: 'user:owner' }, who = (x) => { const p = memory.person(x.id, ctx); return { ...x, apps: p?.apps || [], from: p?.from, rel: p?.relationship }; };
         const about = () => send({ type: 'memory.about', v2: process.env.MEMORY_V2 === '1', ...memory.about(ctx), facts: memory.facts({ history: true }, ctx), people: memory.knownPeople(ctx) });
         const identity = () => send({ type: 'memory.identity', pending: memory.identity.pending(ctx, 10).map((c) => ({ ...c, a: who(c.a), b: who(c.b) })) });
         if (msg.type === 'memory.identity.confirm') { const link = memory.identity.confirm(+msg.a, +msg.b, !!msg.same, ctx); log(`memory identity #${msg.a}/#${msg.b} ${msg.same ? 'same' : 'different'} by owner`); send({ type: msg.type, ok: true, link }); return identity(), about(); }
