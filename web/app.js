@@ -10,7 +10,8 @@ function morph(o, n) {
   if (o.nodeType === 3) { if (o.data !== n.data) o.data = n.data; return; }
   if (o.nodeType !== 1) return;
   for (const a of n.attributes) if (o.getAttribute(a.name) !== a.value) o.setAttribute(a.name, a.value);
-  o.onclick = n.onclick; [...o.childNodes].forEach((c, i) => morph(c, n.childNodes[i]));
+  const nc = [...n.childNodes]; // a copy: replaceWith() below moves nodes out of n, which would shift a live list
+  o.onclick = n.onclick; [...o.childNodes].forEach((c, i) => morph(c, nc[i]));
 }
 function swap(box, ...nodes) {
   const old = [...box.children];
@@ -369,7 +370,7 @@ function renderCenter() {
   if (S.turn && !t) rows.push(el('div', 'rowi', `<span class="orb working"></span><div>Thinking<span class="s">${esc(S.provider)}</span></div>`));
   const running = rows.length; $('#kill').classList.toggle('off', !running && !S.turn);
   for (const x of S.sched) { // upcoming scheduled tasks (agentd schedule.js); x cancels, no card
-    const r = el('div', 'rowi sched', `<span class="appic"><svg width="15" height="15"><use href="#i-cal"/></svg></span><div>${esc(short(x.prompt, 34))}<span class="s">${esc(x.next)}${x.repeat !== 'none' ? ' · ' + esc(x.repeat) : ''}</span></div><div class="r"><button class="ib"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`);
+    const r = el('div', 'rowi sched', `<span class="appic"><svg width="15" height="15"><use href="#i-cal"/></svg></span><div>${esc(short(x.prompt, 34))}<span class="s">${esc(whenLabel(x.at) || x.next)}${x.repeat !== 'none' ? ' · ' + esc(x.repeat) : ''}</span></div><div class="r"><button class="ib"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>`);
     $('button', r).onclick = () => { hap(); r.style.opacity = .4; send({ type: 'schedule.cancel', id: x.id }); }; rows.push(r);
   }
   if (!rows.length) rows.push(el('div', 'empty', 'Nothing running'));
@@ -395,7 +396,7 @@ function renderCenter() {
   $('#stats').innerHTML = stat(nb, nb === 1 ? 'tracker blocked' : 'trackers blocked', 'g') + stat(ads, 'ads blocked', 'g') + stat(stopped, stopped === 1 ? 'action stopped' : 'actions stopped', 'g') + stat(appr.length, appr.length === 1 ? 'approval' : 'approvals' + (auto ? ` · ${auto} auto` : ''), 'b');
   $('#shieldNote').textContent = Date.now() - S.armed < 4000 ? 'Tap to start fresh' : nb + ads + stopped + appr.length ? '' : 'all quiet';
 }
-async function loadTrackers() { let r = await phone('trackers.list', {}); if (!r?.apps) r = await rpc('trackers.list', {}); if (r?.apps) { S.trackers = r.apps; S.adsBlocked = r.blocked_requests; } renderCenter(); } // owner line first: works without agentd
+async function loadTrackers() { let r = await phone('trackers.list', {}); if (!r?.apps) r = await rpc('trackers.list', {}); if (r?.apps) { S.trackers = r.apps.filter((a) => !/^com\.duolingo/.test(a.pkg)); S.adsBlocked = r.blocked_requests; } renderCenter(); } // owner line first: works without agentd; founder: no Duolingo on stage
 function taskRow(t) {
   const r = el('div', 'rowi ' + (S.pending ? 'approval' : 'working'));
   const pct = Math.min(100, Math.round(100 * (t.steps || 0) / (t.max_steps || 40))), last = S.audit.filter((e) => e.task === t.task_id && !/^task\./.test(e.tool)).pop();
@@ -663,8 +664,10 @@ on('approval.resolved', (m) => {
   setSheet(ok ? (m.approver === 'reviewer' ? 'Auto-approved ✓' : 'Approved') : m.decision === 'timeout' ? 'Timed out' : 'Denied', ok ? 'done' : 'alert'); live();
 });
 on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" height="14"><use href="#i-shield"/></svg><span>Suspicious message in ${esc(appName(m.source_pkg))}</span>`)); scrollDown(); });
-on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; } body.append(el('div', 'msg err', esc(m.message))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
-on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : m.status || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
+on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; }
+  if (m.retryable && m.code !== 'turn_failed') return setSheet('Reconnecting…', 'working'); // codex/agentd retries: one calm state, not a line per attempt
+  body.append(el('div', 'msg err', esc(/proxy|websocket|network|connect|dns|stream|exited|timed? ?out/i.test(m.message) ? 'Couldn’t reach the AI. Check the connection and try again.' : short(m.message, 160)))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
+on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done'); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); });
 on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- wake word (launcher Wake.java): a toggle in the command center, a small mic on the home status line ----------
@@ -772,7 +775,8 @@ async function loadMemory() {
   try {
     const g = window.Native ? await nget('/memory/graph.json') : await (await fetch(GRAPH, { headers: { Authorization: 'Bearer ' + N.token('agentd') } })).json();
     if (!g.nodes) throw new Error(g.error || 'no graph');
-    graphAt = Date.now(); $('#memNote').textContent = $('#memNote2').textContent = `${g.nodes.length - 1} people`;
+    graphAt = Date.now(); $('#memNote').textContent = $('#memNote2').textContent = `${g.nodes.filter((n) => n.data.type === 'person').length} people`; // apps, places and sites aren't people
+    for (const n of g.nodes) if (n.data.type === 'app' && /^\w+(\.\w+)+$/.test(n.data.label)) n.data.label = appName(n.data.label); // "com.spotify.music" -> "Spotify"
     drawGraph(g); renderSources($('#sources'), g.consents); S.consents = g.consents;
   } catch (e) { $('#memNote').textContent = $('#memNote2').textContent = 'offline'; }
 }

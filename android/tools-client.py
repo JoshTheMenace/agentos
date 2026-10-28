@@ -35,8 +35,8 @@ ADB = ["adb", "-s", "ZY22J3TK8S"]
 PORT = os.environ.get("AGENTOS_PORT", "17777")  # Mac-side port, forwarded to the phone's 7777
 PRESS = "--press-approve" in sys.argv  # operator taps the card's Approve via adb (720x1600 Moto layout)
 PIGEON, BEACON = "local.agentos.pigeon", "local.agentos.beacon"
-# Island card buttons on the 720x1600 Moto: lease "Allow", and "Approve" on a "Send" card (message bubble + "Untrusted content" chip).
-LEASE_ALLOW, CARD_APPROVE = os.environ.get("AGENTOS_ALLOW_XY", "580 190"), os.environ.get("AGENTOS_APPROVE_XY", "575 325")
+# Island card buttons on the 720x1600 Moto (card below the camera cutout since 10-28, +77 px): lease "Allow", and "Approve" on a "Send" card (message bubble + "Untrusted content" chip).
+LEASE_ALLOW, CARD_APPROVE = os.environ.get("AGENTOS_ALLOW_XY", "580 267"), os.environ.get("AGENTOS_APPROVE_XY", "575 402")
 
 
 def adb(*args):

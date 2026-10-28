@@ -36,6 +36,7 @@ final class Strip extends View {
     private String notice; // send-safety line; replaces the suggestions while set
     private final RectF[] cells = {new RectF(), new RectF(), new RectF()};
     private final List<String> items = new ArrayList<>();
+    private String typed = ""; // Reply mode: the draft every chip starts with; chips show only what they add ("…tonight?")
     private String detail = "";
     private int orb = Theme.IDLE, mode;
     private boolean loading, tappable = true;
@@ -61,6 +62,7 @@ final class Strip extends View {
     /** Actions offered on the detail line (null = hidden): translate the last incoming message, catch me up. */
     void setActions(String translate, String catchUp) { acts[0] = translate; acts[1] = catchUp; }
     void setLoading() { loading = true; items.clear(); invalidate(); }
+    void setTyped(String draft) { typed = draft == null ? "" : draft; }
     /** Replace the suggestions; tappable=false shows a plain message (e.g. "Type a draft to rewrite"). */
     void setItems(List<String> list, boolean tappable) {
         loading = false; items.clear(); items.addAll(list); this.tappable = tappable; shownAt = SystemClock.uptimeMillis(); invalidate();
@@ -145,7 +147,8 @@ final class Strip extends View {
             tmp.set(cells[i]); tmp.inset(3 * d, 4 * d); tmp.offset(0, (1 - ease) * 6 * d);
             if (i == pressedCell) { fill.setColor(Theme.CHIP_PRESSED); c.drawRoundRect(tmp, Theme.CHIP_R * d, Theme.CHIP_R * d, fill); }
             text.setColor(tappable ? Theme.TEXT : Theme.TEXT3); text.setAlpha(Math.round(255 * ease));
-            CharSequence s = TextUtils.ellipsize(items.get(i).replace('\n', ' ').replaceAll("\\s+", " "), text, w - 2 * Theme.CHIP_PAD_X * d, TextUtils.TruncateAt.END); // an email's newlines would draw as boxes
+            String it = items.get(i); if (tappable && !typed.isEmpty() && it.length() > typed.length() && it.regionMatches(true, 0, typed, 0, typed.length())) it = "…" + it.substring(typed.length()).trim();
+            CharSequence s = TextUtils.ellipsize(it.replace('\n', ' ').replaceAll("\\s+", " "), text, w - 2 * Theme.CHIP_PAD_X * d, TextUtils.TruncateAt.END); // an email's newlines would draw as boxes
             c.drawText(s.toString(), tmp.centerX(), baseline(tmp.centerY()), text);
         }
         if (animating) postInvalidateOnAnimation();

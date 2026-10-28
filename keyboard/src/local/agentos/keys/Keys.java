@@ -299,6 +299,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         if (key.equals(lastKey)) return; // cursor moved but the text didn't: nothing new to ask
         lastKey = key;
         List<String> instant = new ArrayList<>(); String draft = (b + a).trim().toLowerCase(); // QuickType-style: keep what still fits the draft
+        strip.setTyped(mode == MODE_REPLY ? (b + a).trim() : "");
         if (mode == MODE_REPLY && !draft.isEmpty()) for (String s : shown) if (s.toLowerCase().startsWith(draft) && s.length() > draft.length()) instant.add(s);
         if (instant.isEmpty()) strip.setLoading(); else { strip.setItems(instant, true); lat(trig, trigAt, now(), now(), now(), now(), "instant " + instant.size()); }
         final boolean reuse = trig.equals("type") && !draft.isEmpty() && lastScreen != null && System.currentTimeMillis() - lastScreenAt < 30000; // typing doesn't change the chat; an empty draft (just sent) re-reads
@@ -330,6 +331,8 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
                 Agent.Result r = agent.suggest(ctx, mode);
                 final long t4 = now();
                 Log.i(Agent.TAG, "suggest via " + r.how + " in " + r.ms + " ms: " + r.items);
+                String w0 = b.trim().split("\\s+")[0]; // Reply with a draft: the model sometimes answers the chat instead of finishing the draft; a tap would erase it
+                if (mode == MODE_REPLY && !w0.isEmpty()) r.items.removeIf(x -> !x.regionMatches(true, 0, w0, 0, w0.length()));
                 if (!r.items.isEmpty()) synchronized (cache) { cache.put(cacheKey, r.items); }
                 ui.post(() -> {
                     if (g != gen) return;
