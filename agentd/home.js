@@ -1,3 +1,4 @@
+// NOT REGISTERED (founder 10-28: no agent opening Google Home on screen; the API route replaces it). Kept as reference.
 // Smart home plugin: the founder's real Google Home devices, read and switched through the Google Home app itself.
 // Google's Home APIs need a hub and developer approval (research/SMART-HOME-ENERGY.md), but the app on the phone already
 // controls everything in the home. So the agent uses it the way a person would: open it, read the "All devices" grid,
