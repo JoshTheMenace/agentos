@@ -18,7 +18,8 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 7 | Bug hunt across demo flows | Claude Opus | done (91b0fa8; 8 fixes, BUGHUNT-NIGHT.md; Wi-Fi pinned, undo `cmd wifi reset-connected-score`) |
 | 13 | "What did I miss?" catch-up (DEMO-WOW #6) | Claude Opus | done (ed01014, bb73767; ~1.7 s median; NOT deployed, goes in #11) |
 | 17 | Draft 5-slide deck + one-pager PDF (real numbers, A2 look) | Claude Fable | done (7f968d4, 78a3d0b, 5b4a80c; pitch/deck/, pitch/one-pager.pdf) |
-| 18 | UI polish pass 3: on-stage feel (motion, legibility, recordings) | Claude Fable | running |
+| 18 | UI polish pass 3: on-stage feel (motion, legibility, recordings) | Claude Fable | done (0e8b3b7) |
+| 19 | Integration deploy #1 + smoke test (all overnight work live together) | Claude Opus | running |
 | 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | done (2f7f170, 69ed541) |
 | 15 | Live tracker counter with company names (DEMO-WOW #7) + spoken "Done, in 7 seconds" | Claude Fable | done (11b2cd7; voice line NOT deployed, goes in #11) |
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
@@ -26,7 +27,7 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 14 | Review all overnight commits (security + crash) | GPT-6 Astra | done (edc95bb: reviewer rechecks live flags after grading [high]; voice.heard routing [medium]; REVIEW-NIGHT.md) |
 | 16 | Stage preflight script (check + safe --fix) | GPT-6 Astra | done (3467473; `scripts/preflight.sh [--fix warm,ime,home,…]`) |
 | 12 | Keyboard replies that know your calendar (DEMO-WOW #8) | GPT-6 Astra | done (787ac15; empty-draft calendar replies 4 ms, typed +177 ms; backend in #11) |
-| 11 | Morning integration deploy (scheduled to start 6:43 AM): push all agentd changes incl. reviewer, one restart, smoke test every demo beat, update STATUS.md | Claude | queued (after others finish) |
+| 11 | Final morning deploy + smoke + STATUS summary (scheduled 6:43 AM): push all agentd changes incl. reviewer, one restart, smoke test every demo beat, update STATUS.md | Claude | queued (after others finish) |
 | S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra | done (3430c2e; navy/gold + promoted rows removed, vanilla pixel-identical) |
 
 ## Oversight
