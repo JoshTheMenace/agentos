@@ -475,6 +475,23 @@ function renderMods() {
     $('button', r).onclick = async () => { hap(); r.style.opacity = .4; await own('app.mod.remove', { id: m.id, by: 'settings' }); loadMods(); }; return r; }));
 }
 on('mod.changed', () => loadMods());
+// ---------- promises (agentd proactive.js, PROACTIVE=1): tap = help me with it (a normal task; sends need approval) ----------
+const PKIND = { commitment: 'You promised', request: 'Asked of you', reply: 'Waiting on you' };
+on('ws.open', () => send({ type: 'promises.list' }));
+on('promises', (m) => { S.promises = m.items || []; $('#toPromises').hidden = !!m.off; renderPromises(); });
+function renderPromises() {
+  const all = S.promises || [], n = all.filter((x) => x.state === 'open').length, box = $('#prlist');
+  $('#promNote').textContent = $('#promisesNote').textContent = n ? `${n} open` : '';
+  if (!all.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring blue"><svg width="30" height="30"><use href="#i-check"/></svg></span>Nothing owed<small>Things you promise, and things people ask you, show up here</small>`));
+  box.replaceChildren(...all.map((x, i) => {
+    const on_ = x.state === 'open', r = el('div', 'glass pw prom' + (on_ ? '' : ' off'), `<span class="appic">${x.pkg ? ICOHTML(x.pkg) : `<svg width="18" height="18"><use href="#i-${x.kind === 'reply' ? 'msg' : 'check'}"/></svg>`}</span><div>${esc(short(x.kind === 'reply' ? `Reply to ${x.who}` : x.what || `${x.who}: ${x.quote}`, 40))}<span class="s">${esc(PKIND[x.kind])} · ${esc(short(x.who, 18))} · ${esc(x.dueLabel ? `due ${x.dueLabel}` : x.ago)}</span><span class="s q">“${esc(short(x.quote, 64))}”</span></div>`
+      + (on_ ? `<button class="tag" data-a="done">Done</button><button class="tag" data-a="snooze">Later</button><button class="ib" data-a="dismiss"><svg width="14" height="14"><use href="#i-x"/></svg></button>` : `<button class="tag" data-a="open">${x.state === 'snoozed' ? 'Later' : x.state === 'dismissed' ? 'Hidden' : 'Done'} · undo</button>`));
+    r.style.animationDelay = i * .04 + 's';
+    r.onclick = (e) => { const a = e.target.closest('[data-a]')?.dataset.a; hap(); if (a) return send({ type: 'promises.update', id: x.id, action: a, hours: 3 }); if (on_) { close('promises'); startSuggestion({ goal: x.goal }, r); } };
+    return r; }));
+}
+$('#toPromises').onclick = () => { hap(); open('promises'); renderPromises(); send({ type: 'promises.list' }); };
+$('#promisesBack').onclick = () => close('promises');
 // ---------- plugins: the owner's switches for groups of the agent's API tools (agentd/plugins.js) ----------
 // The list comes from agentd (names, summaries); a switch goes over the owner line to the broker (plugins.set), which takes it
 // only from this app's uid. agentd and models can't flip one. Off = the agent loses those API tools; it can still use the app on screen.

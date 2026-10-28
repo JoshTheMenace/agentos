@@ -46,6 +46,7 @@ final class Theme {
     static final int WRITER_BG = 0xFF2A2A2D, WRITER_LINE = 0x1FFFFFFF, CHIP_BG = 0x1FFFFFFF, CHIP_ON = 0xFF0A84FF, CURSOR = 0xFF0A84FF;
     static final int NOTICE = 0xFFFFD60A;        // calm send-safety line (--yellow), never a red pop-up
     static final float WRITER_PAD_X = 12, WRITER_TEXT = 15, WRITER_LINE_H = 20, WRITER_ROW_H = 44, WRITER_CHIP_H = 30, WRITER_CHIP_PAD_X = 11, WRITER_CHIP_GAP = 6, WRITER_CHIP_TEXT = 12, WRITER_TITLE = 11;
+    static final float WRITER_IMAGE_H = 150;
     static final int WRITER_MAX_LINES = 4, DETAIL_ACTIONS_MS = 5000, CURSOR_BLINK = 530;
 
     // ---- radii (dp) ----

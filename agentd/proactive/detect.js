@@ -9,7 +9,7 @@
 
 const DAY = 864e5, H = 36e5;
 export const OWNER = process.env.OWNER_NAME || 'Josh';
-export const REPLY_AFTER = 3 * H; // Gmail-style: don't nag about a question until it has sat a while
+export const REPLY_AFTER = +(process.env.PROACTIVE_REPLY_MIN || 180) * 6e4; // Gmail-style: don't nag about a question until it has sat a while (stage demo: 1)
 
 const pad = (n) => String(n).padStart(2, '0');
 export const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };

@@ -27,7 +27,8 @@ import java.util.List;
  */
 final class Writer extends View {
     interface Listener { void onSubmit(String intent); void onChip(String task, String lang); void onInsert(String text); void onClose(); }
-    static final int HIDDEN = 0, TYPING = 1, LOADING = 2, RESULT = 3, LANGS = 4, NOTE = 5;
+    static final int HIDDEN = 0, TYPING = 1, LOADING = 2, RESULT = 3, LANGS = 4, NOTE = 5, IMAGE = 6;
+    private android.graphics.Bitmap image; private final RectF imageRect = new RectF();
     static final String[] LANGS_ALL = {"Spanish", "French", "German", "Portuguese", "Italian", "Japanese", "Chinese", "Hindi", "Arabic", "Korean"};
 
     private final Listener listener;
@@ -57,13 +58,19 @@ final class Writer extends View {
 
     // ---- state ----
     void open() { intent.setLength(0); set(TYPING, "Write for me"); }
-    void loading(String what) { set(LOADING, what); }
+    void loading(String what) { result = ""; set(LOADING, what); }
     /** The finished message; chips let the user shape it, Insert puts it in the field. */
     void showResult(String txt, String title, String lastLang) {
         result = txt; insertable = true; this.lastLang = lastLang; resultTitle = title;
         chips.clear(); chips.addAll(Arrays.asList("Shorter", "Casual", "Formal", "Redo", lastLang.isEmpty() ? "Translate" : "→ " + lastLang, "Insert"));
         set(RESULT, title);
     }
+    /** A generated picture: Insert (or Copy when the field can't take images), Redo. */
+    void showImage(android.graphics.Bitmap bmp, String title, boolean canInsert) {
+        image = bmp; chips.clear(); chips.addAll(Arrays.asList("Redo", canInsert ? "Insert" : "Copy")); set(IMAGE, title);
+    }
+    /** Loading with a progress line under the shimmer (image generation takes ~30 to 60 s). */
+    void progress(String line) { result = line; invalidate(); }
     /** Catch me up / translate last: just text and Close. */
     void showNote(String txt, String title) { result = txt; insertable = false; chips.clear(); chips.add("Close"); set(NOTE, title); }
     void showLangs() { chips.clear(); for (String l : LANGS_ALL) if (!l.equals(lastLang)) chips.add(l); if (!lastLang.isEmpty()) chips.add(0, lastLang); chips.add("Back"); set(LANGS, "Translate to"); }
@@ -101,6 +108,7 @@ final class Writer extends View {
         float W = MeasureSpec.getSize(w), hp = 28 * d + 10 * d; // title row + bottom pad
         if (state == TYPING || state == LOADING) hp += Theme.WRITER_ROW_H * d;
         if (state == RESULT || state == NOTE) hp += bodyHeight();
+        if (state == IMAGE) hp += Theme.WRITER_IMAGE_H * d + 6 * d;
         if (state != TYPING && state != LOADING) hp += layoutChips(W) + 6 * d;
         setMeasuredDimension((int) W, Math.round(hp));
     }
@@ -140,7 +148,15 @@ final class Writer extends View {
             LinearGradient g = new LinearGradient(0, 0, avail, 0, new int[]{Theme.SHIMMER_LO, Theme.SHIMMER_HI, Theme.SHIMMER_LO}, new float[]{0, .5f, 1}, Shader.TileMode.CLAMP);
             Matrix m = new Matrix(); m.setTranslate(px - avail + 2 * avail * phase, 0); g.setLocalMatrix(m); fill.setShader(g);
             tmp.set(px, cy - 6 * d, px + avail * .8f, cy + 6 * d); c.drawRoundRect(tmp, 6 * d, 6 * d, fill); fill.setShader(null);
+            if (!result.isEmpty()) { text.setTextSize(Theme.CTX_TEXT * d); text.setColor(Theme.TEXT2); c.drawText(TextUtils.ellipsize(result, text, avail, TextUtils.TruncateAt.END).toString(), px, baseline(cy + 14 * d), text); }
             postInvalidateOnAnimation(); return;
+        }
+        if (state == IMAGE && image != null) {
+            float ih = Theme.WRITER_IMAGE_H * d, iw = ih * image.getWidth() / image.getHeight();
+            imageRect.set(px, y, px + iw, y + ih);
+            c.save(); android.graphics.Path clip = new android.graphics.Path(); clip.addRoundRect(imageRect, Theme.CHIP_R * d, Theme.CHIP_R * d, android.graphics.Path.Direction.CW); c.clipPath(clip);
+            c.drawBitmap(image, null, imageRect, fill); c.restore();
+            y += ih + 6 * d;
         }
         if (state == RESULT || state == NOTE) { c.save(); c.translate(px, y); text.setColor(Theme.TEXT); body().draw(c); c.restore(); y += bodyHeight(); }
         // chip rows
@@ -172,11 +188,11 @@ final class Writer extends View {
     private int chipAt(float x, float y) { for (int i = 0; i < chipRects.size(); i++) if (chipRects.get(i).contains(x, y)) return i; return -1; }
     private void tap(String chip) {
         switch (chip) {
-            case "Insert": listener.onInsert(result); return;
+            case "Insert": case "Copy": listener.onInsert(state == IMAGE ? "\u0000image" : result); return;
             case "Close": listener.onClose(); return;
             case "Back": showResult(result, resultTitle, lastLang); return;
             case "Translate": showLangs(); return;
-            case "Shorter": case "Casual": case "Formal": case "Redo": listener.onChip(chip.toLowerCase(), ""); return;
+            case "Shorter": case "Casual": case "Formal": case "Redo": listener.onChip(state == IMAGE ? "image" : chip.toLowerCase(), ""); return;
         }
         if (state == RESULT && chip.startsWith("→ ")) { listener.onChip("translate", lastLang); return; } // last language, one tap
         if (state == LANGS) listener.onChip("translate", chip);

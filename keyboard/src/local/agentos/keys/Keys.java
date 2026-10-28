@@ -15,6 +15,7 @@ import android.widget.LinearLayout;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -51,6 +52,8 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     private String lastKey = "";
     private Agent.Screen lastScreen; private long lastScreenAt; // reused by the writer for 20 s (saves the ~0.9 s screen.read)
     private String intent = ""; // what the user asked the writer for; kept for Redo / chips
+    private String[] mimes = new String[0]; // EditorInfo.contentMimeTypes: can this field take an image?
+    private File lastImage; // the generated PNG, inserted or copied on request
     private int wgen; // writer request generation
 
     @Override public void onCreate() { super.onCreate(); agent = new Agent(this); }
@@ -80,6 +83,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         capSentences = cls == InputType.TYPE_CLASS_TEXT && (it & InputType.TYPE_TEXT_FLAG_CAP_SENTENCES) != 0;
         pkg = info.packageName == null ? "" : info.packageName;
         hint = info.hintText == null ? "" : info.hintText.toString();
+        mimes = info.contentMimeTypes == null ? new String[0] : info.contentMimeTypes;
         try { ApplicationInfo ai = getPackageManager().getApplicationInfo(pkg, 0); app = String.valueOf(getPackageManager().getApplicationLabel(ai)); } catch (Exception e) { app = pkg; }
 
         int a = info.imeOptions & EditorInfo.IME_MASK_ACTION;
@@ -163,12 +167,57 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     }
 
     // ---- writer ----
-    @Override public void onSubmit(String what) { intent = what; runWrite("write", what, "", "Writing for " + app); }
+    private static final java.util.regex.Pattern IMAGE_INTENT = java.util.regex.Pattern.compile("(?i)^(?:(?:make|generate|create|draw|paint)(?: me)?(?: an?| some)? (?:image|picture|photo|drawing|illustration|sticker|logo)(?: of)?|(?:image|picture|photo|drawing) of)\\s*(.*)");
+    @Override public void onSubmit(String what) {
+        intent = what;
+        java.util.regex.Matcher m = IMAGE_INTENT.matcher(what.trim());
+        if (m.matches()) runImage(m.group(1).isEmpty() ? what : m.group(1)); else runWrite("write", what, "", "Writing for " + app);
+    }
     @Override public void onChip(String task, String lg) {
+        if (task.equals("image")) { runImage(intent); return; }
         if (!lg.isEmpty()) prefs().edit().putString("lang|" + convKey(), lg).apply(); // remember the language per conversation
         runWrite(task, intent, lg, task.equals("translate") ? "Translating to " + lg : task.substring(0, 1).toUpperCase() + task.substring(1));
     }
-    @Override public void onInsert(String text) { writer.hide(); onSuggestion(text); }
+    @Override public void onInsert(String text) { if (text.equals("\u0000image")) insertImage(); else { writer.hide(); onSuggestion(text); } }
+
+    // ---- images: agentd runs one `codex exec` with image generation on; the PNG comes back over the socket ----
+    private boolean canInsertImages() { for (String m : mimes) if (m.equals("image/png") || m.equals("image/*") || m.equals("*/*")) return true; return false; }
+    private void runImage(final String prompt) {
+        final int g = ++wgen;
+        writer.loading("Making an image · about a minute");
+        bg.execute(() -> {
+            long t0 = System.currentTimeMillis();
+            try {
+                byte[] png = agent.image(prompt, (t) -> ui.post(() -> { if (g == wgen) writer.progress(t); }));
+                File f = new File(Images.dir(this), "kb-" + t0 + ".png");
+                try (java.io.FileOutputStream o = new java.io.FileOutputStream(f)) { o.write(png); }
+                android.graphics.BitmapFactory.Options opt = new android.graphics.BitmapFactory.Options(); opt.inSampleSize = 4; // preview only
+                final android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeByteArray(png, 0, png.length, opt);
+                final long ms = System.currentTimeMillis() - t0;
+                Log.i(Agent.TAG, "image in " + ms + " ms, " + png.length + " bytes, field accepts images: " + canInsertImages());
+                ui.post(() -> { if (g != wgen) return; lastImage = f; writer.showImage(bmp, String.format("%s · image %.0fs%s", app, ms / 1000.0, canInsertImages() ? "" : " · field takes text only"), canInsertImages()); });
+            } catch (Exception e) {
+                Log.w(Agent.TAG, "image failed", e);
+                ui.post(() -> { if (g == wgen) writer.showNote("No image: " + e.getMessage(), app); });
+            }
+        });
+    }
+    /** commitContent (the image keyboard API) when the field lists image/png or image/*; otherwise the clipboard. */
+    private void insertImage() {
+        if (lastImage == null) return;
+        android.net.Uri uri = Images.uri(lastImage.getName());
+        InputConnection ic = getCurrentInputConnection();
+        if (canInsertImages() && ic != null) {
+            grantUriPermission(pkg, uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            android.view.inputmethod.InputContentInfo info = new android.view.inputmethod.InputContentInfo(uri, new android.content.ClipDescription("image", new String[]{"image/png"}));
+            boolean ok = ic.commitContent(info, InputConnection.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null);
+            Log.i(Agent.TAG, "commitContent -> " + ok);
+            if (ok) { writer.hide(); kb.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM); return; }
+        }
+        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        cm.setPrimaryClip(android.content.ClipData.newUri(getContentResolver(), "image", uri));
+        writer.showNote("Copied the image. Paste it here or in another app (this field takes text only).", app);
+    }
     @Override public void onClose() { wgen++; writer.hide(); } // a stale answer is dropped by wgen; the suggest socket is left alone
 
     private android.content.SharedPreferences prefs() { return getSharedPreferences("keys", MODE_PRIVATE); }
@@ -221,10 +270,10 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         PASSWORD = java.util.regex.Pattern.compile("(?i)\\b(password|passwd|pwd|passcode|pin)\\b\\s*(is|:|=)\\s*\\S+");
     static String sendSafety(String draft, String hint) {
         if (hint.matches("(?i).*(code|otp|password|card|cvv|pin).*")) return null; // the field itself asks for it (a login form), not a chat
-        if (PASSWORD.matcher(draft).find()) return "Looks like a password. Real support never asks for it in a chat.";
+        if (PASSWORD.matcher(draft).find()) return "Password? Real support never asks for it.";
         java.util.regex.Matcher m = CARD.matcher(draft);
-        while (m.find()) if (luhn(m.group().replaceAll("\\D", ""))) return "Looks like a card number. Keep card details inside a payment app.";
-        if (CODE.matcher(draft).find()) return "Looks like a login code. Codes are never asked for by real support.";
+        while (m.find()) if (luhn(m.group().replaceAll("\\D", ""))) return "Card number? Keep it inside a payment app.";
+        if (CODE.matcher(draft).find()) return "Login code? Real support never asks for one.";
         return null;
     }
     private static boolean luhn(String n) { int sum = 0; boolean alt = false; for (int i = n.length() - 1; i >= 0; i--) { int x = n.charAt(i) - '0'; if (alt) { x *= 2; if (x > 9) x -= 9; } sum += x; alt = !alt; } return n.length() >= 13 && sum % 10 == 0; }

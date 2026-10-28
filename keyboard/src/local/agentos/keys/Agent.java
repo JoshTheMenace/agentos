@@ -124,6 +124,28 @@ final class Agent {
         return call(msg, context, writePrompt(context, task, intent, lang), 1);
     }
 
+    interface Progress { void on(String text); }
+    /** Image insert. Sends {type:"image", id, prompt} and waits (up to 3 min) for {type:"image.result", png(base64) | error}. Returns PNG bytes. */
+    byte[] image(String prompt, Progress progress) throws IOException, org.json.JSONException {
+        if (agentdToken == null) throw new IOException("no agentd token (run keyboard/install.sh)");
+        Ws ws = new Ws("127.0.0.1", AGENTD_PORT, "/", agentdToken);
+        ws.s.setSoTimeout(200000);
+        try {
+            ws.send(new JSONObject().put("type", "image").put("id", System.currentTimeMillis()).put("prompt", prompt).toString());
+            for (String raw; (raw = ws.recv()) != null; ) {
+                JSONObject m = new JSONObject(raw);
+                String t = m.optString("type");
+                if (t.equals("image.progress")) progress.on(m.optString("text"));
+                if (t.equals("error")) throw new IOException(m.optString("message"));
+                if (t.equals("image.result")) {
+                    if (m.has("error")) throw new IOException(m.optString("error"));
+                    return android.util.Base64.decode(m.optString("png"), android.util.Base64.DEFAULT);
+                }
+            }
+            throw new IOException("agentd closed");
+        } finally { ws.close(); }
+    }
+
     private Result call(JSONObject msg, JSONObject context, String askPrompt, int max) throws IOException {
         if (agentdToken == null) throw new IOException("no agentd token (run keyboard/install.sh)");
         long t0 = System.currentTimeMillis();
@@ -216,7 +238,7 @@ final class Agent {
 
     /** Tiny RFC 6455 client (text frames, ping/pong, close) over plain loopback. Java 8 / Android has no built-in WebSocket client. */
     static final class Ws implements Closeable {
-        private final Socket s; private final DataInputStream in; private final OutputStream out; private final SecureRandom rnd = new SecureRandom();
+        final Socket s; private final DataInputStream in; private final OutputStream out; private final SecureRandom rnd = new SecureRandom();
         Ws(String host, int port, String path, String token) throws IOException {
             s = new Socket(host, port); s.setSoTimeout(60000);
             in = new DataInputStream(s.getInputStream()); out = s.getOutputStream();

@@ -338,4 +338,5 @@ body{position:fixed;inset:0}
 .attmenu button:active{background:rgba(255,255,255,.08)}
 .vsteps img{width:28px;height:28px;object-fit:cover;border-radius:8px}
 .sorb.muted .core{filter:grayscale(1) brightness(.6);animation:none}
-
+/* promises (proactive.js) */
+.pw.off{opacity:.5}.pw .q{font-weight:500;color:var(--l3)}.pw.prom .tag+.tag,.pw.prom .tag+.ib{margin-left:-5px}

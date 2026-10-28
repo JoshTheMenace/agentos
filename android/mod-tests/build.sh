@@ -7,9 +7,7 @@ D=/tmp/agentos-mod-tests
 mkdir -p "$D/classes" "$D/dex"
 cat > "$D/AndroidManifest.xml" <<'XML'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.agentos.modtests">
-<application android:label="AgentOS mod tests" android:theme="@android:style/Theme.Material.NoActionBar">
-<activity android:name="local.agentos.ModFixture" android:exported="true"/>
-</application>
+<application android:label="AgentOS mod tests"/>
 <instrumentation android:name="local.agentos.ModTests" android:targetPackage="local.agentos"/>
 </manifest>
 XML
@@ -19,3 +17,14 @@ aapt2 link -I "$ANDROID_JAR" --manifest "$D/AndroidManifest.xml" --min-sdk-versi
 (cd "$D/dex" && zip -q "$D/unsigned.apk" classes.dex)
 zipalign -f 4 "$D/unsigned.apk" "$D/aligned.apk"
 apksigner sign --ks debug.keystore --ks-pass pass:android --ks-key-alias agentos --out "$D/tests.apk" "$D/aligned.apk"
+
+cat > "$D/fixture.xml" <<'XML'
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.agentos.modfixture">
+<application android:label="Mod feed fixture" android:theme="@android:style/Theme.Material.NoActionBar">
+<activity android:name="local.agentos.ModFixture" android:exported="true"/>
+</application></manifest>
+XML
+aapt2 link -I "$ANDROID_JAR" --manifest "$D/fixture.xml" --min-sdk-version 33 --target-sdk-version 33 -o "$D/fixture-unsigned.apk"
+(cd "$D/dex" && zip -q "$D/fixture-unsigned.apk" classes.dex)
+zipalign -f 4 "$D/fixture-unsigned.apk" "$D/fixture-aligned.apk"
+apksigner sign --ks debug.keystore --ks-pass pass:android --ks-key-alias agentos --out "$D/fixture.apk" "$D/fixture-aligned.apk"

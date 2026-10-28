@@ -40,7 +40,8 @@ final class ModMask {
             AccessibilityNodeInfo target = n;
             if ("item".equals(a.optString("scope", "node"))) {
                 target = null;
-                for (AccessibilityNodeInfo c = n, p = n.getParent(); p != null; c = p, p = p.getParent()) {
+                int up = 0;
+                for (AccessibilityNodeInfo c = n, p = n.getParent(); p != null && up++ < 40; c = p, p = p.getParent()) {
                     if (p.isScrollable()) { target = c; break; }
                     if (p.getParent() == null) break;
                 }
@@ -52,12 +53,12 @@ final class ModMask {
         for (int i = 0; i < n.getChildCount(); i++) walk(n.getChild(i), spec, screen, out, budget, depth + 1);
     }
 
-    static boolean scroll(AccessibilityNodeInfo n, int x, int y, boolean forward, int depth) {
-        if (n == null || depth > 40) return false;
+    static boolean scroll(AccessibilityNodeInfo n, int x, int y, boolean forward, int[] budget, int depth) {
+        if (n == null || --budget[0] < 0 || depth > 40) return false;
         Rect r = new Rect(); n.getBoundsInScreen(r);
         if (!r.contains(x, y)) return false;
         if (n.isScrollable()) return n.performAction(forward ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
-        for (int i = 0; i < Math.min(n.getChildCount(), 100); i++) if (scroll(n.getChild(i), x, y, forward, depth + 1)) return true;
+        for (int i = 0; i < Math.min(n.getChildCount(), 100); i++) if (scroll(n.getChild(i), x, y, forward, budget, depth + 1)) return true;
         return false;
     }
 

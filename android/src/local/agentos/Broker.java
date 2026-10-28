@@ -503,6 +503,7 @@ final class Broker {
                 "a person should see what is added to their app", Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
         log.put("allowed_channels", new JSONArray(a.channels));
         if (a.channel.isEmpty()) return finish(log, ok(false), "denied", a.reason, null);
+        if (!mods.previewed(spec)) return finish(log, ok(false), "blocked", "preview expired or mods disabled/removed during approval; preview again", null);
         log.put("approver", a.channel);
         if (!a.note.isEmpty()) log.put("utterance", a.note);
         AccessibilityNodeInfo root = svc.getRootInActiveWindow();

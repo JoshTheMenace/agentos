@@ -7,7 +7,7 @@
 //   then code's gate() has the last word. Offline or failing: regex rules. Eval: 99-100% precision, 93-95% recall.
 //   Output: a Promises list (~/.agentos/promises.json; launcher: done / dismiss / snooze) and at most 3 Home cards.
 //   A tap starts a normal task (drafted reply -> the usual approval card). Nothing is ever sent by this file.
-//   Interruptions: only MY commitments with a due day become pushed reminders (via schedule.js, 9 AM on the due day),
+//   Interruptions: only MY commitments with a due day become pushed reminders (via schedule.js, 9 AM on the due day, 3 PM if same-day),
 //   at most PROACTIVE_MAX a day (3), never in quiet hours (PROACTIVE_QUIET=22-8) or while Do Not Disturb is on.
 //   Requests and replies come from other people's text, so they never schedule anything: Home card and list only.
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -108,9 +108,10 @@ export async function tick() {
   const now = Date.now();
   let dirty = false;
   for (const x of items) if (x.state === 'snoozed' && x.until <= now) { x.state = 'open'; dirty = true; }
-  // Pushed reminders: my own promises with a due day, from 9 AM that day; overdue by 2+ days = Home card only.
+  // Pushed reminders: my own promises with a due day, from 9 AM that day (3 PM for a same-day "by EOD", like Cortana's
+  // suggested reminders); overdue by 2+ days = Home card only.
   for (const x of items.filter((y) => y.state === 'open' && y.kind === 'commitment' && y.due && !y.reminded)) {
-    const at = new Date(`${x.due}T09:00`).getTime();
+    const at = new Date(`${x.due}T${x.due === D.ymd(x.at) ? '15:00' : '09:00'}`).getTime();
     if (now < at || now - at > 2 * DAY) continue;
     if (quiet(now) || budget().used >= MAX || await dnd()) break; // try again next minute (quiet hours end, DND off, tomorrow's budget)
     x.reminded = now; dirty = true;

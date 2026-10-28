@@ -3,7 +3,7 @@
  "set": "both",
  "model": "qwen3.5-0.8b",
  "effort": "low",
- "ms": 13385,
+ "ms": 14076,
  "candidates": 110,
  "usage": {
   "in": 27566,

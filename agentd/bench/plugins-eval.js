@@ -32,8 +32,8 @@ const LABELED = [
   ['When am I free to see Mom this week?', 'calendar'],
   // messages
   ['Text Mom I\'m on my way', 'messages'], ['call Dad', 'messages'], ['what\'s Sam\'s number', 'messages'], ['read my last texts', 'messages'],
-  ['email my boss that I\'m sick', 'messages'], ['send a message to Jo saying thanks', 'messages'], ['who called?', 'messages'],
-  ['any missed calls', 'messages'], ['send an email to dana@x.com', 'messages'], ['look up Jo in my contacts', 'messages'],
+  ['email my boss that I\'m sick', 'gmail'], ['send a message to Jo saying thanks', 'messages'], ['who called?', 'messages'],
+  ['any missed calls', 'messages'], ['send an email to dana@x.com', 'gmail'], ['look up Jo in my contacts', 'messages'],
   // clock
   ['Delete my 7 AM alarm', 'clock'], ['what alarms do I have', 'clock'], ['turn off my 6:15 alarm', 'clock'], ['which alarms are set?', 'clock'],
   ['cancel tomorrow\'s alarm', 'clock'], ['remove all my alarms', 'clock'],
@@ -68,7 +68,7 @@ const LABELED = [
   ['add a tip button to my calculator', 'mods'], ['add a focus 25 minute button to my timer', 'mods'], ['remove the tip mod', 'mods'], ['what mods do I have', 'mods'],
   // tricky
   ['what\'s playing on my calendar today', 'calendar'], ['block my calendar Friday afternoon', 'calendar'], ['play the video Sam texted me', 'messages'],
-  ['text me when my timer is done', 'messages'], ['turn off the alarm and play music', 'clock,media'], ['email the trackers report to Jo', 'messages'],
+  ['text me when my timer is done', 'messages'], ['turn off the alarm and play music', 'clock,media'], ['email the trackers report to Jo', 'gmail'],
 ];
 
 // Held out: written after the routes, never tuned on. Phrasings the route words don't cover on purpose.

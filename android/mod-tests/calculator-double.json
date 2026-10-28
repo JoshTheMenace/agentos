@@ -1,0 +1,1 @@
+{"id":"calculator-double","package":"com.google.android.calculator","label":"Double","anchor":"op_div","place":"above","gap":8,"w":"anchor","h":44,"action":{"type":"press","press":["op_mul","digit_2","eq"]}}

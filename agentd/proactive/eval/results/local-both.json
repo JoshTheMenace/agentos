@@ -3,7 +3,7 @@
  "set": "both",
  "model": "qwen3.5-0.8b",
  "effort": "low",
- "ms": 9758,
+ "ms": 10024,
  "candidates": 110,
  "usage": {
   "in": 19989,
@@ -13,52 +13,54 @@
   "calls": 110
  },
  "dev": {
-  "precision": 1,
-  "recall": 0.481,
-  "f1": 0.65,
-  "cardPrecision": 1,
+  "precision": 0.933,
+  "recall": 0.519,
+  "f1": 0.667,
+  "cardPrecision": 0.933,
   "whoAcc": 1,
-  "dueAcc": 0.857,
-  "tp": 13,
-  "fp": 0,
-  "fn": 14
+  "dueAcc": 0.875,
+  "tp": 14,
+  "fp": 1,
+  "fn": 13
  },
  "test": {
-  "precision": 0.8,
+  "precision": 0.727,
   "recall": 0.296,
-  "f1": 0.432,
-  "cardPrecision": 0.8,
+  "f1": 0.421,
+  "cardPrecision": 0.727,
   "whoAcc": 1,
   "dueAcc": 1,
   "tp": 8,
-  "fp": 2,
+  "fp": 3,
   "fn": 19
  },
  "blind": {
-  "precision": 0.778,
-  "recall": 0.219,
-  "f1": 0.341,
-  "cardPrecision": 0.778,
-  "whoAcc": 0.857,
+  "precision": 0.8,
+  "recall": 0.25,
+  "f1": 0.381,
+  "cardPrecision": 0.8,
+  "whoAcc": 0.875,
   "dueAcc": 1,
-  "tp": 7,
+  "tp": 8,
   "fp": 2,
-  "fn": 25
+  "fn": 24
  },
  "all": {
-  "precision": 0.875,
-  "recall": 0.326,
-  "f1": 0.475,
-  "cardPrecision": 0.875,
-  "whoAcc": 0.964,
-  "dueAcc": 0.944,
-  "tp": 28,
-  "fp": 4,
-  "fn": 58
+  "precision": 0.833,
+  "recall": 0.349,
+  "f1": 0.492,
+  "cardPrecision": 0.833,
+  "whoAcc": 0.967,
+  "dueAcc": 0.95,
+  "tp": 30,
+  "fp": 6,
+  "fn": 56
  },
  "fps": [
+  "n05:commitment≠none",
   "n07:commitment≠none",
   "n09:commitment≠none",
+  "n40:commitment≠none",
   "b22:commitment≠none",
   "b37:request≠none"
  ],
@@ -69,7 +71,6 @@
   "c11:commitment",
   "c12:commitment",
   "c15:commitment",
-  "c16:commitment",
   "c17:commitment",
   "r01:request",
   "r02:request",
@@ -116,7 +117,6 @@
   "b38:request",
   "b41:reply",
   "b44:request",
-  "b46:commitment",
   "b47:reply",
   "b48:commitment",
   "b49:request",
@@ -317,7 +317,11 @@
     "kind": "commitment",
     "what": "pick up the cake"
    },
-   "kind": "none"
+   "kind": "commitment",
+   "who": "Jess",
+   "due": "2026-10-28",
+   "what": "I'll pick up the cake on my way home tomorrow",
+   "at": 1793131200000
   },
   {
    "id": "c17",
@@ -774,7 +778,11 @@
     "due": null,
     "kind": "none"
    },
-   "kind": "none"
+   "kind": "commitment",
+   "who": "Jess",
+   "due": null,
+   "what": "if I finish early I'll swing by",
+   "at": 1793127600000
   },
   {
    "id": "n06",
@@ -1097,7 +1105,11 @@
     "due": null,
     "kind": "none"
    },
-   "kind": "none"
+   "kind": "commitment",
+   "who": "Eli",
+   "due": null,
+   "what": "I'll try to make it",
+   "at": 1793124000000
   },
   {
    "id": "n41",
@@ -1647,7 +1659,11 @@
     "kind": "commitment",
     "what": "tag jess.makes in the market photos"
    },
-   "kind": "none"
+   "kind": "commitment",
+   "who": "jess.makes",
+   "due": "2026-10-25",
+   "what": "haha thank you!! yes will tag you tonight",
+   "at": 1792976400000
   },
   {
    "id": "b47",

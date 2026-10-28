@@ -34,7 +34,7 @@ final class AppReads {
     }
 
     static JSONObject read(Context c, String method, JSONObject p) throws Exception {
-        long begin = System.currentTimeMillis(), since = Math.max(0, p.optLong("since", begin - 7 * 86400000L));
+        long begin = System.currentTimeMillis(), since = Math.max(0, p.optLong("since", method.equals("linkedin.unread") ? 0 : begin - 7 * 86400000L));
         String id = app(method), pkg = PACKAGES.get(id);
         int n = Math.max(1, Math.min(20, p.optInt("n", 8)));
         JSONObject out = new JSONObject().put("ok", true).put("app", id).put("pkg", pkg).put("as_of", begin)

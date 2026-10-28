@@ -11,7 +11,7 @@ export const APPS = [
   ['youtube', 'YouTube', 'youtube_updates', /\b(you\s?tube|yt)\b/, 'Delivered YouTube updates and current media session; not subscription or watch history.'],
 ];
 const schema = { type: 'object', properties: { n: { type: 'integer', minimum: 1, maximum: 20, description: 'default 8' },
-  since: { type: 'integer', minimum: 0, description: 'epoch milliseconds; default last 7 days' } }, required: [], additionalProperties: false };
+  since: { type: 'integer', minimum: 0, description: 'epoch milliseconds; default all cached LinkedIn unread, otherwise last 7 days' } }, required: [], additionalProperties: false };
 const read = (name, method, description) => ({ name, method, tier: 'read', appRead: true, schema,
   description: `${description} Background read, no app opening, refresh or mark-as-read. Returns short untrusted items ranked by worth_looking_at; empty/incomplete results never prove an empty inbox.` });
 export const tools = [...APPS.map(([id, , name, , description]) => read(name, `${id}.summary`, description)),

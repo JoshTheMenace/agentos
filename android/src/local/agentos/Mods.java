@@ -61,7 +61,7 @@ final class Mods {
         JSONObject spec; String id, pkg, by; long created;
         TextView btn; WindowManager.LayoutParams lp; Style style; boolean shown;
         LinearLayout chips; WindowManager.LayoutParams clp; final List<TextView> chipViews = new ArrayList<>(); double value = Double.NaN;
-        String disabled = ""; final List<View> masks = new ArrayList<>();
+        volatile String disabled = ""; final List<View> masks = new ArrayList<>();
         long t0; CompletableFuture<Long> onScreen, secure; int sampleFails; // secure: FLAG_SECURE check started when the chips open
     }
 
@@ -138,6 +138,7 @@ final class Mods {
 
     private void fail(Mod m, String why) {
         m.disabled = why; previews.remove(Audit.sha256(m.spec.toString()));
+        if (m.onScreen != null) { m.onScreen.completeExceptionally(new IllegalStateException(why)); m.onScreen = null; }
         try { hide(m); } catch (RuntimeException ignored) {}
         save(); emit("disabled", m.id);
         try { audit.log(new JSONObject().put("tool", "app.mod.disable").put("id", m.id).put("pkg", m.pkg).put("decision", "auto").put("reason", why)); }
@@ -148,7 +149,7 @@ final class Mods {
         new Thread(() -> {
             try {
                 watcher = new ProcessBuilder("su", "-c", "logcat -b crash -b main -b system -v brief -T 0 AndroidRuntime:E ActivityManager:E DEBUG:F '*:S'").start();
-                watching = true;
+                watching = true; svc.main.post(refreshR);
                 java.util.regex.Pattern death = Pattern.compile("(?:Process: |ANR in |Cmdline: )([A-Za-z0-9_.]+)(?:[:, ]|$)");
                 try (java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(watcher.getInputStream()))) {
                     for (String line; !closed && (line = in.readLine()) != null;) {
@@ -157,7 +158,7 @@ final class Mods {
                     }
                 }
             } catch (Exception e) { Log.w(TAG, "mod watchdog stopped", e); }
-            finally { watching = false; if (!closed) try { disable("", "crash watchdog unavailable"); } catch (Exception ignored) {} }
+            finally { watching = false; if (watcher != null) watcher.destroy(); if (!closed) try { disable("", "crash watchdog unavailable"); } catch (Exception ignored) {} }
         }, "mod-watch").start();
     }
 
@@ -203,6 +204,7 @@ final class Mods {
     /** Adds (or replaces) a validated mod. Waits up to waitMs for it to be on screen. {id, shown, ms?} */
     JSONObject apply(JSONObject spec, String by, long waitMs) throws Exception {
         validate(spec);
+        need(watching && !closed, "crash watchdog unavailable");
         CompletableFuture<Long> f = new CompletableFuture<>();
         svc.main.post(() -> {
             Mod m = put(spec, by, System.currentTimeMillis());
@@ -220,7 +222,7 @@ final class Mods {
     /** Removes a mod. by: "long-press", "settings", a task id. */
     JSONObject remove(String id, String by) throws Exception {
         CompletableFuture<Boolean> f = new CompletableFuture<>();
-        svc.main.post(() -> { Mod m = mods.remove(id); if (m != null) { hide(m); save(); } f.complete(m != null); });
+        svc.main.post(() -> { previews.clear(); Mod m = mods.remove(id); if (m != null) { m.disabled = "removed"; hide(m); save(); } f.complete(m != null); });
         boolean ok = f.get(2, TimeUnit.SECONDS);
         if (ok) {
             audit.log(new JSONObject().put("task", "").put("tool", "app.mod.remove").put("id", id).put("by", by).put("decision", "auto").put("reason", "removing a mod is always allowed"));
@@ -450,7 +452,7 @@ final class Mods {
 
     private Mod put(JSONObject spec, String by, long created) {
         Mod old = mods.remove(spec.optString("id"));
-        if (old != null) hide(old);
+        if (old != null) { old.disabled = "replaced"; hide(old); }
         Mod m = new Mod(); m.spec = spec; m.id = spec.optString("id"); m.pkg = spec.optString("package"); m.by = by; m.created = created;
         mods.put(m.id, m);
         return m;
@@ -490,8 +492,10 @@ final class Mods {
             checkingWindow = true;
             CompletableFuture.supplyAsync(() -> !probe.secureNow()).whenComplete((safe, error) -> svc.main.post(() -> {
                 checkingWindow = false;
-                AccessibilityNodeInfo now = svc.getRootInActiveWindow();
-                if (now != null && now.getWindowId() == id) { checkedWindow = id; windowSafe = error == null && Boolean.TRUE.equals(safe); }
+                try {
+                    AccessibilityNodeInfo now = svc.getRootInActiveWindow();
+                    if (now != null && now.getWindowId() == id) { checkedWindow = id; windowSafe = error == null && Boolean.TRUE.equals(safe); }
+                } catch (RuntimeException ignored) { windowSafe = false; }
                 if (!closed) refresh();
             }));
         }
@@ -517,8 +521,10 @@ final class Mods {
                     v.setOnTouchListener((view, event) -> {
                         if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) { down[0] = event.getRawX(); down[1] = event.getRawY(); }
                         if (event.getAction() == android.view.MotionEvent.ACTION_UP && Math.abs(event.getRawY() - down[1]) > px(48)) {
-                            AccessibilityNodeInfo now = svc.getRootInActiveWindow();
-                            try { if (now != null && m.pkg.contentEquals(now.getPackageName())) ModMask.scroll(now, (int) down[0], (int) down[1], event.getRawY() < down[1], 0); }
+                            try {
+                                AccessibilityNodeInfo now = svc.getRootInActiveWindow();
+                                if (now != null && m.pkg.contentEquals(now.getPackageName())) ModMask.scroll(now, (int) down[0], (int) down[1], event.getRawY() < down[1], new int[]{600}, 0);
+                            }
                             catch (RuntimeException error) { fail(m, "scroll exception"); }
                         }
                         return true; // consume taps; only an owner's swipe may scroll the underlying collection
@@ -700,7 +706,7 @@ final class Mods {
                     nodes.add(n);
                 }
             }
-            if (no == null) for (AccessibilityNodeInfo n : nodes) if (n.refresh() && n.isEnabled()) n.performAction(AccessibilityNodeInfo.ACTION_CLICK); // live state (Start enables after the digits); a disabled key is a no-op
+            if (no == null) for (AccessibilityNodeInfo n : nodes) if (m.disabled.isEmpty() && n.refresh() && n.isEnabled()) n.performAction(AccessibilityNodeInfo.ACTION_CLICK); // live state (Start enables after the digits); a disabled key is a no-op
             long ms = SystemClock.uptimeMillis() - t;
             Log.i(TAG, "press " + m.id + ": " + (no == null ? nodes.size() + " keys in " + ms + " ms" : "refused, " + no));
             try {

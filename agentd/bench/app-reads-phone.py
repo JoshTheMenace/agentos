@@ -53,6 +53,8 @@ future = phone.call(token, 'linkedin.unread', {'since': 4102444800000})
 assert future['items'] == [], 'since must filter cache and notifications'
 limited = phone.call(token, 'linkedin.unread', {'since': 0, 'n': 1})
 assert len(limited['items']) <= 1
+default = phone.call(token, 'linkedin.unread', {'n': 20})
+assert default['available'] == r['available'], 'Unread default must include older cached conversations'
 screen_times, _ = sample('screen.read')
 screen_after = phone.call(token, 'screen.read').get('pkg')
 after = digest()

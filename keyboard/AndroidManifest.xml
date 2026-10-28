@@ -7,5 +7,6 @@
       <intent-filter><action android:name="android.view.InputMethod"/></intent-filter>
       <meta-data android:name="android.view.im" android:resource="@xml/method"/>
     </service>
+    <provider android:name=".Images" android:authorities="local.agentos.keys.images" android:exported="false" android:grantUriPermissions="true"/>
   </application>
 </manifest>

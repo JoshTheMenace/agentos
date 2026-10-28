@@ -72,6 +72,7 @@
     <div class="mod rise" style="animation-delay:.08s"><div class="k">Model</div><div class="seg" id="prov"><button data-p="codex">Codex</button><button data-p="claude">Claude</button><button data-p="local">Local</button></div><div class="provnote" id="provNote"></div></div>
     <div class="mod rise" style="animation-delay:.16s"><div class="k">Activity<span id="recentNote">today</span></div><ul class="log" id="recent"></ul></div>
     <div class="links rise" style="animation-delay:.2s">
+      <button class="mod link" id="toPromises" hidden><svg width="18" height="18"><use href="#i-check"/></svg><b>Promises</b><span class="k" id="promNote"></span></button>
       <button class="mod link" id="toBlockers"><svg width="18" height="18"><use href="#i-shield"/></svg><b>Blockers</b><span class="k" id="blockNote"></span></button>
       <button class="mod link" id="toVault"><svg width="18" height="18"><use href="#i-lock"/></svg><b>Passwords</b><span class="k" id="vaultNote"></span></button>
       <button class="mod link" id="toMods"><svg width="18" height="18"><use href="#i-mod"/></svg><b>Mods</b><span class="k" id="modNote"></span></button>
@@ -107,6 +108,12 @@
   <div class="bar"><button class="back" id="blockersBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Blockers</h2><span class="k" id="blockersNote"></span><button class="pillbtn blue" id="blockAll" hidden>Block all</button></div>
   <div class="legend" id="blegend" hidden><i class="g"></i>blocked<i class="a"></i>still sending<span>numbers = requests seen</span></div>
   <div class="scroll body" id="blist"></div>
+</section>
+
+<!-- PROMISES (agentd proactive.js, PROACTIVE=1): what you promised, what you were asked, who is waiting on a reply -->
+<section class="over slide" id="promises">
+  <div class="bar"><button class="back" id="promisesBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Promises</h2><span class="k" id="promisesNote"></span></div>
+  <div class="scroll body" id="prlist"></div>
 </section>
 
 <!-- PASSWORDS (vault) -->
