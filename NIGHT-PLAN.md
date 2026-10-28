@@ -16,7 +16,8 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 5 | Voice/GPT Live latency hill-climb | GPT-6.1 Sol | done (a16552e…5e00624: warm session ready ~9 ms, task start ~1.7 s, no duplicate/missed handoffs). NOT deployed; goes in #11 |
 | 6 | Reviewer light polish | GPT-6.1 Sol | done (a333832; 2.27 → 1.86 s, 27/28; NOT yet deployed to phone) |
 | 7 | Bug hunt across demo flows | Claude Opus | done (91b0fa8; 8 fixes, BUGHUNT-NIGHT.md; Wi-Fi pinned, undo `cmd wifi reset-connected-score`) |
-| 13 | "What did I miss?" by voice/ask: one fast cross-app catch-up that can then act (DEMO-WOW #6) | Claude Opus | running |
+| 13 | "What did I miss?" catch-up (DEMO-WOW #6) | Claude Opus | done (ed01014, bb73767; ~1.7 s median; NOT deployed, goes in #11) |
+| 17 | Draft 5-slide deck + one-pager PDF (real numbers, A2 look) | Claude Fable | running |
 | 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | done (2f7f170, 69ed541) |
 | 15 | Live tracker counter with company names (DEMO-WOW #7) + spoken "Done, in 7 seconds" | Claude Fable | running |
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
