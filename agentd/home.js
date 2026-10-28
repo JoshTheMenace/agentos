@@ -21,9 +21,9 @@ function inventory(cloud = true) {
 }
 const seen = (t) => new Date(t).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const OFF = { ok: false, error: 'The Home devices memory source is off (or was never added). The owner can turn it on in Memory › Sources.' };
-const HONEST = 'Known from the owner\'s Google Home device list (last seen as stated); live status and remote control are not connected yet. Watts are typical estimates.';
+const HONEST = 'The owner\'s saved Google Home list: no live on/off state and no remote control. Never say a device is on/off now or that you switched one. Watts are typical estimates.';
 const view = (d) => ({ name: d.name, room: d.room, type: d.type, ecosystem: d.ecosystem, est_watts: d.watts_est, watts_basis: d.watts_basis,
-  last_seen_in_google_home: seen(d.seen_at), state_when_last_seen: d.state_seen });
+  saved_from_google_home: seen(d.seen_at) }); // no on/off state: it was a snapshot, not live
 const norm = (s) => String(s || '').toLowerCase().replace(/\b(the|my|lights?|plug)\b/g, ' ').replace(/\s+/g, ' ').trim();
 function find(list, name) {
   const q = norm(name), near = list.filter((d) => norm(d.name).includes(q) || q.includes(norm(d.name)));
@@ -49,7 +49,7 @@ export async function plan(args = {}, ctx = {}) {
   const c = (cents) => +(kwh * cents).toFixed(1), co2 = (gkwh) => (gkwh == null ? null : Math.round(kwh * gkwh));
   return { ok: true, device: view(d), hours, est_kwh: +kwh.toFixed(2),
     best_window: { from: w.from, to: w.to, remind_when: w.remind_when, price_cents_kwh: w.price_cents, est_g_co2_kwh: w.est_g_co2_kwh },
-    now: g.now, next_peak: pk && { from: pk.from, to: pk.to, price_cents_kwh: pk.price_cents },
+    now: g.now, next_peak: pk && { from: pk.from, to: pk.to, price_cents_kwh: pk.price_cents, est_g_co2_kwh: pk.est_g_co2_kwh },
     est_cost_cents: { best_window: c(w.price_cents), peak: pk ? c(pk.price_cents) : null, saving: pk ? c(pk.price_cents - w.price_cents) : null },
     est_co2_g: { best_window: co2(w.est_g_co2_kwh), peak: co2(pk?.est_g_co2_kwh ?? g.dirtiest_est_g_co2_kwh) },
     reason: g.reason, data_age: g.data_age, note: `${HONEST} Prices: ${g.notes}` };
@@ -81,7 +81,7 @@ const obj = (props, required = []) => ({ type: 'object', properties: props, requ
 const S = { type: 'string' };
 export const tools = [
   { name: 'home_devices', tier: 'read', run: devices, schema: obj({ room: S, type: { type: 'string', enum: ['light', 'plug'] }, name: S }),
-    description: 'The owner\'s smart home devices, from their Google Home list saved in memory: name, room, type, ecosystem, estimated watts, when it was last seen in Google Home and its state then. Instant, read-only. No live state, no control.' },
+    description: 'The owner\'s smart home devices, from their Google Home list saved in memory: name, room, type, ecosystem, estimated watts. Instant, read-only. No live on/off state and no control.' },
   { name: 'home_plan', tier: 'read', run: plan, schema: obj({ device: S, hours: { type: 'number', description: 'how long it runs; default 4 h for a light, 3 h for a plug' } }, ['device']),
     description: 'Best time to run one of the owner\'s devices: grid_outlook + its estimated watts -> best_window (with remind_when for schedule_task), estimated cost there vs at the next peak, estimated CO₂, reason.' },
   { name: 'home_daily', tier: 'act', run: daily, schema: obj({ device: S, at: { type: 'string', description: 'when the morning check runs; default "7 AM"' } }, ['device']),
