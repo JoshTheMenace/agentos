@@ -65,7 +65,13 @@ final class Strip extends View {
     void setTyped(String draft) { typed = draft == null ? "" : draft; }
     /** Replace the suggestions; tappable=false shows a plain message (e.g. "Type a draft to rewrite"). */
     void setItems(List<String> list, boolean tappable) {
-        loading = false; items.clear(); items.addAll(list); this.tappable = tappable; shownAt = SystemClock.uptimeMillis(); invalidate();
+        boolean keep = loading && !items.isEmpty() && !list.isEmpty() && items.get(0).equals(list.get(0)); // the streamed first chip doesn't fade in twice
+        loading = false; items.clear(); items.addAll(list); this.tappable = tappable; if (!keep) shownAt = SystemClock.uptimeMillis(); invalidate();
+    }
+    /** The streamed first suggestion: it shows in the first cell while the other two keep shimmering. False if the set already came. */
+    boolean setFirst(String s) {
+        if (!loading || !items.isEmpty()) return false;
+        items.add(s); tappable = true; shownAt = SystemClock.uptimeMillis(); invalidate(); return true;
     }
     private void showDetail(long ms) { detailUntil = SystemClock.uptimeMillis() + ms; removeCallbacks(hideDetail); postDelayed(hideDetail, ms + 16); invalidate(); }
 
@@ -125,20 +131,20 @@ final class Strip extends View {
             Matrix m = new Matrix(); m.setTranslate(left - avail + 2 * avail * phase, 0); g.setLocalMatrix(m);
             fill.setShader(g);
             float[] widths = {.9f, 1f, .75f};
-            for (int i = 0; i < 3; i++) {
+            for (int i = items.size(); i < 3; i++) {
                 float sw = w * Theme.SKELETON_W * widths[i], sh = Theme.SKELETON_H * d, cx = left + w * (i + .5f);
                 tmp.set(cx - sw / 2, cy - sh / 2, cx + sw / 2, cy + sh / 2);
                 c.drawRoundRect(tmp, sh / 2, sh / 2, fill);
             }
             fill.setShader(null);
             postInvalidateOnAnimation();
-            return;
+            if (items.isEmpty()) return;
         }
-        int n = items.size();
+        int n = loading ? 3 : items.size(); // loading with one item: the streamed first chip in a third of the strip
         if (n == 0) return;
         float w = avail / n;
         boolean animating = false;
-        for (int i = 0; i < n && i < 3; i++) {
+        for (int i = 0; i < items.size() && i < 3; i++) {
             float t = tappable ? Math.min(1f, (now - shownAt - i * Theme.CHIP_STAGGER) / (float) Theme.CHIP_IN) : 1;
             if (t < 0) t = 0; if (t < 1) animating = true;
             float ease = 1 - (1 - t) * (1 - t);

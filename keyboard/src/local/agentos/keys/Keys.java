@@ -328,10 +328,10 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
             try {
                 JSONObject ctx = new JSONObject().put("pkg", pkg).put("app", app).put("hint", hint).put("inputType", inputType).put("before", Agent.redact(b, red)).put("after", Agent.redact(a, red))
                     .put("screen", lines).put("redacted", redacted).put("untrusted", true);
-                Agent.Result r = agent.suggest(ctx, mode);
+                String w0 = b.trim().split("\\s+")[0]; // Reply with a draft: the model sometimes answers the chat instead of finishing the draft; a tap would erase it
+                Agent.Result r = agent.suggest(ctx, mode, s -> { if (mode != MODE_REPLY || s.regionMatches(true, 0, w0, 0, w0.length())) ui.post(() -> { if (g == gen && strip.setFirst(s)) lat(why + "-first", t0, t1, t2, t3, now(), "streamed"); }); });
                 final long t4 = now();
                 Log.i(Agent.TAG, "suggest via " + r.how + " in " + r.ms + " ms: " + r.items);
-                String w0 = b.trim().split("\\s+")[0]; // Reply with a draft: the model sometimes answers the chat instead of finishing the draft; a tap would erase it
                 if (mode == MODE_REPLY && !w0.isEmpty()) r.items.removeIf(x -> !x.regionMatches(true, 0, w0, 0, w0.length()));
                 if (!r.items.isEmpty()) synchronized (cache) { cache.put(cacheKey, r); }
                 ui.post(() -> {

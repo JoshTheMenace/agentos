@@ -94,3 +94,51 @@ Typed-draft run, 03:10 MDT, the same Thursday question with `before: "I'm "`, 4 
 Validation: `node --check` on every changed agentd file; 13 facts/reply tests plus 13 existing memory fixture tests; keyboard APK built and installed. Tests cover consent revocation, cache windows, recurrence, free events, no false free time from empty memory, redaction, injection, password/no-learning fields, cancellation/deadline, event details, explicit arrival vs flight end, and preserving typed drafts. The requested code-golf skill was not installed; the manual simplification pass shared question selection and replaced a filtered array with `find`.
 
 Deployment: the compatible keyboard APK is installed. Backend testing used `~/agentos/kb-calendar-agentd`; the live agentd was not restarted while other tracks were benchmarking. Morning integration must deploy `server.js`, `suggest-facts.js`, `suggest-calendar.js`, and `memory/brain.js` together, then restart once. Reproduction: copy `keyboard/bench/calendar.js` beside agentd's `config.js` as `kb-calendar.js`; run `node kb-calendar.js <Pigeon-context.json> 3` in that copy. Context is `{type:"suggest", mode:"reply", before:"", field:{pkg:"local.agentos.pigeon",inputType:1}, screen:[...guarded/redacted lines]}`; an array tests several conversations. Respect `scripts/withphone` for injection/capture/install, and release it before model benchmarking.
+
+## Round 2 (10-28, 04:20–06:00): the "all at once" stall was Wi-Fi power save
+
+**Suspicion (BUGHUNT-NIGHT-2 open #2):** slow replies arrived all at once, and often right after the hedge sent a second request.
+
+### Trace, one suggestion, hop by hop
+`keyboard/bench/trace.js` (on the phone, own app-server) puts a logging CONNECT proxy in front of Codex. So each TLS chunk from chatgpt.com gets a timestamp next to Codex's deltas. Typical warm call:
+
+| Hop | Time |
+|---|---|
+| Keyboard trigger → request sent (settle 150 ms / debounce 400 ms + screen.read ~300 ms on focus) | 0.15–0.7 s |
+| Keyboard → agentd over loopback WS, incl. guard + facts, and back | 11–25 ms total |
+| agentd → app-server → request on the wire (one long-lived Responses WebSocket per thread; request is ~190 B compressed) | ~40 ms |
+| Request → `response.created` back | 0.1–0.6 s |
+| → first output token (backend queue + hidden reasoning) | 0.6–2 s; the variable part |
+| First → last token (normal streaming) | 130–200 ms; item 1 is complete ~100 ms after the first token |
+| Last chunk on the wire → Codex delta → agentd | 5–20 ms |
+| Render | 1–3 ms |
+
+Nothing on the phone buffers: when the burst came, it hit the proxy's socket and was relayed within 5–20 ms. Ruled out: Nagle/delayed ACK (the keyboard writes each frame in one write; `ws` sets no-delay; the hop is 11–25 ms), missing flushes, waiting for all 3 items (they really did arrive together), and compression (requests are compressed, the replies stream). Codex also opens one extra short HTTPS connection per call, in parallel, and it doesn't block anything.
+
+**The cause: Wi-Fi power save.** On "BathroomCamera4" (2.4 GHz, 11n, a lot of tx retries) the radio dozes between packets, and the router holds the downlink until the phone transmits. The hedge's request was that transmission. A UDP ping to the gateway every 100 ms during a call (`wake` arm), or Android's **low-latency mode** (`cmd wifi force-low-latency-mode enabled`; `dumpsys wifi` → "Current operation mode: 4"), keeps the radio awake.
+
+Model-only, interleaved, 76 calls:
+| | n | median | p90 | max | bunched (spread < 25 ms) | > 2.5 s |
+|---|---|---|---|---|---|---|
+| Power save on | 28 | 1.51 s | 4.47 s | 6.64 s | 13 | 6 |
+| Power save on + wake ping | 28 | 1.26 s | 2.16 s | 3.03 s | 3 | 1 |
+| Low-latency mode | 20 | 1.36 s | 2.68 s | 4.55 s | 0 | 2 (late *first* token = backend) |
+A control round with the mode turned off again brought the bunching back (3 of 10, which were exactly the 2.0/3.7/4.5 s calls).
+
+### Fixes
+1. **Low-latency Wi-Fi mode** (phone setting, live since 04:40; no restart). Undo: `cmd wifi force-low-latency-mode disabled`. It doesn't survive a reboot: `agentd/deploy/magisk-service.sh` now sets it at boot (the installed copy isn't updated yet), and `scripts/preflight.sh` checks it (`--fix wifi`). Cost: a bit more battery. It helps every Codex call (tasks, voice), not just the keyboard.
+2. **Stream the first suggestion:** agentd sends `{type:"suggestions.first", id, item}` as soon as item 1's string closes. The keyboard shows it in cell 1 while cells 2–3 shimmer, and the full set follows without the chip fading in twice. Both directions are compatible (an old keyboard ignores the message; with an old agentd the keyboard behaves as before). Logged as `lat focus-first` / `lat type-first`.
+3. **Warm spare thread on rotation:** the suggestion thread rotates every 30 calls, and the first turn on a new thread is cold (seen live: `thread=317 … first=3164`, ~3.5 s). Now the next thread starts 3 calls early and gets one throwaway turn. Test at rotate=5: the rotation calls took 3.4 / 3.8 s before and 1.8 / 1.8 s after. Only suggestions use the spare (`spare: true`); apps/eyes/reviewer rotation is unchanged.
+
+### End to end in Pigeon (`FRESH=1 N=11 PAUSE=8 scripts/withphone keyboard/bench/lat.sh`; FRESH restarts the keyboard each round so focus never hits the per-chat cache)
+| | Typing pause → suggestions | Focus → suggestions |
+|---|---|---|
+| Before (power save on, 04:34–04:39), n=11 / 11 | **3.57 s** median (1.54–3.70); 7 of 22 calls released ~0.1 s after the 3 s hedge (`hedge=3001 first=3124`) | **3.14 s** (1.76–3.88) |
+| After low-latency mode (live agentd, 04:40–04:45), n=11 / 10 | **2.55 s** (1.58–5.46*); hedge never fired | **2.29 s** (1.46–3.35) |
+| + streamed first chip (isolated agentd on :8789 with fixes 2+3 and a temporary :8789 keyboard build, 04:55–05:00), n=11 / 11 | full set 1.54 s, **first chip 1.50 s** | full set 1.69 s, **first chip 1.60 s** |
+\*one keyboard-worker queue wait of 3.4 s right after the forced keyboard restart.
+In the third run the network was also quieter, so compare its first chip with its own full set: the first chip came a median **86 ms** earlier (16–224 ms, 21 pairs). At the agentd level it was 105 ms (64–151, 11 calls).
+
+### Live vs. pending
+- Live now: low-latency mode, and the keyboard APK with streaming (it waits for agentd).
+- Needs the 6:43 agentd restart: `agentd/server.js` + `agentd/providers/codex.js` (streamed first item, spare thread).

@@ -12,13 +12,13 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description='Stage checks; RED includes anything that could not be verified. No data is deleted.')
-parser.add_argument('--fix', nargs='?', const='ime,home,warm,dnd,reset,tabs', default='',
-                    help='safe fixes, or a comma list: ime,home,warm,dnd,reset,tabs')
+parser.add_argument('--fix', nargs='?', const='ime,home,warm,dnd,reset,tabs,wifi', default='',
+                    help='safe fixes, or a comma list: ime,home,warm,dnd,reset,tabs,wifi')
 parser.add_argument('--tabs', type=Path, help='agent-created Chrome targets: JSON {serial, tabs: [{id, url}]}; only exact matches may close')
 args = parser.parse_args()
 fixes = set(args.fix.split(',')) - {''}
-if fixes - {'ime', 'home', 'warm', 'dnd', 'reset', 'tabs'}:
-    parser.error('unknown fix; use ime,home,warm,dnd,reset,tabs')
+if fixes - {'ime', 'home', 'warm', 'dnd', 'reset', 'tabs', 'wifi'}:
+    parser.error('unknown fix; use ime,home,warm,dnd,reset,tabs,wifi')
 if fixes and os.environ.get('PREFLIGHT_LOCKED') != '1':
     parser.error('use --fix with a space before its optional comma list')
 serial = os.environ.get('ANDROID_SERIAL', os.environ.get('SERIAL', 'ZY22J3TK8S'))
@@ -118,6 +118,14 @@ console.log(JSON.stringify({bad,newest}));'''
     bad = result['bad']
     return not bad and loaded, (f'{len(bad)} files differ/missing vs {commit[:8]}' if bad else f'files match {commit[:8]}') + ('; restart needed' if not loaded else '')
 check('Deployed code', deployed)
+
+def wifi():
+    # Power save lets the router hold replies while the radio dozes: keyboard replies arrived in a burst 2-6 s late (keyboard/LATENCY.md).
+    if 'wifi' in fixes:
+        shell('cmd wifi force-low-latency-mode enabled', root=True)
+    ok = 'Current operation mode: 4' in shell('dumpsys wifi | grep "Current operation mode"', root=True)
+    return ok, 'low-latency mode (no power save)' if ok else 'power save on; use --fix wifi'
+check('Wi-Fi latency', wifi)
 
 check('Internet', lambda: (shell(f'{termux}/usr/bin/curl -fsS --max-time 10 https://www.google.com/generate_204 -o /dev/null && echo reachable', root=True) == 'reachable', 'phone HTTPS reachable'))
 

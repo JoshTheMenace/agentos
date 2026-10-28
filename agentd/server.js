@@ -185,7 +185,7 @@ wss.on('connection', (ws, req) => {
       before: String(m.before || '').slice(-2000), after: String(m.after || '').slice(0, 500),
       field: { pkg: m.field?.pkg, app: m.field?.app, hint: m.field?.hint }, untrusted_screen_data: { source_pkg: m.field?.pkg, trusted: false, lines } });
     const timing = () => Object.entries(tm).map(([k, v]) => `${k}=${v}`).join(' '); // keyboard/LATENCY.md
-    try { reply({ items: write ? [await codex.write(input, abort.signal)] : (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal, tm))).slice(0, 3).map(String), ...(facts && { cache_ms: cacheMs }), timing: timing() }); }
+    try { reply({ items: write ? [await codex.write(input, abort.signal)] : (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal, tm, (item) => !abort.signal.aborted && send({ type: 'suggestions.first', id: m.id, item })))).slice(0, 3).map(String), ...(facts && { cache_ms: cacheMs }), timing: timing() }); }
     catch (e) { // Codex failed (offline, airplane mode): the on-phone model, if it's running, still gives replies
       const off = !abort.signal.aborted && !write && !local && (m.mode || 'reply') === 'reply' && await localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal).catch(() => null);
       reply(off ? { items: off.slice(0, 3).map(String), timing: `${timing()} local` } : { items: [], error: e.message });

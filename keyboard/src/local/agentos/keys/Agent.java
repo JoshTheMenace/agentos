@@ -110,9 +110,9 @@ final class Agent {
      * {type, id, mode, before, after, field:{pkg,hint,inputType}, screen:[lines]} -> {type:"suggestions", id, items, ms, error?}.
      * If agentd gives no items, falls back to a plain `ask` turn that returns a JSON array. Throws on failure.
      */
-    Result suggest(JSONObject context, int mode) throws IOException, org.json.JSONException {
+    Result suggest(JSONObject context, int mode, Progress first) throws IOException, org.json.JSONException { // first: agentd's streamed first item (suggestions.first)
         JSONObject msg = new JSONObject().put("type", "suggest").put("mode", Strip.MODES[mode].toLowerCase());
-        return call(msg, context, prompt(context, mode), 3);
+        return call(msg, context, prompt(context, mode), 3, first);
     }
 
     /**
@@ -121,7 +121,7 @@ final class Agent {
      */
     Result write(JSONObject context, String task, String intent, String lang) throws IOException, org.json.JSONException {
         JSONObject msg = new JSONObject().put("type", "write").put("task", task).put("intent", intent).put("lang", lang);
-        return call(msg, context, writePrompt(context, task, intent, lang), 1);
+        return call(msg, context, writePrompt(context, task, intent, lang), 1, null);
     }
 
     interface Progress { void on(String text); }
@@ -146,7 +146,7 @@ final class Agent {
         } finally { ws.close(); }
     }
 
-    private Result call(JSONObject msg, JSONObject context, String askPrompt, int max) throws IOException {
+    private Result call(JSONObject msg, JSONObject context, String askPrompt, int max, Progress first) throws IOException {
         if (agentdToken == null) throw new IOException("no agentd token (run keyboard/install.sh)");
         long t0 = System.currentTimeMillis();
         Result res = new Result();
@@ -163,6 +163,7 @@ final class Agent {
                 if (t.equals("suggestions")) { addAll(res.items, m.optJSONArray("items")); res.timing = m.optString("timing");
                     if (m.has("cache_ms")) res.expiresAt = android.os.SystemClock.elapsedRealtime() + Math.max(0, m.optLong("cache_ms"));
                     error = m.has("error") ? m.optString("error") : null; break; }
+                if (t.equals("suggestions.first") && first != null) first.on(m.optString("item"));
                 if (t.equals("guard.alert")) res.flagged++;
                 if (t.equals("error")) throw new IOException(m.optString("message"));
             }

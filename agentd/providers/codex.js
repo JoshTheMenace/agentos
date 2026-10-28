@@ -20,7 +20,7 @@ const TRANSIENT = /dns|lookup|resolve|ENOTFOUND|EAI_AGAIN|error sending request|
 const STALL_MS = 45_000;
 const SUGGEST_SCHEMA = { type: 'object', properties: { items: { type: 'array', items: { type: 'string' } } }, required: ['items'], additionalProperties: false };
 const WRITE_SCHEMA = { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false };
-const suggestJob = (timing) => ({ model: cfg.suggestModel, effort: cfg.suggestEffort, prompt: SUGGEST_PROMPT, schema: SUGGEST_SCHEMA, rotate: 30, timing });
+const suggestJob = (timing) => ({ model: cfg.suggestModel, effort: cfg.suggestEffort, prompt: SUGGEST_PROMPT, schema: SUGGEST_SCHEMA, rotate: 30, spare: true, timing });
 const noDash = (x) => String(x).replace(/\s*—\s*/g, ', '); // the owner never wants em dashes
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Finishing tools (cfg.codexFinish): the model may pass its final reply as `done`. If the call succeeds (so the broker
@@ -198,18 +198,21 @@ export class Codex {
 
   // Small tool-less JSON jobs on warm threads, one per kind: the warm connection and prompt cache make a turn ~1 s
   // instead of ~3 s. One request at a time per kind; rotated so history stays small. Returns the parsed JSON; abort = stale.
-  // job: {model, effort, prompt, schema?, rotate, images?}; onDelta(text) streams the output (apps.js shows build progress). No schema = raw text.
+  // job: {model, effort, prompt, schema?, rotate, images?, spare?}; onDelta(text) streams the output (apps.js shows build progress). No schema = raw text.
+  // spare: the next thread starts 3 calls before rotation and gets one throwaway turn, so the switch never pays a cold first turn (3-5 s).
   async quick(kind, job, text, signal, onDelta) {
     const t0 = Date.now(), tm = job.timing || {}; // job.timing (optional) gets ms marks: new thread, queue, first token, done
     await this.ready();
     let s = this.#warm.get(kind);
+    const next = s?.gen === this.#gen && s.n >= job.rotate && await s.spare;
+    if (next) { this.#req('thread/unsubscribe', { threadId: s.threadId }).catch(() => {}); this.#warm.set(kind, (s = next)); tm.spare = 1; }
     if (!s || s.gen !== this.#gen || s.n >= job.rotate) {
       if (s) this.#req('thread/unsubscribe', { threadId: s.threadId }).catch(() => {});
-      const { thread } = await this.#req('thread/start', { ...(job.model && { model: job.model }), ...tier(), cwd: cfg.codexCwd,
-        ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: job.prompt, dynamicTools: [] });
-      this.#warm.set(kind, (s = { threadId: thread.id, gen: this.#gen, n: 0, idle: Promise.resolve() }));
+      this.#warm.set(kind, (s = await this.#thread(job)));
       tm.thread = Date.now() - t0;
     }
+    if (job.spare && s.n >= job.rotate - 3) s.spare ??= this.#thread(job).then((x) => (x.idle = this.#turn(x.threadId, text, { emit: () => {}, signal: AbortSignal.timeout(60_000) },
+      { effort: job.effort, ...(job.schema && { outputSchema: job.schema }) }), x.n = 1, x)).catch(() => null);
     await s.idle; // a stale or timed-out turn is being interrupted; wait for it to end
     if (signal.aborted) throw new Error('stale');
     tm.queue = Date.now() - t0; tm.n = ++s.n;
@@ -222,12 +225,21 @@ export class Codex {
     return job.schema ? JSON.parse(r.text) : r.text;
   }
 
+  async #thread(job) {
+    const { thread } = await this.#req('thread/start', { ...(job.model && { model: job.model }), ...tier(), cwd: cfg.codexCwd,
+      ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never', baseInstructions: job.prompt, dynamicTools: [] });
+    return { threadId: thread.id, gen: this.#gen, n: 0, idle: Promise.resolve() };
+  }
+
   // Keyboard suggestions -> items[].
   // Hedged: Codex's time to first token has a long random tail (1 s usually, sometimes 5-25 s), so if the first warm thread
   // hasn't answered after cfg.suggestHedge ms the same request also goes to a second one; the first answer wins, the other is stopped.
-  async suggest(text, signal, timing = {}) {
+  // onFirst(item): the first item as soon as its string closes in the stream, ~0.1 s (sometimes 1+ s) before the full set.
+  async suggest(text, signal, timing = {}, onFirst) {
     const t0 = Date.now(), ab = [new AbortController(), new AbortController()], hb = {}, stop = () => ab.forEach((a) => a.abort());
-    const go = (i, tm) => this.quick(i ? 'suggest2' : 'suggest', suggestJob(tm), text, ab[i].signal)
+    const go = (i, tm, out = '') => this.quick(i ? 'suggest2' : 'suggest', suggestJob(tm), text, ab[i].signal, (d) => {
+      const m = timing.item1 == null && /"items"\s*:\s*\[\s*("(?:[^"\\]|\\.)*")/.exec(out += d);
+      if (m) { timing.item1 = Date.now() - t0; onFirst?.(noDash(JSON.parse(m[1]))); } })
       .then((r) => { timing.won ??= i ? 'hedge' : 'first'; return r.items.map(noDash); });
     signal.addEventListener('abort', stop, { once: true });
     let timer;

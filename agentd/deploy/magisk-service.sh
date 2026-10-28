@@ -10,6 +10,7 @@ settings put global settings_enable_monitor_phantom_procs false   # Android 12L+
 device_config set_sync_disabled_for_tests persistent
 device_config put activity_manager max_phantom_processes 2147483647
 dumpsys deviceidle whitelist +com.termux >/dev/null
+cmd wifi force-low-latency-mode enabled   # no Wi-Fi power save: it held Codex replies 2-6 s (keyboard/LATENCY.md)
 echo agentd > /sys/power/wake_lock      # keep the CPU awake (Termux's own wake lock lived in the app)
 echo -900 > /proc/$$/oom_score_adj       # inherited by agentd; lmkd doesn't track it anyway
 T=/data/data/com.termux/files
