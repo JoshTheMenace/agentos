@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AgentOS · stage deck · 14 beats</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* A2 · Calm Glass iOS Dark, same tokens as pitch/deck/index.html (v3). 1600×900 slides. One beat per slide: big headline, real screenshots, one small cue for the founder. Opens in present mode; P toggles the overview grid. */
+@page { size: 1600px 900px; margin: 0; }
+:root{
+  --bg:#050506;
+  --l1:#fff; --l2:rgba(235,235,245,.6); --l3:rgba(235,235,245,.3);
+  --blue:#0A84FF; --green:#30D158; --orange:#FF9F0A; --red:#FF453A; --purple:#BF5AF2; --teal:#64D2FF;
+  --r:22px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;color:var(--l1);font-family:Inter,-apple-system,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss03";-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.slide{width:1600px;height:900px;position:relative;overflow:hidden;background:var(--bg);break-after:page;page-break-after:always;padding:72px 88px}
+.slide:last-child{break-after:auto;page-break-after:auto}
+.blob{position:absolute;border-radius:50%;pointer-events:none}
+.b1{width:560px;height:560px;left:-120px;top:-160px;background:radial-gradient(circle,rgba(70,60,220,.36),rgba(70,60,220,0) 70%)}
+.b2{width:560px;height:560px;right:-140px;top:120px;background:radial-gradient(circle,rgba(40,170,190,.22),rgba(40,170,190,0) 70%)}
+.b3{width:480px;height:480px;left:520px;bottom:-240px;background:radial-gradient(circle,rgba(230,90,150,.2),rgba(230,90,150,0) 70%)}
+.k{font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--l3)}
+h1{font-size:84px;font-weight:700;letter-spacing:-.045em;line-height:1.02;margin:18px 0 0;max-width:760px}
+h1 em{font-style:normal;color:var(--l2)}
+.sub{font-size:30px;font-weight:500;color:var(--l2);letter-spacing:-.02em;line-height:1.3;margin:22px 0 0;max-width:720px}
+/* the founder's cue: small, bottom-left, out of the audience's eye line */
+.cue{position:absolute;left:88px;bottom:40px;max-width:760px;font-size:15px;font-weight:500;color:var(--l3);letter-spacing:.005em;line-height:1.4}
+.cue b{color:var(--l2);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;margin-right:10px}
+.n{position:absolute;right:88px;bottom:40px;font-size:14px;font-weight:600;color:var(--l3);letter-spacing:.02em}
+.glass{background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.06));border-radius:var(--r);position:relative}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(160deg,rgba(255,255,255,.28),rgba(255,255,255,.07) 40%,rgba(255,255,255,.03) 70%,rgba(255,255,255,.14));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+/* phone frame: 540×1200 shots → 9:20 */
+.shots{position:absolute;right:88px;top:110px;height:680px;display:flex;gap:28px;align-items:center}
+.phone{width:306px;height:680px;border-radius:48px;background:#000;padding:10px;box-shadow:0 30px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.14);position:relative;flex:none}
+.phone img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:38px}
+.phone.sm{width:243px;height:540px;border-radius:40px;padding:8px}.phone.sm img{border-radius:32px}
+.cap{font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--l2);margin-top:14px;line-height:1.3;text-align:center}
+.col{display:flex;flex-direction:column;align-items:center}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:2px}
+.card{width:482px;height:360px;border-radius:24px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.14);background:#1c1c1e;flex:none}
+.card img{display:block;width:100%;height:100%}
+/* icon tile for beats with no real screenshot */
+.tile{width:306px;height:306px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;flex:none}
+.tile svg{width:120px;height:120px}
+.tile .t{font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--l2);text-align:center;line-height:1.3}
+/* security chips */
+.chips{display:flex;flex-wrap:wrap;gap:12px;max-width:820px;margin-top:40px}
+.chip{padding:14px 22px;border-radius:999px;font-size:22px;font-weight:600;letter-spacing:-.02em;white-space:nowrap}
+.chip i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:12px;vertical-align:1px}
+/* brains */
+.brains{display:flex;gap:14px;margin-top:44px}
+.brain{padding:18px 26px;font-size:24px;font-weight:600;letter-spacing:-.02em}
+.brain span{display:block;font-size:14px;font-weight:600;color:var(--l3);margin-top:4px;letter-spacing:0}
+/* screen mode */
+@media screen{
+  body{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px;background:#000}
+  .slide{transform-origin:top center;box-shadow:0 20px 80px rgba(0,0,0,.6);border-radius:12px;transform:scale(var(--k,1));margin-bottom:calc(900px*var(--k,1) - 900px)}
+  body.present{display:block;padding:0;overflow:hidden;height:100vh;cursor:none}
+  body.present .slide{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--s,1));display:none;border-radius:0;margin:0}
+  body.present .slide.on{display:block}
+  #hint{position:fixed;right:16px;bottom:12px;font:600 12px Inter,-apple-system,sans-serif;color:rgba(235,235,245,.35);z-index:9}
+  body.present #hint{display:none}
+}
+@media print{#hint{display:none}.phone,.card,.tile{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}body,body.present{display:block;padding:0;height:auto;overflow:visible}body.present .slide{position:static;display:block;transform:none;margin:0;border-radius:0}}
+</style>
+</head>
+<body class="present">
+<div id="hint">P = present · ← → · Esc</div>
+
+<!-- 1 · TITLE -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">AgentOS · live on a $200 Android phone</div>
+  <h1 style="max-width:900px;font-size:110px">AgentOS</h1>
+  <p class="sub" style="font-size:40px;max-width:900px">The Siri we should have.</p>
+  <div class="shots"><div class="col"><div class="phone"><img src="img/voice.png" alt="Voice mode: hold the orb to talk"></div></div></div>
+  <div class="cue"><b>Cue</b>Phone in hand, mirroring on. One line, then straight into the wake word.</div>
+  <div class="n">1 / 14</div>
+</section>
+
+<!-- 2 · VOICE + WHAT DID I MISS -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Voice · proactive</div>
+  <h1>"What did I miss?"</h1>
+  <p class="sub">Say the wake word. It already knows.</p>
+  <div class="shots">
+    <div class="col"><div class="card"><img src="img/catchup.png" alt="What did I miss? Two messages waiting, standup, a promise, 1 scam message hidden"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Messages, calendar, promises</div></div>
+    <div class="col"><div class="phone sm"><img src="img/scam.png" alt="A planted message tried to steer the agent; flagged on-device"></div><div class="cap"><span class="dot" style="background:var(--red)"></span>Suspicious message hidden</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>Wake word → "What did I miss?" · point at the hidden scam message.</div>
+  <div class="n">2 / 14</div>
+</section>
+
+<!-- 3 · CROSS-APP + WHICH SAM -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Cross-app action · knowledge graph</div>
+  <h1>Text Sam. <em>Which Sam?</em></h1>
+  <p class="sub">It knows your people. You approve the send.</p>
+  <div class="shots">
+    <div class="col"><div class="phone"><img src="img/memory.png" alt="Memory graph of the people it knows"></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>Knows your people</div></div>
+    <div class="col"><div class="phone"><img src="img/send-card.png" alt="Approval card: Tap Send? Running late, there in about 10 min"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Approval card · Done · N s</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>"Text Sam I'm running 10 minutes late" → pick the Sam → tap Approve → read out "Done · N s".</div>
+  <div class="n">3 / 14</div>
+</section>
+
+<!-- 4 · BUILD AN APP + KEYBOARD -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Micro-apps · smart keyboard</div>
+  <h1>Build an app by asking</h1>
+  <p class="sub">While it builds, the keyboard keeps working for you.</p>
+  <div class="shots">
+    <div class="col"><div class="phone"><img src="img/building.png" alt="Island: designing the new app"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Building in the background</div></div>
+    <div class="col"><div class="phone"><img src="img/keyboard.png" alt="Keyboard: whole replies, translate in place"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Replies, translate, in any app</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>"Build me a water tracker" → open the chat → tap the field: calendar reply chip → Translate. Swipe Home when the app lands.</div>
+  <div class="n">4 / 14</div>
+</section>
+
+<!-- 5 · MODIFY A REAL APP -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">App mods · no code runs</div>
+  <h1>Change a real app. <em>Live.</em></h1>
+  <p class="sub">Your words, auto-approved. The AI never writes or runs code.</p>
+  <div class="shots">
+    <div class="col"><div class="phone"><img src="img/linkedin-before.png" alt="LinkedIn feed with a Promoted post"></div><div class="cap"><span class="dot" style="background:var(--l3)"></span>Before</div></div>
+    <div class="col"><div class="phone"><img src="img/linkedin-after.png" alt="LinkedIn with the Promoted post masked: Ad hidden"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>"Ad hidden"</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>Open LinkedIn: "Hide promoted posts." While it works: my own words, so it auto-approves; no code runs.</div>
+  <div class="n">5 / 14</div>
+</section>
+
+<!-- 6 · LIVE TALK SEES YOUR SCREEN -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Live talk · vision</div>
+  <h1>Live talk sees your screen</h1>
+  <p class="sub">Ask about what's in front of you. It looks, then answers.</p>
+  <div class="shots">
+    <div class="col"><div class="phone"><img src="img/live.png" alt="Voice mode: What does this sign say? Looked."></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>"Looked", then spoke</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>Open voice on the LinkedIn screen: "What's on my screen? Help me reply."</div>
+  <div class="n">6 / 14</div>
+</section>
+
+<!-- 7 · HEALTH FROM THE WATCH -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Galaxy Watch · visual answers</div>
+  <h1>Health from your watch</h1>
+  <p class="sub">A chart, not a wall of text. The data stays on the phone.</p>
+  <div class="shots">
+    <div class="col"><div class="phone"><img src="img/sleep.png" alt="Sleep stages per night with averages, from the Galaxy Watch"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Sleep this week</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>"Show me my sleep this week." Let the chart land, then move on.</div>
+  <div class="n">7 / 14</div>
+</section>
+
+<!-- 8 · SMART HOME + CLEAN POWER -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Smart home · grid-aware</div>
+  <h1>Your home, on clean power</h1>
+  <p class="sub">It knows your devices and when the grid is cleanest.</p>
+  <div class="shots">
+    <div class="col"><div class="phone sm"><img src="img/dishwasher.png" alt="When should I run the dishwasher? 3–6 PM is the cleanest window"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Knows the devices</div></div>
+    <div class="col"><div class="phone"><img src="img/power.png" alt="Grid timeline: cleanest window vs peak, with carbon and price"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>Cleanest window, on a timeline</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>"What smart home devices do I have?" → "When's the cleanest time to turn on the Christmas tree?" Torus angle. Say "knows", not "controls".</div>
+  <div class="n">8 / 14</div>
+</section>
+
+<!-- 9 · GROK CONTROLS THE PHONE -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Remote assistants · MCP</div>
+  <h1>Grok drives. <em>You approve.</em></h1>
+  <p class="sub">Any AI can ask. None can approve or unlock.</p>
+  <div class="shots">
+    <div class="col"><div class="phone"><img src="img/remote.png" alt="Remote: pair an assistant with a one-time code, kill switch"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Paired, with a kill switch</div></div>
+    <div class="col"><div class="phone"><img src="img/lease.png" alt="Lease card: Allow agent in Pigeon for 10 min? Not now / Allow"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Only your finger says Allow</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>Laptop, Grok: "Use AgentOS: open LinkedIn." Then "…and text Sam hi": the card lands on the phone, not in Grok.</div>
+  <div class="n">9 / 14</div>
+</section>
+
+<!-- 10 · FINGERPRINT -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Sensitive actions · Android Keystore</div>
+  <h1>Fingerprint for money and installs</h1>
+  <p class="sub">Payments, installs, saved passwords. Your finger, not the AI's.</p>
+  <div class="shots">
+    <div class="glass tile">
+      <svg viewBox="0 0 120 120" fill="none" stroke="var(--blue)" stroke-width="4" stroke-linecap="round"><path d="M28 56a32 32 0 0 1 64 0"/><path d="M22 72c0-6 2-12 6-16"/><path d="M38 60a22 22 0 0 1 44 0v12"/><path d="M36 92c-4-8-6-16-6-24"/><path d="M60 50a10 10 0 0 0-10 10c0 18 4 30 10 40"/><path d="M60 60c6 0 10 4 10 10 0 10-2 20-6 30"/><path d="M90 76c0 10-2 18-6 24"/></svg>
+      <div class="t">Fingerprint required</div>
+    </div>
+    <div class="col"><div class="phone"><img src="img/fingerprint.png" alt="Native approval card with a Fingerprint required chip"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Native card, not a web view</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>"Install &lt;small free app&gt;" → Fingerprint required card. The system prompt shows black on mirroring: hold the phone up.</div>
+  <div class="n">10 / 14</div>
+</section>
+
+<!-- 11 · LOCKED PHONE -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Scheduled tasks · auto-unlock</div>
+  <h1>Locked phone. <em>Still working.</em></h1>
+  <p class="sub">It wakes, unlocks itself, does the job, locks again.</p>
+  <div class="shots">
+    <div class="glass tile">
+      <svg viewBox="0 0 120 120" fill="none" stroke="var(--orange)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="26" y="52" width="68" height="50" rx="12"/><path d="M40 52V38a20 20 0 0 1 40 0v14"/><circle cx="60" cy="76" r="6" fill="var(--orange)" stroke="none"/><path d="M60 82v8"/></svg>
+      <div class="t">Lock it. Wait a minute.</div>
+    </div>
+    <div class="col"><div class="phone"><img src="img/sched.png" alt="Home: a reminder scheduled for tomorrow 11 AM"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>Scheduled, shown on Home</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>"In one minute, turn on the flashlight" → lock it, face up. Talk security during the minute (next slide).</div>
+  <div class="n">11 / 14</div>
+</section>
+
+<!-- 12 · SECURITY IN ONE BREATH -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Security · built into the OS</div>
+  <h1 style="font-size:72px">Security in one breath</h1>
+  <div class="chips">
+    <div class="glass chip"><i style="background:var(--blue)"></i>AI only asks</div>
+    <div class="glass chip"><i style="background:var(--blue)"></i>Approval cards</div>
+    <div class="glass chip"><i style="background:var(--blue)"></i>Fingerprint</div>
+    <div class="glass chip"><i style="background:var(--blue)"></i>Auto-approval</div>
+    <div class="glass chip"><i style="background:var(--red)"></i>AI can't run code</div>
+    <div class="glass chip"><i style="background:var(--red)"></i>Can't see its own cards</div>
+    <div class="glass chip"><i style="background:var(--red)"></i>Screen text is untrusted</div>
+    <div class="glass chip"><i style="background:var(--red)"></i>Prompt Guard 2 on device</div>
+    <div class="glass chip"><i style="background:var(--red)"></i>Scam detection</div>
+    <div class="glass chip"><i style="background:var(--green)"></i>Temporary leases</div>
+    <div class="glass chip"><i style="background:var(--green)"></i>Permissions &amp; plugins</div>
+    <div class="glass chip"><i style="background:var(--green)"></i>Trackers &amp; ads blocked</div>
+    <div class="glass chip"><i style="background:var(--green)"></i>Activity log</div>
+    <div class="glass chip"><i style="background:var(--green)"></i>Password vault</div>
+  </div>
+  <div class="shots">
+    <div class="col"><div class="phone"><img src="img/center.png" alt="Command center: Protected today, Model, Activity log"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Command center · Protected today</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>Swipe to Command center while the flashlight timer runs. Protected today → Activity → Permissions → Blockers.</div>
+  <div class="n">12 / 14</div>
+</section>
+
+<!-- 13 · MULTIPLE BRAINS + AIRPLANE MODE -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Any brain · offline</div>
+  <h1>Three brains. <em>Works offline.</em></h1>
+  <div class="brains">
+    <div class="glass brain">Codex<span>OpenAI, in the cloud</span></div>
+    <div class="glass brain">Claude<span>same tools, same rules</span></div>
+    <div class="glass brain" style="box-shadow:0 4px 24px rgba(10,132,255,.25)">On device<span>Qwen 0.8B, no signal</span></div>
+  </div>
+  <div class="shots">
+    <div class="col"><div class="phone"><img src="img/brains.png" alt="Command center: Model row, Codex / Claude / Local"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Switch brains in a tap</div></div>
+    <div class="col"><div class="phone"><img src="img/offline.png" alt="Airplane mode: the on-device model finishes the task"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Airplane mode · "On device"</div></div>
+  </div>
+  <div class="cue"><b>Cue</b>Command center › Model: tap Codex / Claude / On-device. Airplane mode on → "Turn on the flashlight" → "On device" tag.</div>
+  <div class="n">13 / 14</div>
+</section>
+
+<!-- 14 · CLOSE -->
+<section class="slide">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">AgentOS</div>
+  <h1 style="max-width:1300px;font-size:112px;margin-top:220px">The model proposes.<br><em>The OS decides.</em></h1>
+  <div class="cue"><b>Cue</b>One line. Stop.</div>
+  <div class="n">14 / 14</div>
+</section>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')),i=0,b=document.body,root=document.documentElement;
+  function fit(){root.style.setProperty('--s',Math.min(innerWidth/1600,innerHeight/900));root.style.setProperty('--k',Math.min(1,(innerWidth-48)/1600))}
+  function show(n){i=Math.max(0,Math.min(slides.length-1,n));slides.forEach(function(e,j){e.classList.toggle('on',j===i)});history.replaceState(null,'','#'+(i+1))}
+  addEventListener('keydown',function(e){
+    if(e.key==='p'||e.key==='P'){b.classList.toggle('present');show(i);return}
+    if(!b.classList.contains('present'))return;
+    // clickers send → / PageDown / space and ← / PageUp
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'||e.key===' '||e.key==='Enter'){e.preventDefault();show(i+1)}
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'||e.key==='Backspace'){e.preventDefault();show(i-1)}
+    if(e.key==='Home')show(0);if(e.key==='End')show(slides.length-1);if(e.key==='Escape')b.classList.remove('present')});
+  addEventListener('click',function(e){if(b.classList.contains('present'))show(e.clientX>innerWidth/3?i+1:i-1)});
+  addEventListener('resize',fit);fit();
+  var q=/[?&]slide=(\d+)/.exec(location.search)||/#(\d+)/.exec(location.hash);
+  if(q){b.classList.add('present');show(+q[1]-1)}else show(0);
+  if(window.matchMedia('print').matches)b.classList.remove('present');
+  addEventListener('beforeprint',function(){b.classList.remove('present')});
+})();
+</script>
+</body>
+</html>
