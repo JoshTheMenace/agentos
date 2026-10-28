@@ -116,7 +116,7 @@ export const gcEntities = (db) => db.prepare(`DELETE FROM entity WHERE type!='me
 export function consentState(db) {
   return db.prepare(`SELECT c.source, c.scope, c.action, c.at, c.id,
       (SELECT max(at) FROM consent g WHERE g.source=c.source AND g.action='grant') AS granted_at,
-      (SELECT count(*) FROM event e WHERE e.source=c.source) AS events
+      (SELECT count(*) FROM event e WHERE e.source=c.source) + (SELECT count(DISTINCT entity_id) FROM alias a WHERE a.source=c.source AND c.source='contacts') AS events
     FROM consent c WHERE c.id=(SELECT max(id) FROM consent WHERE source=c.source) ORDER BY c.source`).all()
     .map((c) => ({ source: c.source, scope: c.scope, active: c.action === 'grant', granted_at: c.granted_at,
       revoked_at: c.action === 'revoke' ? c.at : null, events: c.events, ledger_id: c.id }));

@@ -90,6 +90,23 @@ final class ApprovalCard {
         open(f, RED);
     }
 
+    /** ScamWatch: a scam or hidden AI orders in a chat the owner opened (no task). Calm amber: headline, one-line why, OK; snippet and score behind a tap. */
+    void scam(String app, String sender, String why, String snippet, double score, Runnable ok) {
+        LinearLayout f = face(glyphIcon("shield", AMBER), appLabel(app) + (sender.isEmpty() ? "" : " · " + sender), "Possible scam message", AMBER, false);
+        f.addView(text(Character.toUpperCase(why.charAt(0)) + why.substring(1), 13, 500, L2), margin(0, dp(6)));
+        LinearLayout details = col();
+        details.setVisibility(View.GONE);
+        TextView q = text("“" + snippet + "”", 12.5f, 400, L2);
+        q.setMaxLines(4); q.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        details.addView(q, margin(0, dp(10)));
+        details.addView(text((score >= 0 ? "Prompt Guard " + String.format(Locale.US, "%.2f", score) + " · " : "") + "logged in Activity · the agent won't act on it", 11, 500, L3), margin(0, dp(6)));
+        f.addView(details);
+        f.addView(acts(text("Details", 12, 600, L3), button("OK", AMBER, 0xFF1C1C1E, ok)));
+        disclose(f, details);
+        svc.island.set("alert", "Possible scam", -1);
+        open(f, AMBER);
+    }
+
     /** Task lease (LeaseCard delegates here): let the agent act in `apps` (labels) for `minutes`. Caller is behind a tap. */
     void lease(String apps, String minutes, String goal, String caller, Listener l) {
         LinearLayout f = face(glyphIcon("clock", BLUE), goal, "Allow agent in " + apps + " for " + minutes + " min?", BLUE, true);
