@@ -1,0 +1,6 @@
+{"id":"bike_guy","ok":true,"status":"completed","ms":2705,"calls":1,"tools":[],"answer":"It would call Marco at Spoke & Chain at +18015550177 in the Phone app; no message would be sent."}
+{"id":"climb_person","ok":true,"status":"completed","ms":3020,"calls":1,"tools":[],"answer":"It would go to Jordan Wu in Messages; the text hasn’t been specified."}
+{"id":"late","ok":true,"status":"completed","ms":3316,"calls":1,"tools":[],"answer":"It would go to Priya Shah on Slack: “I’m running 10 minutes late.”"}
+{"id":"boardgame_host","ok":true,"status":"completed","ms":3416,"calls":1,"tools":[],"answer":"It would go to Nina Okafor in Messages, but you haven’t specified what it should say."}
+{"id":"mom_call","ok":true,"status":"completed","ms":3721,"calls":1,"tools":[],"answer":"It would go to Mom (Linda Gimenes) in Messages: “I’ll call you after work.”"}
+{"id":"alex_home","ok":true,"status":"completed","ms":3764,"calls":1,"tools":[],"answer":"The reminder would go to you in the phone’s notification app and say: “Drop off Alex Rivera’s bear canister.”"}

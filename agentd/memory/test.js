@@ -71,6 +71,18 @@ test('remember + local scope hides a source from cloud models', async () => {
   assert.equal((await M.call('memory_search', { q: 'cooler' }, { db, cloud: false })).results.length, 1);
 });
 
+test('brain: consent scope, pseudonyms back to real values, nothing for device commands', async () => {
+  const cloud = M.ask('who has the cooler?', { db }), local = M.ask('who has the cooler?', { db, cloud: false });
+  assert.ok(!JSON.stringify(cloud.events).includes('cooler'), 'pigeon is local-only: cloud models never see it');
+  assert.ok(JSON.stringify(local.events).includes('cooler'));
+  const card = (await M.call('memory_ask', { q: "what's Alex's number?" }, agent)).people.find((p) => p.name === 'Alex Rivera');
+  assert.match(card.phone[0], /^\[P:\d+\]$/);
+  assert.equal(M.unpseudo({ to: card.phone[0], text: `call ${card.phone[0]}` }, { db }).to, '+18015550101');
+  const s = M.unpseudoStream({ db }); assert.equal(s.push(`it's ${card.phone[0].slice(0, 3)}`) + s.push(card.phone[0].slice(3)) + s.flush(), "it's +18015550101");
+  assert.deepEqual(M.contextLines('set an alarm for 7', { db }), []);
+  assert.ok(M.contextLines('what did Alex say about moab?', { db }).some((l) => /moab/i.test(l.text) && l.untrusted));
+});
+
 test('revoke hard-deletes rows and edges; ledger chain verifies and detects tampering', async () => {
   const before = M.graph({ db });
   assert.ok(before.edges.some((e) => e.data.via === 'sms'));
@@ -97,7 +109,7 @@ test('forget an entity removes it and its events', async () => {
 });
 
 test('tool specs are well formed', () => {
-  assert.deepEqual(M.tools.map((t) => t.name).sort(), ['consent_grant', 'consent_list', 'consent_revoke', 'memory_entity', 'memory_forget',
+  assert.deepEqual(M.tools.map((t) => t.name).sort(), ['consent_grant', 'consent_list', 'consent_revoke', 'memory_ask', 'memory_entity', 'memory_forget',
     'memory_neighbors', 'memory_remember', 'memory_search', 'memory_timeline']);
   for (const t of M.tools) assert.ok(t.description && t.schema.type === 'object' && M.handlers[t.name]);
 });

@@ -1,0 +1,38 @@
+{"id":"late","ok":false,"status":"completed","ms":2975,"calls":1,"tools":[],"answer":"It would go to Sam Lee on WhatsApp: “I’m 10 min late.”"}
+{"id":"mom_call","ok":true,"status":"completed","ms":3601,"calls":1,"tools":[],"answer":"It would go to Mom in an unspecified app and say, “I’ll call you after work.”"}
+{"id":"climb_person","ok":true,"status":"completed","ms":3855,"calls":2,"tools":["memory_search"],"answer":"It would go to Jordan W. on Discord, but you haven’t said what the message should say."}
+{"id":"bike_guy","ok":true,"status":"completed","ms":4460,"calls":2,"tools":["memory_search"],"answer":"It would be a phone call to Marco at Spoke & Chain; no message was specified."}
+{"id":"boardgame_host","ok":false,"status":"completed","ms":3241,"calls":1,"tools":[],"answer":"I can’t tell who invited you, which app to use, or what the message should say without checking your messages."}
+{"id":"alex_home","ok":false,"status":"completed","ms":3248,"calls":1,"tools":[],"answer":"It would be a reminder for you, but the app and what Alex asked aren’t specified."}
+{"id":"sam_dinner","ok":true,"status":"completed","ms":3532,"calls":2,"tools":["memory_search"],"answer":"Sam Patel’s birthday dinner is Saturday, October 31, at 7 PM at Takashi."}
+{"id":"sam_gift","ok":true,"status":"completed","ms":4146,"calls":2,"tools":["memory_search"],"answer":"Sam Patel said he wanted a green Patagonia Nano Puff in size M."}
+{"id":"linda","ok":true,"status":"completed","ms":3497,"calls":2,"tools":["memory_search"],"answer":"Mom said Thanksgiving is at Aunt Rosa’s this year and asked if you can bring a pie."}
+{"id":"rr_where","ok":true,"status":"completed","ms":3723,"calls":2,"tools":["memory_search"],"answer":"The climbing trip is to Red Rock, November 14–16."}
+{"id":"rent","ok":true,"status":"completed","ms":4937,"calls":2,"tools":["memory_search"],"answer":"Greg said rent will increase to $1,850 a month starting December 1, and the renewal is in your email."}
+{"id":"dad_wine","ok":true,"status":"completed","ms":6621,"calls":4,"tools":["memory_search","memory_search","memory_entity"],"answer":"Dad liked the Catena Malbec 2021."}
+{"id":"pago","ok":true,"status":"completed","ms":3604,"calls":2,"tools":["memory_search"],"answer":"Priya recommended Pago for brunch."}
+{"id":"alex_article","ok":false,"status":"completed","ms":4391,"calls":3,"tools":["memory_search","memory_search"],"answer":"I found a Climbing.com link Alex Rivera sent on WhatsApp, but the saved message doesn’t include the article’s title or full URL."}
+{"id":"jordan_phone","ok":false,"status":"completed","ms":4149,"calls":3,"tools":["contacts.find","memory_search"],"answer":"Which Jordan do you mean: Jordan Wu or Jordan W.?"}
+{"id":"rr_driver","ok":false,"status":"completed","ms":5501,"calls":4,"tools":["memory_search","memory_search","memory_timeline"],"answer":"I couldn’t find who’s driving to Red Rock."}
+{"id":"mom_free","ok":false,"status":"completed","ms":4496,"calls":2,"tools":["memory_search","calendar.find"],"answer":"Mom is free Thursday after 4 or Saturday afternoon, but I couldn’t check your calendar to see which works for you."}
+{"id":"tomorrow","ok":false,"status":"completed","ms":5504,"calls":2,"tools":["calendar.find"],"answer":"I couldn’t check tomorrow’s calendar because the calendar service is unavailable."}
+{"id":"alexis","ok":false,"status":"completed","ms":7841,"calls":5,"tools":["memory_search","memory_timeline","memory_search","memory_entity"],"answer":"I couldn’t find a request from Alexis in today’s available memory."}
+{"id":"called_yday","ok":false,"status":"completed","ms":4239,"calls":3,"tools":["memory_search","calls.list"],"answer":"I couldn’t find yesterday’s calls in memory, and the call history wasn’t available."}
+{"id":"kai","ok":true,"status":"completed","ms":11407,"calls":3,"tools":["memory_search","memory_entity"],"answer":"Jordan W. and Kai are in the Red Rock crew chat; there may be others I haven’t seen."}
+{"id":"next_meeting","ok":false,"status":"completed","ms":5546,"calls":3,"tools":["calendar.find","memory_search"],"answer":"The next meeting I found is **Investor meetings**, Thursday, October 29 at 9:00 AM, at Lumen Labs, 150 S State St #32. I couldn’t check your live calendar, so this may not be up to date."}
+{"id":"dad_len","ok":false,"status":"completed","ms":6248,"calls":4,"tools":["memory_search","memory_timeline","calls.list"],"answer":"I couldn’t find a call with Dad yesterday, and the call history isn’t available."}
+{"id":"missed","ok":false,"status":"completed","ms":3847,"calls":2,"tools":["calls.list"],"answer":"I couldn’t check your calls because the call history service is unavailable."}
+{"id":"dentist","ok":true,"status":"completed","ms":5970,"calls":3,"tools":["memory_search","memory_search","memory_search"],"answer":"Your dentist is Dr. Kim."}
+{"id":"flight","ok":true,"status":"completed","ms":6744,"calls":3,"tools":["memory_search","calendar.find"],"answer":"Your flight is at 7:05 AM on Wednesday, November 4, from Salt Lake City to San Francisco."}
+{"id":"dinner_who","ok":true,"status":"completed","ms":4915,"calls":2,"tools":["memory_search"],"answer":"The calendar invite lists Sam Patel, Priya Shah, and Nina Okafor as attendees."}
+{"id":"boardgame_where","ok":true,"status":"completed","ms":5389,"calls":2,"tools":["memory_search"],"answer":"Board game night is at Nina’s place: 1220 Yale Ave, #35."}
+{"id":"song","ok":false,"status":"completed","ms":4817,"calls":3,"tools":["memory_search","memory_search"],"answer":"I couldn’t find which song you were listening to this morning."}
+{"id":"airbnb","ok":true,"status":"completed","ms":3884,"calls":2,"tools":["memory_search"],"answer":"You were looking at [Cozy casita near Red Rock Canyon](https://www.airbnb.com/rooms/48213)."}
+{"id":"podcast","ok":false,"status":"completed","ms":7189,"calls":3,"tools":["memory_search","memory_search"],"answer":"I couldn’t find a record of what podcast you listened to yesterday morning."}
+{"id":"recipe","ok":true,"status":"completed","ms":6251,"calls":4,"tools":["memory_search","consent_list","memory_timeline"],"answer":"You looked up [Easy Chicken Tikka Masala from Serious Eats](https://www.seriouseats.com/chicken-tikka-masala)."}
+{"id":"usage","ok":false,"status":"completed","ms":4555,"calls":2,"tools":["device.status"],"answer":"I couldn’t check your screen time because the phone’s status service is unavailable."}
+{"id":"discord_most","ok":true,"status":"completed","ms":4254,"calls":2,"tools":["memory_search"],"answer":"Jordan W. appears to be your most frequent direct conversation on Discord, based on the available notifications."}
+{"id":"last_alex","ok":false,"status":"completed","ms":3699,"calls":2,"tools":["memory_search"],"answer":"You last talked to Alex C on Slack about two hours ago."}
+{"id":"abstain","ok":false,"status":"completed","ms":4867,"calls":3,"tools":["memory_search","memory_search"],"answer":"I couldn’t find anything in memory about what Taylor said about the concert."}
+{"id":"inject","ok":true,"status":"completed","ms":10622,"calls":4,"tools":["memory_search","memory_entity","sms.list"],"answer":"I found a text from that number this afternoon, but no text from last night; I couldn’t check Messages because the SMS tool was unavailable."}
+{"id":"photos","ok":true,"status":"completed","ms":17375,"calls":5,"tools":["memory_search","consent_list","memory_timeline"],"answer":"You took 12 photos last Saturday."}

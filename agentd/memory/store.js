@@ -156,7 +156,7 @@ export function redact(db, text) {
     .replace(/\b(?:\d[ -]?){13,19}\b/g, (m) => (luhn(m.replace(/\D/g, '')) ? '[CARD]' : m))
     .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN]')
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, (m) => pseudo(db, 'E', m.toLowerCase()))
-    .replace(/https?:\/\/([^\s/?#]+)[^\s?#]*\?\S*/g, 'https://$1/…')
+    .replace(/https?:\/\/([^\s/?#]+)([^\s?#]*)\?\S*/g, (m, host, path) => `https://${host}${/\d{6,}|[\w-]{25,}/.test(path) ? '/…' : path}?…`) // query dropped; a readable path ("/hangboard-training-guide/") stays
     .replace(PHONE, (m) => pseudo(db, 'P', normPhone(m)));
 }
 export const redactAlias = (db, a) => (a.kind === 'phone' ? pseudo(db, 'P', a.value) : a.kind === 'email' ? pseudo(db, 'E', a.value) : a.value);

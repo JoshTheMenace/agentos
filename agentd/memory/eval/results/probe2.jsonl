@@ -1,0 +1,5 @@
+{"id":"late","ok":true,"status":"completed","ms":2760,"calls":1,"tools":[],"answer":"It would go to Priya Shah on Slack: “I’m 10 min late.”"}
+{"id":"climb_person","ok":true,"status":"completed","ms":4455,"calls":2,"tools":["memory_ask"],"answer":"It would go to Jordan Wu on Discord; you haven’t specified what it should say."}
+{"id":"bike_guy","ok":false,"status":"completed","ms":5257,"calls":1,"tools":[],"answer":"I can’t tell who fixed your bike from the information provided, so I can’t say who the call would go to or what it would say; it would use the Phone app."}
+{"id":"alex_home","ok":false,"status":"completed","ms":5257,"calls":1,"tools":[],"answer":"The reminder would appear as a phone notification to you, but I can’t determine what Alex asked from the available context."}
+{"id":"boardgame_host","ok":false,"status":"completed","ms":6115,"calls":1,"tools":[],"answer":"I can’t tell who invited you, which app to use, or what the message should say from the available context."}

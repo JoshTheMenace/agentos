@@ -1,0 +1,12 @@
+{"id":"h_lunch_place","ok":true,"status":"completed","ms":3503,"calls":2,"tools":["memory_search"],"answer":"Lunch with Nina is at Pago, 878 S 900 E #33."}
+{"id":"h_priya_where","ok":true,"status":"completed","ms":3543,"calls":2,"tools":["memory_search"],"answer":"You’re meeting Priya at Blue Copper Coffee, 179 W 900 S."}
+{"id":"h_trad","ok":true,"status":"completed","ms":3634,"calls":2,"tools":["memory_search"],"answer":"Jordan asked you to bring the trad rack."}
+{"id":"h_rr_dates","ok":true,"status":"completed","ms":4477,"calls":2,"tools":["memory_search"],"answer":"The Red Rock trip is November 14–16."}
+{"id":"h_bike_close","ok":true,"status":"completed","ms":2979,"calls":2,"tools":["memory_search"],"answer":"Spoke & Chain closes at 6 PM."}
+{"id":"h_mom_pie","ok":true,"status":"completed","ms":3171,"calls":2,"tools":["memory_search"],"answer":"Linda asked you to bring a pie to Thanksgiving at Aunt Rosa’s."}
+{"id":"h_kai_bring","ok":true,"status":"completed","ms":5342,"calls":4,"tools":["memory_search","memory_search","memory_entity"],"answer":"Kai is bringing the crash pads."}
+{"id":"h_dad_called","ok":true,"status":"completed","ms":4418,"calls":3,"tools":["memory_search","memory_timeline"],"answer":"Yes, you called Dad yesterday and talked for 22 minutes."}
+{"id":"h_gift_idea","ok":true,"status":"completed","ms":4211,"calls":3,"tools":["memory_search","memory_entity"],"answer":"Sam said he’d love a green Patagonia Nano Puff in size M for his birthday."}
+{"id":"h_pr_who","ok":true,"status":"completed","ms":4817,"calls":2,"tools":["memory_search"],"answer":"Alex C asked in Slack’s #eng channel for someone to review PR #482 today."}
+{"id":"h_group_who","ok":true,"status":"completed","ms":7139,"calls":3,"tools":["memory_search","memory_entity"],"answer":"You, Sam Lee, and Priya Shah are in the Climbing Club chat; there may be others I can’t see."}
+{"id":"h_lastnight_song","ok":true,"status":"completed","ms":13291,"calls":3,"tools":["memory_search","memory_timeline"],"answer":"You were listening to “Redbone” by Childish Gambino around 11:10 PM."}

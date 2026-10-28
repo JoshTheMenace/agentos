@@ -1,0 +1,2 @@
+{"id":"late","ok":false,"status":"completed","ms":3683,"calls":1,"tools":[],"answer":"It would go to Sam Lee on WhatsApp: “I’m 10 minutes late.”"}
+{"id":"sam_gift","ok":true,"status":"completed","ms":3967,"calls":2,"tools":["memory_search"],"answer":"Sam Patel said he wanted a green Patagonia Nano Puff in size M."}

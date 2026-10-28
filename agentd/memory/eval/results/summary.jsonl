@@ -1,0 +1,13 @@
+{"label":"smoke","provider":"codex","correct":"0/2","median_s":150,"avg_tool_calls":0,"avg_model_calls":0,"at":"2026-10-27T23:02:02.740Z"}
+{"label":"smoke","provider":"codex","correct":"0/1","median_s":40,"avg_tool_calls":0,"avg_model_calls":0,"at":"2026-10-27T23:02:47.847Z"}
+{"label":"smoke","provider":"codex","correct":"1/2","median_s":3.7,"avg_tool_calls":0.5,"avg_model_calls":1.5,"at":"2026-10-27T23:57:33.070Z"}
+{"label":"baseline-codex","provider":"codex","correct":"20/38","median_s":4.5,"avg_tool_calls":1.61,"avg_model_calls":2.58,"at":"2026-10-27T23:59:52.391Z"}
+{"label":"brain-codex-1","provider":"codex","correct":"35/38","median_s":3,"avg_tool_calls":0.13,"avg_model_calls":1.13,"at":"2026-10-28T00:07:07.362Z"}
+{"label":"heldout-baseline-codex","provider":"codex","correct":"12/12","median_s":4.2,"avg_tool_calls":1.5,"avg_model_calls":2.5,"at":"2026-10-28T00:08:06.886Z"}
+{"label":"brain-codex-2","provider":"codex","correct":"47/50","median_s":3.1,"avg_tool_calls":0.2,"avg_model_calls":1.2,"at":"2026-10-28T00:09:37.634Z"}
+{"label":"probe1","provider":"codex","correct":"2/5","median_s":3,"avg_tool_calls":0.2,"avg_model_calls":1.2,"at":"2026-10-28T00:09:58.818Z"}
+{"label":"probe2","provider":"codex","correct":"2/5","median_s":5.3,"avg_tool_calls":0.2,"avg_model_calls":1.2,"at":"2026-10-28T00:10:05.290Z"}
+{"label":"probe3","provider":"codex","correct":"6/6","median_s":3.3,"avg_tool_calls":0,"avg_model_calls":1,"at":"2026-10-28T00:10:23.847Z"}
+{"label":"brain-codex-final","provider":"codex","correct":"50/50","median_s":2.9,"avg_tool_calls":0.12,"avg_model_calls":1.12,"at":"2026-10-28T00:11:08.274Z"}
+{"label":"brain-claude","provider":"claude","correct":"7/8","median_s":3.2,"avg_tool_calls":0.25,"avg_model_calls":0,"at":"2026-10-28T00:11:34.937Z"}
+{"label":"brain-codex-final2","provider":"codex","correct":"50/50","median_s":2.8,"avg_tool_calls":0.16,"avg_model_calls":1.16,"at":"2026-10-28T00:25:05.755Z"}
