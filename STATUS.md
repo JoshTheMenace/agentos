@@ -15,6 +15,7 @@ Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in resear
 - **Explore:** Claude Code on the phone as a provider (like Codex app-server), the Galaxy Watch, live-modifying a real app (e.g. calculator/camera: add a button), password vault + fingerprint fill (stretch).
 - UI: **A2 · Calm Glass iOS Dark** (design/mockups/A2-calm-glass-ios-dark.html, tokens in design/A2-tokens.md). Minimal text, progressive disclosure. Say "Fingerprint", never "Touch ID". **All UI work goes to Fable agents** (model: fable).
 - Founder is Utah-based with an LLC. No Duolingo. Code freeze Wed noon; judging Wed 5 PM.
+- **Tool plugins (post-hackathon, agentd/research/TOOLS-AT-SCALE.md):** a plugin toggle turns off its direct-API tools only; it never restricts the app itself (UI driving still allowed).
 - **Phone access (agents):** wrap every state-changing adb step in `scripts/withphone <cmd>` (takes the shared lock, stores its pid, releases on exit; a stray `rmdir` can't remove it). Never tap approval cards, never text/call real contacts, never touch the founder's real data except clearly-named test items deleted by exact id.
 
 ## Done (on the phone, committed)

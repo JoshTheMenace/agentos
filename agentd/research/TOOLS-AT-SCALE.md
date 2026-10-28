@@ -4,6 +4,8 @@ The question: how can agentd keep adding tools (and group them into plugins the 
 
 **Short answer:** keep a small, stable **core** that every request sees. In front of the model, add a **pre-selector**: plain code that reads the request and loads the one or two plugins it probably needs, with no model call. Every other enabled plugin stays **deferred**, so the model sees only its name and a one-line summary and can still load it through the provider's own tool search if the pre-selector guessed wrong. Disabled plugins don't appear at all, and **both agentd and the broker refuse them**.
 
+> **Founder decision (10-27):** a plugin toggle turns off its **API tools only**. It does not restrict the apps themselves: with Messages off, the agent may still open and drive the Messages app through the UI. So skip the `apps` field, the `task.start` lease refusal (point 3 below) and enforcement test (b).
+
 Analogy: a restaurant menu. Today the waiter reads all 62 recipes aloud before every order. The design keeps a one-page menu (core), and the host who seats you hands over the dessert page if you mention cake (pre-selector). Any other page you can still ask for (tool search), and that only costs a short wait.
 
 Speed is the top goal, so the main rule is: **never add a model round-trip to a common task.** One extra call costs about 2.5 s. Cutting about 5k cached tokens saves about 0.1 to 0.3 s per call. So the token savings are a bonus. What matters more: requests stay the same size and accuracy holds as the tool count climbs from 62 toward 150 or more.
