@@ -5,6 +5,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createServer } from 'node:http';
+import { networkInterfaces } from 'node:os';
 import { WebSocketServer } from 'ws';
 import { agentdToken, cfg, log, provisionClients } from './config.js';
 import { classify } from './guard.js';
@@ -33,7 +34,7 @@ import { Local, suggest as localSuggest } from './providers/local.js';
 const cli = new ClaudeCli();
 const codex = new Codex();
 const providers = Object.fromEntries([codex, cli.available() ? cli : new Claude(), new Local()].map((p) => [p.id, p]));
-if (cfg.provider === 'codex') codex.ready().catch(() => {}); // warm start; it also restarts itself if it crashes
+if (cfg.provider === 'codex') codex.ready().then(() => cfg.suggestProvider === 'codex' && codex.warmSuggest()).catch(() => {}); // warm start (+ the keyboard's threads); it also restarts itself if it crashes
 taskman.init(codex); // background workers for voice (and typed task.start); see tasks.js
 events.watch(); // broker approvals/guard/task events -> every connected UI
 events.onEvent((e) => e.type === 'plugins.changed' && plugins.invalidate()); // the owner flipped a plugin: re-read it now
@@ -164,9 +165,14 @@ wss.on('connection', (ws, req) => {
     const input = JSON.stringify({ mode: m.mode || 'reply', ...(write && { task: String(m.task || 'write'), intent: String(m.intent || '').slice(0, 500), lang: m.lang }),
       before: String(m.before || '').slice(-2000), after: String(m.after || '').slice(0, 500),
       field: { pkg: m.field?.pkg, app: m.field?.app, hint: m.field?.hint }, untrusted_screen_data: { source_pkg: m.field?.pkg, trusted: false, lines } });
-    const local = !write && cfg.suggestProvider === 'local' && (m.mode || 'reply') === 'reply'; // the local prompt only writes replies
-    try { reply({ items: write ? [await codex.write(input, abort.signal)] : (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal))).slice(0, 3).map(String) }); }
-    catch (e) { reply({ items: [], error: e.message }); }
+    const online = Object.values(networkInterfaces()).flat().some((x) => !x.internal && !x.address.startsWith('fe80')); // airplane mode: only lo + link-local
+    const local = !write && (cfg.suggestProvider === 'local' || !online) && (m.mode || 'reply') === 'reply'; // the local prompt only writes replies
+    const tm = { guard: Date.now() - t0 }, timing = () => Object.entries(tm).map(([k, v]) => `${k}=${v}`).join(' '); // keyboard/LATENCY.md
+    try { reply({ items: write ? [await codex.write(input, abort.signal)] : (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal, tm))).slice(0, 3).map(String), timing: timing() }); }
+    catch (e) { // Codex failed (offline, airplane mode): the on-phone model, if it's running, still gives replies
+      const off = !abort.signal.aborted && !write && !local && (m.mode || 'reply') === 'reply' && await localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal).catch(() => null);
+      reply(off ? { items: off.slice(0, 3).map(String), timing: `${timing()} local` } : { items: [], error: e.message });
+    }
   }
 
   ws.on('message', async (raw) => {

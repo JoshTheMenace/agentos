@@ -27,6 +27,7 @@ export const cfg = {
   screenFormat: env.AGENTD_SCREEN || 'compact', // what the model sees of a screen: 'compact' lines or the raw 'json' nodes (bench/RESULTS.md)
   suggestModel: env.SUGGEST_MODEL || 'gpt-6-luna', // keyboard suggestions: small and fast, no tools
   suggestEffort: env.SUGGEST_EFFORT || 'low',
+  suggestHedge: +(env.SUGGEST_HEDGE ?? 3000), // keyboard: no answer after this many ms -> same request on a 2nd warm thread, first one wins (0 = off; keyboard/LATENCY.md)
   suggestProvider: env.SUGGEST_PROVIDER || 'codex', // 'local' = llama-server for mode "reply" (fix/rewrite stay on Codex)
   appsModel: env.APPS_MODEL || env.CODEX_MODEL || 'gpt-6.1-terra', // micro-app generator (apps.js): the fast model writes one HTML file
   appsEffort: env.APPS_EFFORT || 'low',

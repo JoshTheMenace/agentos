@@ -103,7 +103,7 @@ final class Agent {
     }
 
     // ---- suggestions ----
-    static final class Result { final List<String> items = new ArrayList<>(); String how = "agentd"; long ms; int flagged; }
+    static final class Result { final List<String> items = new ArrayList<>(); String how = "agentd", timing = ""; long ms; int flagged; }
 
     /**
      * Blocking. mode: 0 reply, 1 rewrite, 2 fix. Sends agentd's `suggest` contract (agentd/README.md "Keyboard suggestions"):
@@ -160,7 +160,7 @@ final class Agent {
             for (String raw; (raw = ws.recv()) != null; ) {
                 JSONObject m = new JSONObject(raw);
                 String t = m.optString("type");
-                if (t.equals("suggestions")) { addAll(res.items, m.optJSONArray("items")); error = m.has("error") ? m.optString("error") : null; break; }
+                if (t.equals("suggestions")) { addAll(res.items, m.optJSONArray("items")); res.timing = m.optString("timing"); error = m.has("error") ? m.optString("error") : null; break; }
                 if (t.equals("guard.alert")) res.flagged++;
                 if (t.equals("error")) throw new IOException(m.optString("message"));
             }

@@ -81,7 +81,7 @@ final class Theme {
 
     // ---- motion (ms) ----
     static final int PRESS_IN = 40, PRESS_OUT = 120, CHIP_IN = 300, CHIP_STAGGER = 70, SHIMMER = 1100;
-    static final int BACKSPACE_DELAY = 350, BACKSPACE_REPEAT = 45, DOUBLE_TAP = 300, DEBOUNCE = 700, FOCUS_SETTLE = 300;
+    static final int BACKSPACE_DELAY = 350, BACKSPACE_REPEAT = 45, DOUBLE_TAP = 300, DEBOUNCE = 400, FOCUS_SETTLE = 150;
 
     private Theme() {}
 }

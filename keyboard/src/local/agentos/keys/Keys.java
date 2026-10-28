@@ -49,6 +49,8 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     private boolean privateField, capSentences;
     private int mode = MODE_REPLY;
     private int gen; // request generation: late answers for older generations are dropped
+    private List<String> shown = new ArrayList<>(); // last reply items on the strip: typing a prefix of one shows it instantly
+    private long trigAt; private String trig = "focus"; // latency log (keyboard/LATENCY.md): when the focus / keystroke that led to this request happened
     private String lastKey = "";
     private Agent.Screen lastScreen; private long lastScreenAt; // reused by the writer for 20 s (saves the ~0.9 s screen.read)
     private String intent = ""; // what the user asked the writer for; kept for Redo / chips
@@ -97,11 +99,11 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         kb.setShift(autoCap(before(3)));
         strip.setMode(mode); strip.setActions(null, null); strip.setNotice(null);
         if (writer != null) writer.hide();
-        lastKey = ""; lastScreen = null;
+        lastKey = ""; lastScreen = null; shown = new ArrayList<>();
         if (privateField) {
             strip.setContext(password ? "Password field · nothing sent" : "Private field · nothing sent", Theme.CORAL);
             strip.setItems(new ArrayList<String>(), false);
-        } else { ui.removeCallbacks(debounced); ui.postDelayed(debounced, Theme.FOCUS_SETTLE); } // prefetch on focus (after the app's screen settles)
+        } else { trig = "focus"; trigAt = now(); ui.removeCallbacks(debounced); ui.postDelayed(debounced, Theme.FOCUS_SETTLE); } // prefetch on focus (after the app's screen settles)
     }
 
     @Override public void onFinishInputView(boolean finishingInput) {
@@ -113,8 +115,10 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         super.onUpdateSelection(os, oe, ns, ne, cs, ce);
         if (kb == null) return;
         kb.setShift(autoCap(before(3)));
-        if (!privateField) { ui.removeCallbacks(debounced); ui.postDelayed(debounced, Theme.DEBOUNCE); }
+        if (!privateField) { trig = "type"; trigAt = now(); ui.removeCallbacks(debounced); ui.postDelayed(debounced, Theme.DEBOUNCE); }
     }
+
+    private static long now() { return android.os.SystemClock.uptimeMillis(); }
 
     private boolean autoCap(String before) {
         return capSentences && (before.isEmpty() || before.matches("(?s).*[.!?]\\s+$") || before.endsWith("\n"));
@@ -294,11 +298,17 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         final String key = mode + "|" + pkg + "|" + b + "|" + a;
         if (key.equals(lastKey)) return; // cursor moved but the text didn't: nothing new to ask
         lastKey = key;
-        strip.setLoading();
+        List<String> instant = new ArrayList<>(); String draft = (b + a).trim().toLowerCase(); // QuickType-style: keep what still fits the draft
+        if (mode == MODE_REPLY && !draft.isEmpty()) for (String s : shown) if (s.toLowerCase().startsWith(draft) && s.length() > draft.length()) instant.add(s);
+        if (instant.isEmpty()) strip.setLoading(); else { strip.setItems(instant, true); lat(trig, trigAt, now(), now(), now(), now(), "instant " + instant.size()); }
+        final boolean reuse = trig.equals("type") && !draft.isEmpty() && lastScreen != null && System.currentTimeMillis() - lastScreenAt < 30000; // typing doesn't change the chat; an empty draft (just sent) re-reads
         agent.cancel();
+        final long t0 = trigAt, t1 = now(); final String why = trig;
         bg.execute(() -> {
-            Agent.Screen sc = agent.screenRead(); // ~1 s; what the other person said
-            lastScreen = sc; lastScreenAt = System.currentTimeMillis();
+            final long t2 = now();
+            final Agent.Screen sc = reuse ? lastScreen : agent.screenRead(); // 0.3-1 s; what the other person said
+            final long t3 = now();
+            if (!reuse) { lastScreen = sc; lastScreenAt = System.currentTimeMillis(); }
             ui.post(() -> strip.setActions(sc.lines.isEmpty() ? null : Strip.ACT_TRANSLATE, sc.lines.size() >= 8 ? Strip.ACT_CATCH_UP : null));
             if (g != gen) return;
             int[] red = {0};
@@ -311,13 +321,14 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
             final int redacted = red[0];
             List<String> hit;
             synchronized (cache) { hit = cache.get(cacheKey); }
-            if (hit != null) { final List<String> h = hit; ui.post(() -> { if (g == gen) { strip.setContext(ctxLabel + " · cached", Theme.GREEN); strip.setItems(h, true); } }); return; }
+            if (hit != null) { final List<String> h = hit; ui.post(() -> { if (g == gen) { strip.setContext(ctxLabel + " · cached", Theme.GREEN); strip.setItems(h, true); if (mode == MODE_REPLY) shown = h; lat(why, t0, t1, t2, t3, t3, "cached"); } }); return; }
             ui.post(() -> { if (g == gen) strip.setContext(ctxLabel + " · thinking", Theme.AMBER); });
             Log.d(Agent.TAG, "context " + ctxLabel + " before=\"" + b + "\" screen=" + lines);
             try {
                 JSONObject ctx = new JSONObject().put("pkg", pkg).put("app", app).put("hint", hint).put("inputType", inputType).put("before", Agent.redact(b, red)).put("after", Agent.redact(a, red))
                     .put("screen", lines).put("redacted", redacted).put("untrusted", true);
                 Agent.Result r = agent.suggest(ctx, mode);
+                final long t4 = now();
                 Log.i(Agent.TAG, "suggest via " + r.how + " in " + r.ms + " ms: " + r.items);
                 if (!r.items.isEmpty()) synchronized (cache) { cache.put(cacheKey, r.items); }
                 ui.post(() -> {
@@ -325,6 +336,8 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
                     String label = r.flagged > 0 && sc.flagged == 0 ? ctxLabel + " · " + r.flagged + " flagged" : ctxLabel; // agentd's guard withheld lines
                     strip.setContext(label + String.format(" · %s %.1fs", r.how, r.ms / 1000.0), r.items.isEmpty() ? Theme.CORAL : Theme.GREEN);
                     strip.setItems(r.items.isEmpty() ? Arrays.asList("No suggestion") : r.items, !r.items.isEmpty());
+                    if (mode == MODE_REPLY && !r.items.isEmpty()) shown = r.items;
+                    lat(why, t0, t1, t2, t3, t4, r.how + (reuse ? " screen-reused " : " ") + r.timing);
                 });
             } catch (Exception e) {
                 Log.w(Agent.TAG, "suggest failed", e);
@@ -332,6 +345,12 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
                 ui.post(() -> { if (g == gen) { strip.setContext(app + " · agentd offline", Theme.CORAL); strip.setItems(Arrays.asList(String.valueOf(e.getMessage())), false); } });
             }
         });
+    }
+
+    /** One line per shown suggestion set: trigger → debounce → bg queue → screen.read → agentd → on screen (adb logcat -s AgentKeys | grep lat). */
+    private static void lat(String why, long t0, long t1, long t2, long t3, long t4, String how) {
+        long t5 = now();
+        Log.i(Agent.TAG, String.format("lat %s total=%d wait=%d queue=%d screen=%d agentd=%d render=%d %s", why, t5 - t0, t1 - t0, t2 - t1, t3 - t2, t4 - t3, t5 - t4, how));
     }
 
     @Override public void onDestroy() { super.onDestroy(); bg.shutdownNow(); }
