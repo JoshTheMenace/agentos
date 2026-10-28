@@ -1,6 +1,7 @@
 // Ingestors. Each one checks for an active consent grant first, then reads its source and writes entities/events.
 // Phone data comes from root `content query` / `dumpsys` / `cat`: via `su` in Termux, or `adb shell su` on the Mac.
 // For tests set MEMORY_FIXTURES=<dir> and each shell command is answered from <dir>/<name>.txt instead.
+import { ingest as samsung_health } from './samsung-health.js';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -190,7 +191,7 @@ function pigeon(db, { file } = {}) {
   return { rows, added };
 }
 
-export const INGESTORS = { contacts, calendar, calllog, sms, notifications, whatsapp, pigeon };
+export const INGESTORS = { samsung_health, contacts, calendar, calllog, sms, notifications, whatsapp, pigeon };
 
 export function ingest(db, source, opts = {}) {
   if (!INGESTORS[source]) throw new Error(`no ingestor for ${source}`);

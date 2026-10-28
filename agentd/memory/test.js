@@ -109,7 +109,7 @@ test('forget an entity removes it and its events', async () => {
 });
 
 test('tool specs are well formed', () => {
-  assert.deepEqual(M.tools.map((t) => t.name).sort(), ['consent_grant', 'consent_list', 'consent_revoke', 'memory_ask', 'memory_entity', 'memory_forget',
+  assert.deepEqual(M.tools.map((t) => t.name).sort(), ['consent_grant', 'consent_list', 'consent_revoke', 'health_query', 'health_summary', 'memory_ask', 'memory_entity', 'memory_forget',
     'memory_neighbors', 'memory_remember', 'memory_search', 'memory_timeline', ...(S.flags.v2 ? ['memory_confirm_identity', 'memory_correct', 'memory_facts', 'memory_identity', 'memory_person'] : [])].sort());
   for (const t of M.tools) assert.ok(t.description && t.schema.type === 'object' && M.handlers[t.name]);
 });

@@ -6,3 +6,19 @@ out/
 *.onnx
 models/
 .DS_Store
+
+# Personal health exports, normalized payloads and databases (synthetic CSVs are generated outside the repo).
+com.samsung.*.csv
+samsunghealth*/
+SamsungHealth*/
+DownloadPersonalData*/
+*health-export*.json
+*health-export*.zip
+*.db
+*.db-wal
+*.db-shm
+samsung-health-*/
+agentos-private/
+jsons.zip
+samsunghealth*.zip
+DownloadPersonalData*.zip

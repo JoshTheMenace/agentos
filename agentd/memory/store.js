@@ -7,8 +7,10 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { HEALTH_SCHEMA, HEALTH_TABLES } from './health-schema.js';
 
 export const SOURCES = {
+  samsung_health: 'Samsung Health personal-data export (sleep, heart rate, HRV, stress, steps, exercise)',
   contacts: 'Android contacts (names, phone numbers, emails)',
   calendar: 'Android calendar events and attendees',
   calllog: 'Android call log',
@@ -64,6 +66,7 @@ export function open(path = process.env.MEMORY_DB || join(process.env.AGENTOS_HO
     CREATE TRIGGER IF NOT EXISTS event_ad AFTER DELETE ON event BEGIN DELETE FROM event_fts WHERE rowid=old.id; END;`);
   db.prepare(`INSERT OR IGNORE INTO meta VALUES('fts',?),('salt',?)`).run(db.fts, randomBytes(16).toString('hex'));
   db.salt = db.prepare(`SELECT v FROM meta WHERE k='salt'`).get().v;
+  db.exec(HEALTH_SCHEMA);
   db.me = entity(db, 'me', 'Me');
   return db;
 }
@@ -95,6 +98,7 @@ export function revoke(db, source, { actor = 'user', note } = {}) {
   const deleted = tx(db, () => {
     const n = { events: db.prepare('DELETE FROM event WHERE source=?').run(source).changes,
       aliases: db.prepare('DELETE FROM alias WHERE source=?').run(source).changes };
+    if (source === 'samsung_health') for (const table of HEALTH_TABLES) n[table] = db.prepare(`DELETE FROM ${table}`).run().changes;
     n.entities = gcEntities(db);
     appendConsent(db, { source, scope: active(db, source)?.scope || 'cloud', action: 'revoke', actor, note: note ?? JSON.stringify(n) });
     rebuildRelations(db);

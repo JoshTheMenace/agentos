@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Demo CLI for AgentOS memory. Prints JSON. Output is redacted (cloud view) unless --local is given.
+//   node cli.js import-samsung-health <folder>   node cli.js consent grant|revoke samsung_health (Mac → phone; --db selects local)
 //   node cli.js grant contacts [--scope local]     node cli.js revoke sms
 //   node cli.js ingest contacts|calendar|calllog|sms|notifications|pigeon [--limit N]
 //   node cli.js ingest whatsapp --file "WhatsApp Chat with Alex.txt" [--me "Josh"]
@@ -21,23 +22,32 @@ for (let i = 0; i < argv.length; i++) {
 const num = (v) => (v === undefined || v === true || isNaN(+v) ? v : +v);
 for (const k in flags) flags[k] = num(flags[k]);
 
+const [cmd, ...rest] = pos;
+const healthAction = cmd === 'import-samsung-health' ? 'import' : cmd === 'consent' && rest[1] === 'samsung_health' ? rest[0]
+  : ['grant', 'revoke'].includes(cmd) && rest[0] === 'samsung_health' ? cmd : null;
+if (healthAction && process.platform !== 'android' && !flags.db) {
+  try { console.log(JSON.stringify((await import('./samsung-remote.js')).remote(healthAction, { folder: rest[0], scope: flags.scope || 'cloud' }), null, 2)); }
+  catch (e) { console.error(e.message); process.exitCode = 1; }
+  process.exit(process.exitCode || 0);
+}
 const M = await import('./index.js');
 const S = await import('./store.js');
 const db = S.open(flags.db);
 const ctx = { db, actor: 'user:cli', cloud: !flags.local };
-const [cmd, ...rest] = pos;
 const out = (x) => console.log(JSON.stringify(x, null, 2));
 const tool = async (name, args) => {
   const t0 = performance.now(); const r = await M.call(name, args, ctx);
   if (flags.time) console.error(`${name}: ${(performance.now() - t0).toFixed(1)} ms`);
   out(r);
+  if (r.ok === false) process.exitCode = 1;
 };
 const { db: _, ...opts } = flags;
 
 switch (cmd) {
   case 'grant': await tool('consent_grant', { source: rest[0], ...(flags.scope && { scope: flags.scope }) }); break;
   case 'revoke': await tool('consent_revoke', { source: rest[0] }); break;
-  case 'consent': await tool('consent_list', {}); break;
+  case 'consent': await tool(rest.length ? `consent_${rest[0]}` : 'consent_list', rest.length ? { source: rest[1], ...(flags.scope && { scope: flags.scope }) } : {}); break;
+  case 'import-samsung-health': try { out(M.ingest('samsung_health', { folder: rest[0] }, ctx)); } catch (e) { out({ ok: false, error: e.message }); process.exitCode = 1; } break;
   case 'ledger': out(S.ledger(db)); break;
   case 'sync': { const C = await import('./connectors/index.js'); out(rest[0] ? C.sync(db, rest[0], { force: !!flags.force }) : C.syncAll(db, { force: !!flags.force })); break; }
   case 'ingest': try { out(M.ingest(rest[0], opts, ctx)); } catch (e) { out({ ok: false, error: e.message }); process.exitCode = 1; } break;
