@@ -11,6 +11,7 @@ import * as microapps from './apps.js';
 import { tools as appReads } from './app-reads.js';
 import { tools as notificationTools } from './notification-tools.js';
 import { TOOLS as DEEPMOD_TOOLS, redactSummary } from './deepmod-tools.js';
+import * as catchup from './catchup.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -162,6 +163,7 @@ for (const m of notificationTools) TOOLS[m.name] = m;
 for (const m of memory.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, memory: true };
 for (const m of context.ruleTools()) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true }; // reply rules
 for (const m of schedule.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, sched: true }; // schedule.js
+TOOLS.catch_up = { ...catchup.tool(), method: 'catch_up', run: catchup.call }; // catchup.js: "what did I miss?" in one local read
 for (const m of microapps.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, apps: true }; // apps.js (micro-apps)
 
 // Memory results: any text from other people (trusted:false) goes through the guard like screen text.
@@ -281,7 +283,7 @@ export async function runTool(name, args, ctx) {
     return { success: true, text: JSON.stringify(r) };
   }
   if (t.local) {
-    const r = await (t.apps ? microapps.call(name, args, ctx) : t.sched ? schedule.call(name, args, turn) : context.call(name, args));
+    const r = await (t.run ? t.run(args, ctx) : t.apps ? microapps.call(name, args, ctx) : t.sched ? schedule.call(name, args, turn) : context.call(name, args));
     ctx.emit({ type: 'tool.result', name, ok: r.ok !== false, reason: r.error, ms: Date.now() - t0 });
     return { success: r.ok !== false, text: JSON.stringify(r) };
   }

@@ -278,6 +278,9 @@ body{position:fixed;inset:0}
 .step .orb{width:8px;height:8px}
 .step .tag{margin-left:auto;padding:3px 8px;font-size:10.5px}
 .step.alert{color:#FF8A82}
+.catch{display:flex;flex-direction:column;gap:3px;padding:2px 0 8px;animation:rise .4s var(--soft) both}
+.crow{display:flex;align-items:center;gap:9px;min-width:0;padding:8px 11px;border-radius:12px;background:rgba(255,255,255,.06);font:inherit;font-size:13px;color:var(--l1);text-align:left;transition:transform .25s var(--spring)}
+.crow svg,.crow i{flex:none;color:var(--l2)}.crow i{width:6px;height:6px;border-radius:50%;background:var(--l2);margin:0 4px}.crow b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}.crow .s{flex:1;color:var(--l2);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}button.crow:active{transform:scale(.98);background:rgba(255,255,255,.1)}
 .ask{display:flex;align-items:center;gap:8px;height:46px;border-radius:999px;background:rgba(255,255,255,.1);padding:0 5px 0 16px;flex:none;margin-bottom:10px}
 .ask input{flex:1;font-size:15px;color:var(--l1);min-width:0}
 .ask input::placeholder{color:var(--l3)}

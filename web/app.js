@@ -644,6 +644,9 @@ app.picked = (url, kind) => {
 $('#askForm').onsubmit = (e) => { e.preventDefault(); const t = $('#askIn').value.trim(); $('#askIn').value = ''; hap('tick'); sendUser(t); };
 $('#shstop').onclick = () => { hap(); send({ type: 'stop' }); };
 on('text.delta', (m) => { dots?.remove(); dots = null; if (!aiMsg) body.append(aiMsg = el('div', 'msg ai')); aiMsg.textContent += m.text; if (S.home) S.home.text = aiMsg.textContent; scrollDown(); });
+on('catchup', (m) => { dots?.remove(); dots = null; aiMsg = null; const ICO = { chat: 'msg', cal: 'cal', spark: 'spark', shield: 'shield' }, list = el('div', 'catch'); // "What did I miss?" rows land before the spoken answer
+  list.append(...(m.cards || []).slice(0, 8).map((c) => { const r = el(c.goal ? 'button' : 'div', 'crow', `${ICO[c.icon] ? `<svg width="14" height="14"><use href="#i-${ICO[c.icon]}"/></svg>` : '<i></i>'}<b>${esc(c.title)}</b>${c.detail ? `<span class="s">${esc(c.detail)}</span>` : ''}`); if (c.goal) r.onclick = () => { hap('tick'); sendUser(c.goal); }; return r; }));
+  body.append(list); scrollDown(); });
 on('tool.request', (m) => {
   const a = m.args || {}, what = m.name === 'open_app' ? appName(a.pkg) : m.name === 'task.start' ? (a.apps || []).map(appName).join(', ') : a.text ? `“${short(a.text, 30)}”` : a.id != null ? `#${a.id}` : a.key || a.pkg || '';
   const s = el('div', 'step', `<span class="orb working"></span><span>${esc(toolName(m.name))} ${esc(what)}</span>`);
