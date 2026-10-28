@@ -20,7 +20,9 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 17 | Draft 5-slide deck + one-pager PDF (real numbers, A2 look) | Claude Fable | done (7f968d4, 78a3d0b, 5b4a80c; pitch/deck/, pitch/one-pager.pdf) |
 | 18 | UI polish pass 3: on-stage feel (motion, legibility, recordings) | Claude Fable | done (0e8b3b7) |
 | 19 | Integration deploy #1 + smoke test (all overnight work live together) | Claude Opus | done (agentd 7e01c9a live, ONE restart at 03:40:48, pid 24595 → 28442; APKs already matched HEAD; all 9 beats pass, Beacon tracker leg skipped; empty catch-up fix a36a04c + fb9abad prompt.js wait for the next restart; pitch/rehearsal/DEPLOY-NIGHT.md) |
-| 20 | Bug hunt round 2: reliability under stage conditions (repeats, memory pressure) | Claude Opus | running |
+| 20 | Bug hunt round 2: reliability under stage conditions | Claude Opus | done (4814e76 queued asks; 757636a offline probe 2.5 s, needs restart; Magisk logging off; BUGHUNT-NIGHT-2.md) |
+| 21 | Keyboard: suggestions arriving late in a batch + more latency | Claude Opus | running |
+| 22 | Pre-freeze review #2 (commits after edc95bb) | GPT-6 Astra | running (finish by 6:30) |
 | 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | done (2f7f170, 69ed541) |
 | 15 | Live tracker counter with company names (DEMO-WOW #7) + spoken "Done, in 7 seconds" | Claude Fable | done (11b2cd7; voice line NOT deployed, goes in #11) |
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
