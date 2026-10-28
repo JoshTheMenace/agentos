@@ -276,9 +276,9 @@ function personCard(db, c, id, cloud) {
 const hm = (t) => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00', '');
 const dayName = (t) => new Date(t).toLocaleDateString('en-US', { weekday: 'long' });
 
-function freeSlots(db, srcs, since, until, now) {
+export function freeSlots(db, srcs, since, until, now, instances) {
   const IN = srcs.map(() => '?').join(',');
-  const busy = db.prepare(`SELECT id, ts, coalesce(ts_end, ts + 3600000) te, title FROM event WHERE kind='calendar' AND source IN (${IN}) AND ts < ? AND coalesce(ts_end, ts+3600000) > ? ORDER BY ts`)
+  const busy = instances ?? db.prepare(`SELECT id, ts, coalesce(ts_end, ts + 3600000) te, title FROM event WHERE kind='calendar' AND source IN (${IN}) AND ts < ? AND coalesce(ts_end, ts+3600000) > ? ORDER BY ts`)
     .all(...srcs, until, since);
   const out = [];
   for (let d = day0(Math.max(since, now)); d < until; d = day0(d, 1)) { // setHours, not +24 h: DST days are 23 or 25 h long

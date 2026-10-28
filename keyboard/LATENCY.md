@@ -56,3 +56,41 @@ The model round trip is now nearly all of the remaining time; on a quiet network
 - The cloud round trip still dominates, and it varies with the hotspot and with other Codex users on the same account (the task bench ran at the same time as most of these numbers).
 - Privacy is unchanged: password and no-learning fields send nothing, redaction runs before anything leaves the keyboard, send-safety drafts send nothing, Prompt Guard lines are withheld, and the reused screen is the same redacted, guarded read.
 - The hedge sends a duplicate request only when the first one is slow (after 1.8 s, about a third of requests); each is ~1k tokens.
+
+## Calendar-aware replies (10-28, DEMO-WOW #8)
+
+The suggest path now recognizes availability, next-event, meal, flight/arrival, and named-event questions in the latest guarded conversation line. Empty drafts get three local replies, including a concrete calendar answer when known. Typed drafts keep the existing model and prefix behavior, with a small separate `trusted_facts` block. Rewrite, Fix, and Write are unchanged.
+
+### Correctness and privacy
+
+- **Use occurrences, not saved event rows, for availability.** On this phone, memory's Events table said Thursday was free 9 AM–5:30 PM. A read-only CalendarContract Instances query included recurring work and correctly narrowed it to **3–5 PM**. `memory/brain.js` now exports its existing `freeSlots` calculation and accepts these occurrences; its other callers retain their original behavior.
+- `suggest-calendar.js` uses the existing memory connector's supported `contentQuery` surface in a worker. It reads 15 days of visible calendar instances, normalizes all-day dates, excludes cancelled events, and respects events marked free. Refresh is every 45 s, with a strict 60 s freshness limit. No synchronous phone read runs on the typing path. No task lease is acquired or replaced: `calendar.find` requires a lease, so it cannot be the keyboard's default background reader. The facts helper still supports that API with a bounded deadline for callers without a snapshot.
+- Calendar cloud consent is checked before collecting the snapshot and on every facts lookup/cache hit. Revocation or local-only scope withholds facts. An unavailable/incomplete recurrence snapshot means **unknown availability**, never an empty calendar. Consented saved memory may still provide an event's title, time, and place.
+- Only relevant facts leave the phone for a drafted reply. Titles/places pass memory redaction, keyboard-style number/email redaction, and the injection guard; they remain labelled untrusted. Password/no-learning fields and guarded screen lines do not retrieve facts. Empty-draft calendar replies stay entirely local and never send/insert anything.
+- Landing time is used only for an explicitly labelled arrival event. A flight event's end time is never assumed to mean landing. There was no matching upcoming dinner or flight in the real-calendar test, so both produced checking replies instead of invented times.
+- `cache_ms` expires calendar-backed IME replies after 60 s (5 s for memory-only/unknown results). Ordinary conversation caching, debounce, screen reuse, prefix suggestions, model choice, and hedging are unchanged.
+
+### Measurement and validation
+
+Measured in an isolated on-phone agentd copy with the existing warmed Codex suggestion provider (`gpt-6-luna`, low, priority, 3 s hedge). Injected messages into our own Pigeon Alex chat, captured the actual `screen.read` layers using the keyboard's filtering, and replayed those contexts through `keyboard/bench/calendar.js`. Alternating before/after order reduces network drift. The benchmark measures **facts + suggestion computation**, not screen-read/debounce/UI time; the live service is reserved for the morning integration restart.
+
+The first experiment injected facts into every model call. The model sometimes ignored a known event, and could add several hundred milliseconds. The final empty-draft path constructs its replies locally; the existing model remains responsible for completing typed drafts.
+
+Final empty-draft run, 03:06 MDT, 3 interleaved pairs per question (15 before + 15 after):
+
+| Pigeon question | Before median | After median | After samples |
+|---|---:|---:|---|
+| What time is dinner? (unknown) | 2,055 ms | 10 ms | 17, 10, 5 ms |
+| When do you land? (unknown) | 1,557 ms | 4 ms | 4, 5, 3 ms |
+| What is next on your calendar? | 1,072 ms | 3 ms | 20, 3, 2 ms |
+| Are you free Thursday? | 1,891 ms | 4 ms | 17, 4, 3 ms |
+| Where is judging? | 1,681 ms | 4 ms | 69, 4, 3 ms |
+| **All five** | **1,681 ms** | **4 ms** | **2–69 ms** |
+
+Facts preparation alone: median **4.1 ms**, max **64.2 ms**, below the +150 ms budget. Examples: “Thursday 3 PM to 5 PM looks free.”; the next event at 7 AM; “At 250 E 200 S ste 320, Salt Lake City, UT 84111, USA.”; “I'll check my flight details.” No live events were added, edited, or deleted. The 1–2 s background CalendarContract read is outside the request path; before its first snapshot completes, availability stays unknown.
+
+Typed-draft run, 03:10 MDT, the same Thursday question with `before: "I'm "`, 4 interleaved pairs: before **1,592 ms median** (1,542 / 1,227 / 2,774 / 1,642); after **1,769 ms median** (1,601 / 1,937 / 1,224 / 3,115), **+177 ms**. Facts preparation was 45.4 / 32.0 / 2.6 / 10.7 ms. All completions kept the draft prefix; the grounded options included “I'm free Thursday, 3–5 PM.” This is near the approximate +150 ms target, with cloud variance still dominating. The deterministic empty-draft path has no cloud variance.
+
+Validation: `node --check` on every changed agentd file; 13 facts/reply tests plus 13 existing memory fixture tests; keyboard APK built and installed. Tests cover consent revocation, cache windows, recurrence, free events, no false free time from empty memory, redaction, injection, password/no-learning fields, cancellation/deadline, event details, explicit arrival vs flight end, and preserving typed drafts. The requested code-golf skill was not installed; the manual simplification pass shared question selection and replaced a filtered array with `find`.
+
+Deployment: the compatible keyboard APK is installed. Backend testing used `~/agentos/kb-calendar-agentd`; the live agentd was not restarted while other tracks were benchmarking. Morning integration must deploy `server.js`, `suggest-facts.js`, `suggest-calendar.js`, and `memory/brain.js` together, then restart once. Reproduction: copy `keyboard/bench/calendar.js` beside agentd's `config.js` as `kb-calendar.js`; run `node kb-calendar.js <Pigeon-context.json> 3` in that copy. Context is `{type:"suggest", mode:"reply", before:"", field:{pkg:"local.agentos.pigeon",inputType:1}, screen:[...guarded/redacted lines]}`; an array tests several conversations. Respect `scripts/withphone` for injection/capture/install, and release it before model benchmarking.

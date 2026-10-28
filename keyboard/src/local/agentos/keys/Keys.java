@@ -38,8 +38,8 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     private Agent agent;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final ExecutorService bg = Executors.newSingleThreadExecutor();
-    private final Map<String, List<String>> cache = new LinkedHashMap<String, List<String>>(32, .75f, true) {
-        @Override protected boolean removeEldestEntry(Map.Entry<String, List<String>> e) { return size() > 32; }
+    private final Map<String, Agent.Result> cache = new LinkedHashMap<String, Agent.Result>(32, .75f, true) {
+        @Override protected boolean removeEldestEntry(Map.Entry<String, Agent.Result> e) { return size() > 32; }
     };
     private final Runnable debounced = this::request;
 
@@ -321,7 +321,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
                 + (sc.secure ? " · secure screen" : "") + (!agent.hasPhone() ? " · field only" : "");
             final int redacted = red[0];
             List<String> hit;
-            synchronized (cache) { hit = cache.get(cacheKey); }
+            synchronized (cache) { Agent.Result r = cache.get(cacheKey); hit = r != null && android.os.SystemClock.elapsedRealtime() < r.expiresAt ? r.items : null; }
             if (hit != null) { final List<String> h = hit; ui.post(() -> { if (g == gen) { strip.setContext(ctxLabel + " · cached", Theme.GREEN); strip.setItems(h, true); if (mode == MODE_REPLY) shown = h; lat(why, t0, t1, t2, t3, t3, "cached"); } }); return; }
             ui.post(() -> { if (g == gen) strip.setContext(ctxLabel + " · thinking", Theme.AMBER); });
             Log.d(Agent.TAG, "context " + ctxLabel + " before=\"" + b + "\" screen=" + lines);
@@ -333,7 +333,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
                 Log.i(Agent.TAG, "suggest via " + r.how + " in " + r.ms + " ms: " + r.items);
                 String w0 = b.trim().split("\\s+")[0]; // Reply with a draft: the model sometimes answers the chat instead of finishing the draft; a tap would erase it
                 if (mode == MODE_REPLY && !w0.isEmpty()) r.items.removeIf(x -> !x.regionMatches(true, 0, w0, 0, w0.length()));
-                if (!r.items.isEmpty()) synchronized (cache) { cache.put(cacheKey, r.items); }
+                if (!r.items.isEmpty()) synchronized (cache) { cache.put(cacheKey, r); }
                 ui.post(() -> {
                     if (g != gen) return;
                     String label = r.flagged > 0 && sc.flagged == 0 ? ctxLabel + " · " + r.flagged + " flagged" : ctxLabel; // agentd's guard withheld lines

@@ -31,6 +31,8 @@ import { Codex } from './providers/codex.js';
 import { Claude } from './providers/claude.js';
 import { ClaudeCli, handleMcp } from './providers/claude-cli.js';
 import { Local, suggest as localSuggest } from './providers/local.js';
+import { createSuggestFacts, calendarReplies, FACTS_RULE } from './suggest-facts.js';
+import { calendarSnapshot } from './suggest-calendar.js';
 import { Router } from './providers/router.js';
 
 // claude: the Claude Code CLI if installed (subscription), else the Messages API with ANTHROPIC_API_KEY.
@@ -47,6 +49,7 @@ if (process.env.PROACTIVE === '1') proactive.init({ codex, rpc, publish: events.
 apps.init(codex, { publish: events.publish }); // micro-apps (apps.js): build_app writes ~/.agentos/apps, served below at GET /apps
 context.start(providers[cfg.provider], codex); // notification feed -> context block, memory, reply rules
 const memsync = connectors.start({ log }); // memory connectors: default grants, then whatever is due once a minute (see memory/SOURCES.md)
+const suggestFacts = createSuggestFacts({ db: memsync.db, rpc, calendar: calendarSnapshot(memsync.db) });
 if (process.env.MEMORY_V2 === '1' && process.env.MEMORY_LLM !== '0') { // LLM fact pass (memory/extract-llm.js) on Codex's warm thread: backfill once, then new events every 15 min, ≤ 10 calls a run, ≤ 40 a day
   const call = async (input) => { const t0 = Date.now(); const r = await codex.quick('facts', { model: cfg.suggestModel, effort: 'low', prompt: factsLLM.SYSTEM, schema: factsLLM.SCHEMA, rotate: 10 }, input, AbortSignal.timeout(120_000));
     return { text: JSON.stringify(r), tokens: (codex.lastUsage?.inputTokens || 0) + (codex.lastUsage?.outputTokens || 0), ms: Date.now() - t0 }; };
@@ -170,13 +173,19 @@ wss.on('connection', (ws, req) => {
       lines.push(g.label === 'benign' ? l : `[withheld by guard: likely prompt injection, score ${g.score}]`);
     }
     const write = m.type === 'write'; // "Write for me": {task, intent, lang} in, one text out (items:[text])
-    const input = JSON.stringify({ mode: m.mode || 'reply', ...(write && { task: String(m.task || 'write'), intent: String(m.intent || '').slice(0, 500), lang: m.lang }),
-      before: String(m.before || '').slice(-2000), after: String(m.after || '').slice(0, 500),
-      field: { pkg: m.field?.pkg, app: m.field?.app, hint: m.field?.hint }, untrusted_screen_data: { source_pkg: m.field?.pkg, trusted: false, lines } });
     const online = Object.values(networkInterfaces()).flat().some((x) => !x.internal && !x.address.startsWith('fe80')); // airplane mode: only lo + link-local
     const local = !write && (cfg.suggestProvider === 'local' || !online) && (m.mode || 'reply') === 'reply'; // the local prompt only writes replies
-    const tm = { guard: Date.now() - t0 }, timing = () => Object.entries(tm).map(([k, v]) => `${k}=${v}`).join(' '); // keyboard/LATENCY.md
-    try { reply({ items: write ? [await codex.write(input, abort.signal)] : (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal, tm))).slice(0, 3).map(String), timing: timing() }); }
+    const tm = { guard: Date.now() - t0 }, factsStart = Date.now();
+    const facts = await suggestFacts(m, lines, abort.signal).catch(() => null);
+    if (abort.signal.aborted) return;
+    tm.facts = Date.now() - factsStart;
+    const concrete = calendarReplies(facts, m, lines), cacheMs = facts?.source === 'saved calendar' ? 5000 : 60_000;
+    if (concrete) return reply({ items: concrete, cache_ms: cacheMs, timing: `guard=${tm.guard} facts=${tm.facts} calendar=local` });
+    const input = (facts ? FACTS_RULE + '\n' : '') + JSON.stringify({ mode: m.mode || 'reply', ...(facts && { trusted_facts: facts }), ...(write && { task: String(m.task || 'write'), intent: String(m.intent || '').slice(0, 500), lang: m.lang }),
+      before: String(m.before || '').slice(-2000), after: String(m.after || '').slice(0, 500),
+      field: { pkg: m.field?.pkg, app: m.field?.app, hint: m.field?.hint }, untrusted_screen_data: { source_pkg: m.field?.pkg, trusted: false, lines } });
+    const timing = () => Object.entries(tm).map(([k, v]) => `${k}=${v}`).join(' '); // keyboard/LATENCY.md
+    try { reply({ items: write ? [await codex.write(input, abort.signal)] : (await (local ? localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal) : codex.suggest(input, abort.signal, tm))).slice(0, 3).map(String), ...(facts && { cache_ms: cacheMs }), timing: timing() }); }
     catch (e) { // Codex failed (offline, airplane mode): the on-phone model, if it's running, still gives replies
       const off = !abort.signal.aborted && !write && !local && (m.mode || 'reply') === 'reply' && await localSuggest([...lines, String(m.before || '')].join('\n'), abort.signal).catch(() => null);
       reply(off ? { items: off.slice(0, 3).map(String), timing: `${timing()} local` } : { items: [], error: e.message });
