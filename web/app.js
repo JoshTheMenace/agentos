@@ -271,7 +271,7 @@ const pager = $('#pager'); let page = 0, W = innerWidth;
 function go(p) {
   page = Math.max(0, Math.min(2, p)); pager.classList.remove('drag'); pager.style.transform = `translateX(${-page * W}px)`;
   $$('#dots i').forEach((d, i) => d.classList.toggle('on', i === page));
-  if (page === 1) renderCenter(); if (page === 2) loadMemory();
+  if (page === 1) { renderCenter(); loadTrackers(); } if (page === 2) loadMemory();
 }
 let T = null;
 pager.addEventListener('touchstart', (e) => { T = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), axis: null }; }, { passive: true });
@@ -350,13 +350,13 @@ function renderCenter() {
   const nb = (S.trackers || []).reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0);
   $('#blockNote').textContent = S.trackers ? `${nb} blocked` : '';
   // Protected today: the security story in three calm numbers, from the real audit + tracker data (no pop-ups, just a tally).
-  const scams = day.filter((e) => e.tool === 'guard.flag').length, stopped = day.filter((e) => e.tool !== 'guard.flag' && /blocked|denied/.test(e.decision || '')).length;
+  const ads = S.adsBlocked || 0, stopped = day.filter((e) => e.tool !== 'guard.flag' && /blocked|denied/.test(e.decision || '')).length;
   const appr = day.filter((e) => e.decision === 'approved'), auto = appr.filter((e) => /reviewer|policy/.test(e.approver || e.channel || '')).length;
   const stat = (n, l, c) => `<div class="stat ${c}"><b>${n}</b><span>${l}</span></div>`;
-  $('#stats').innerHTML = stat(nb, nb === 1 ? 'tracker blocked' : 'trackers blocked', 'g') + stat(scams, scams === 1 ? 'scam caught' : 'scams caught', 'g') + stat(stopped, stopped === 1 ? 'action stopped' : 'actions stopped', 'g') + stat(appr.length, appr.length === 1 ? 'approval' : 'approvals' + (auto ? ` · ${auto} auto` : ''), 'b');
-  $('#shieldNote').textContent = nb + scams + stopped + appr.length ? '' : 'all quiet';
+  $('#stats').innerHTML = stat(nb, nb === 1 ? 'tracker blocked' : 'trackers blocked', 'g') + stat(ads, 'ads blocked', 'g') + stat(stopped, stopped === 1 ? 'action stopped' : 'actions stopped', 'g') + stat(appr.length, appr.length === 1 ? 'approval' : 'approvals' + (auto ? ` · ${auto} auto` : ''), 'b');
+  $('#shieldNote').textContent = nb + ads + stopped + appr.length ? '' : 'all quiet';
 }
-async function loadTrackers() { let r = await phone('trackers.list', {}); if (!r?.apps) r = await rpc('trackers.list', {}); if (r?.apps) S.trackers = r.apps; renderCenter(); } // owner line first: works without agentd
+async function loadTrackers() { let r = await phone('trackers.list', {}); if (!r?.apps) r = await rpc('trackers.list', {}); if (r?.apps) { S.trackers = r.apps; S.adsBlocked = r.blocked_requests; } renderCenter(); } // owner line first: works without agentd
 function taskRow(t) {
   const r = el('div', 'rowi ' + (S.pending ? 'approval' : 'working'));
   const pct = Math.min(100, Math.round(100 * (t.steps || 0) / (t.max_steps || 40))), last = S.audit.filter((e) => e.task === t.task_id && !/^task\./.test(e.tool)).pop();

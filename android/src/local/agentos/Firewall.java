@@ -53,6 +53,15 @@ final class Firewall {
         return new JSONObject().put("ok", true).put("chain", CHAIN).put("rules", rules);
     }
 
+    /** Connections our name blocks have refused so far (iptables packet counters on the tracker REJECT rules; reset at reboot). */
+    static long blockedRequests() throws java.io.IOException {
+        long n = 0;
+        for (String t : IPT)
+            for (String line : Root.run(t + " -w -L " + CHAIN + " -v -n -x").split("\n"))
+                if (line.contains("STRING match") && line.contains("REJECT")) try { n += Long.parseLong(line.trim().split("\\s+")[0]); } catch (NumberFormatException ignored) {}
+        return n;
+    }
+
     /**
      * block, no domains: block all traffic. block + domains: block only those. allow, no domains: remove our rules
      * (back to normal). allow + domains: allow only those, block the rest.

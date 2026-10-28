@@ -189,7 +189,8 @@ final class Trackers {
             if (a != null && a.getJSONArray("trackers").length() > 0) apps.add(a);
         }
         apps.sort((a, b) -> b.optJSONArray("trackers").length() - a.optJSONArray("trackers").length());
-        return new JSONObject().put("ok", true).put("apps", new JSONArray(apps)).put("list_size", LIST.size());
+        return new JSONObject().put("ok", true).put("apps", new JSONArray(apps)).put("list_size", LIST.size())
+                .put("blocked_requests", Firewall.blockedRequests());
     }
 
     /**
