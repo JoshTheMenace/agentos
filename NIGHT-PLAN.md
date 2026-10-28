@@ -21,7 +21,7 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | S3 | Deep-mod implementation on our own apps (LAST; may need Zygisk/reboot) | GPT-6.1 Sol | queued, last |
 
 ## Oversight
-- `scripts/night-watch.py` (read-only) runs every 20 min from the orchestrator (:07/:27/:47). It flags real-app sends/posts/replies, calendar adds/edits/deletes or shrinkage (baseline 1780 events at 01:03), calls, firewall/vault/plugin/auto-reply changes. Alerts accumulate in `/tmp/night-watch/alerts.log`.
+- `scripts/night-watch.py` (read-only) runs every 40 min from the orchestrator. It flags real-app sends/posts/replies, calendar adds/edits/deletes or shrinkage (baseline 1780 events at 01:03), calls, firewall/vault/plugin/auto-reply changes. Alerts accumulate in `/tmp/night-watch/alerts.log`.
 - All children have hard limits: real apps are read-only, outward actions only in Pigeon/Beacon, test calendar items only, deleted by exact id.
 
 ## Incidents
