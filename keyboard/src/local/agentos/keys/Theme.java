@@ -65,6 +65,10 @@ final class Theme {
     static final float CTX_TEXT = 11;                           // the detail line shown on dot tap
     static final float MODE_TEXT = 11, MODE_H = 22, MODE_PAD_X = 10;
     static final int DETAIL_MS = 2200;                          // how long the detail line stays
+    // ---- readable mode: when three cells would cut a suggestion short, a glass panel (A2 `glass` layer) opens above the row ----
+    static final int GLASS_HI = 0x1FFFFFFF, GLASS_LO = 0x0FFFFFFF, GLASS_RING = 0x24FFFFFF, HAIR = 0x17FFFFFF;
+    static final float PANEL_X = 8, PANEL_Y = 6, PANEL_PAD = 4, PANEL_R = 18, ROW_X = 14, ROW_Y = 10, ROW_TEXT = 15, ROW_R = 12;
+    static final int ROW_LINES = 3, PANEL_IN = 380, PANEL_OUT = 180, LONG_PRESS = 380, SWIPE = 28; // ms, ms, ms, dp
 
     // ---- font ----
     static final String FONT_ASSET = null;       // A2 uses SF/Inter; the system sans-serif is the closest on-device match. "manrope.ttf" for A1.

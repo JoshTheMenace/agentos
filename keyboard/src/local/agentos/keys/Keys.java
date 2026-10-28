@@ -97,7 +97,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
         kb.setEnter(enterAction == EditorInfo.IME_ACTION_NONE ? "return" : label, enterAction != EditorInfo.IME_ACTION_NONE);
         kb.setPreviews(!password);
         kb.setShift(autoCap(before(3)));
-        strip.setMode(mode); strip.setActions(null, null); strip.setNotice(null);
+        strip.setMode(mode); strip.setActions(null, null); strip.setNotice(null); strip.collapse();
         if (writer != null) writer.hide();
         lastKey = ""; lastScreen = null; shown = new ArrayList<>();
         if (privateField) {
