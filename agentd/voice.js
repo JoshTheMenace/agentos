@@ -39,7 +39,6 @@ const DESK_NOTE = 'You are on the user\'s phone but cannot act on it or keep tim
 // Backstop: even so, GPT Live often keeps timers to itself. If the user's own words ask for one and no delegation came
 // within 2.5 s, agentd hands it off itself (same #delegate path).
 const PHONE_REQUEST = /\b(phone|battery|charging|timers?|alarms?|remind(?:er)?s?|notifications?|contacts?|calendar|apps?|messages?|texts?|emails?|screen|flashlight|brightness|volume|wi-?fi|bluetooth|settings?|trackers?|open|launch|reply|send|schedule|set)\b|how(?:'s| is) (?:it|that) going|what(?:'s| is) running/i;
-const normalized = (text) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
 const BACKSTOP = /\b(timers?|alarms?|remind(er)?s?)\b/i;
 
 // Vision (cfg.voiceVision, research/LIVE-VISION.md). GPT Live can't take images on our ChatGPT/v3 path (its client events
@@ -91,7 +90,7 @@ export function route(text, hasTasks = true, vision = false) {
 
 // One voice session per WebSocket connection. send(m) talks to that UI.
 export class Voice {
-  #codex; #send; #thread = null; #seen = new Set(); #spoken = new Set(); #off = []; #handedAt = 0; #camera = false; #frame = null; #asked = 0; #lookAt = 0; #generation = 0; #statusAt = 0; #fallback = new Map();
+  #codex; #send; #thread = null; #seen = new Set(); #spoken = new Set(); #off = []; #handedAt = 0; #camera = false; #frame = null; #asked = 0; #lookAt = 0; #generation = 0; #statusAt = 0; #clientHandoffs = false;
   constructor(codex, send) {
     this.#codex = codex; this.#send = send;
     this.#off.push(tasks.onUpdate((t, why) => this.#onTask(t, why)));
@@ -104,7 +103,7 @@ export class Voice {
 
   handle(msg) {
     switch (msg.type) {
-      case 'voice.start': return this.#start(String(msg.sdp || ''));
+      case 'voice.start': return this.#start(String(msg.sdp || ''), !!msg.client_handoffs);
       case 'voice.stop': return this.close();
       case 'voice.say': return this.say(String(msg.text || ''));
       case 'voice.delegate': return this.#delegate(String(msg.item_id), String(msg.text || ''), msg.handoff_id, msg.turn_id); // page saw delegation.created first
@@ -122,9 +121,9 @@ export class Voice {
     }
   }
 
-  async #start(sdp) {
+  async #start(sdp, clientHandoffs) {
     const generation = ++this.#generation, previous = this.#thread;
-    this.#thread = null; this.#seen.clear(); this.#fallback.clear();
+    this.#thread = null; this.#seen.clear(); this.#clientHandoffs = clientHandoffs;
     if (previous) await this.#codex.voiceStop(previous).catch(() => {});
     if (generation !== this.#generation) return;
     const t0 = Date.now();
@@ -145,11 +144,11 @@ export class Voice {
     else if (method === 'thread/realtime/transcript/done') {
       this.#send({ type: 'voice.transcript', role: p.role, text: p.text, final: true });
       if (p.role === 'user') { // the user's words only, never the voice model's
-        this.#approvalAnswer(p.text); this.#backstop(p.text); this.#asked = Date.now();
+        this.#approvalAnswer(p.text); if (!this.#clientHandoffs) this.#backstop(p.text); this.#asked = Date.now();
         if (cfg.voiceVision && !this.#camera && LOOK.test(p.text)) this.#lookOnce(p.text, Date.now()); // GPT Live rarely hands off "help me answer this"
       }
     }
-    else if (method === 'thread/realtime/itemAdded' && p.item?.type === 'handoff_request') this.#delegate(p.item.item_id || p.item.handoff_id, p.item.input_transcript, p.item.handoff_id);
+    else if (!this.#clientHandoffs && method === 'thread/realtime/itemAdded' && p.item?.type === 'handoff_request') this.#delegate(p.item.item_id || p.item.handoff_id, p.item.input_transcript, p.item.handoff_id);
     else if (method === 'thread/realtime/error') this.#send({ type: 'voice.error', message: p.message ?? JSON.stringify(p) });
     else if (method === 'thread/realtime/closed') { this.#thread = null; this.#send({ type: 'voice.closed', reason: p.reason }); }
   }
@@ -165,7 +164,6 @@ export class Voice {
     if (!text) return;
     const ids = [itemId, handoffId, turnId].filter(Boolean), seen = ids.some((id) => this.#seen.has(id));
     if (seen) { ids.forEach((id) => this.#seen.add(id)); return; } // attach late aliases to an already-started turn
-    if (!turnId && Date.now() - (this.#fallback.get(normalized(text)) || 0) < 15000) return;
     ids.forEach((id) => this.#seen.add(id));
     if (BACKSTOP.test(text)) this.#handedAt = Date.now(); // the model handed this kind off itself
     if (this.#frame && Date.now() - this.#frame.at < (this.#camera ? 15_000 : 120_000) && CAMERA_Q.test(text)) // about the picture: not a task
@@ -232,12 +230,11 @@ export class Voice {
   // A final user transcript arrives on the media channel even when GPT Live says "On it" without a handoff.
   // Give the model 600 ms, then use the same desk path. Its turn id also dedupes a late model handoff.
   #heard(text, turnId) {
-    if (!turnId || this.#seen.has(turnId) || !PHONE_REQUEST.test(text)) return;
+    if (!this.#clientHandoffs || !turnId || this.#seen.has(turnId) || !PHONE_REQUEST.test(text)) return;
     const generation = this.#generation;
     setTimeout(() => {
       if (generation !== this.#generation || !this.#thread || this.#seen.has(turnId)) return;
       this.#delegate(`heard-${turnId}`, text, null, turnId);
-      this.#fallback.set(normalized(text), Date.now());
     }, 600);
   }
 

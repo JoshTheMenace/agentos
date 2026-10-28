@@ -16,7 +16,7 @@ const hooks = registerHooks({ resolve(specifier, context, next) {
 } });
 const { Voice } = await import('../../agentd/voice.js');
 hooks.deregister();
-function fixture() {
+function fixture(direct = true) {
   const starts = [], stopped = [], sent = [], said = [], notes = [];
   const codex = {
     voiceStart: (_, on) => new Promise((resolve) => starts.push({ on, resolve })),
@@ -25,7 +25,7 @@ function fixture() {
     voiceText: async (_, text) => { notes.push(text); },
   };
   const voice = new Voice(codex, (m) => sent.push(m));
-  const start = async (id) => { const p = voice.handle({ type: 'voice.start', sdp: 'offer' }); await new Promise(setImmediate); starts.at(-1).resolve({ threadId: id, sdp: 'answer' }); await p; };
+  const start = async (id) => { const p = voice.handle({ type: 'voice.start', client_handoffs: direct, sdp: 'offer' }); await new Promise(setImmediate); starts.at(-1).resolve({ threadId: id, sdp: 'answer' }); await p; };
   return { voice, starts, stopped, sent, said, notes, start };
 }
 test('closing during setup stops the late session and ignores its events', async () => {
@@ -84,7 +84,14 @@ test('a sideband report after a fallback cannot swallow a new repeated user turn
   const f = fixture(); state.tasks = []; await f.start('repeated');
   f.voice.handle({ type: 'voice.heard', turn_id: 'turn1', text: 'Read the phone battery' });
   t.mock.timers.tick(600); assert.equal(state.tasks.length, 1);
-  f.starts[0].on({ method: 'thread/realtime/itemAdded', params: { item: { type: 'handoff_request', handoff_id: 'handoff_2', input_transcript: 'Read the phone battery' } } });
+  f.starts[0].on({ method: 'thread/realtime/itemAdded', params: { item: { type: 'handoff_request', handoff_id: 'handoff_2', input_transcript: 'Check how much charge is left' } } });
+  assert.equal(state.tasks.length, 1);
   await f.voice.handle({ type: 'voice.delegate', item_id: 'item2', handoff_id: 'handoff_2', turn_id: 'turn2', text: 'Read the phone battery' });
   assert.equal(state.tasks.length, 2); f.voice.dispose();
+});
+test('legacy clients still receive one sideband handoff', async () => {
+  const f = fixture(false); state.tasks = []; await f.start('legacy');
+  f.starts[0].on({ method: 'thread/realtime/itemAdded', params: { item: { type: 'handoff_request', handoff_id: 'handoff_1', input_transcript: 'Read the battery' } } });
+  await f.voice.handle({ type: 'voice.delegate', item_id: 'item1', handoff_id: 'handoff_1', text: 'Read the battery' });
+  assert.equal(state.tasks.length, 1); f.voice.dispose();
 });

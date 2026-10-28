@@ -53,7 +53,7 @@ async function start() {
   await new Promise((ok) => { setTimeout(ok, 500); // host candidates are enough (the answer is ice-lite); don't wait for slow interfaces
     pc.onicegatheringstatechange = () => pc.iceGatheringState === 'complete' && ok(); });
   out(`offer ready +${now() - t}ms`);
-  ws.send(JSON.stringify({ type: 'voice.start', sdp: pc.localDescription.sdp }));
+  ws.send(JSON.stringify({ type: 'voice.start', client_handoffs: true, sdp: pc.localDescription.sdp }));
 }
 
 // Latency: end of mic speech -> first loud sample of the reply.

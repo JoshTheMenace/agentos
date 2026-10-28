@@ -703,7 +703,7 @@ async function voiceStart() {
     pc.ontrack = (e) => { $('#spk').srcObject = e.streams[0]; };
     await pc.setLocalDescription(await pc.createOffer());
     await new Promise((ok) => { setTimeout(ok, 500); pc.onicegatheringstatechange = () => pc.iceGatheringState === 'complete' && ok(); });
-    if (epoch === voiceEpoch) send({ type: 'voice.start', sdp: pc.localDescription.sdp });
+    if (epoch === voiceEpoch) send({ type: 'voice.start', client_handoffs: true, sdp: pc.localDescription.sdp });
   } catch (e) { if (epoch === voiceEpoch) { voiceStop(); V.state('Mic unavailable'); } }
 }
 function voiceDrop() { clearTimeout(voiceIdle); if (pc) { send({ type: 'voice.stop' }); pc.close(); pc = null; } }
