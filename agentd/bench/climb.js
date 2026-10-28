@@ -33,8 +33,12 @@ const CANDIDATES = {
   oneAct: { append: '- Plan for the fewest calls: after open_app, put every remaining step you can already see into ONE act call (tap, type, tap Search/Send, tap the result). Never split steps into separate calls when one act can do them.' },
   // Shorter final replies (fewer output tokens on the last call).
   terse: { append: '- Final replies: one short sentence, no lists, no follow-up offers.' },
+  // Round 3: one type step instead of tapping an on-screen keypad key by key (each tap costs ~0.7 s on the phone).
+  typeKeys: { append: '- To enter numbers or text, type into the app\'s field in one type step (e.g. "234*17" into Calculator\'s display) instead of tapping keypad keys one by one; then tap the button that finishes it (=, Search, Send).' },
   // Round 3: answer from what the screen already shows (a chat list's preview line) instead of opening the item.
   visible: { append: '- If the screen you already have answers the question (a list row\'s preview, a label, a number), answer from it at once; don\'t open the item to check.' },
+  // Round 3: notifications are already in <phone_context>; don't spend a call on notifications_list for a summary.
+  ctx: { append: '- Questions about notifications or messages: answer from <phone_context> when it lists them; call notifications_list only if you need more than it shows.' },
   // Few-shot: a worked example of the 2-call shape.
   fewShot: { append: '- Example. User: "Use Calculator to work out 12 times 3." → open_app com.google.android.calculator → act [tap 1, tap 2, tap ×, tap 3, tap =] → reply "12 × 3 = 36." Example. User: "Text Sam I\'m here" in a chat app → open_app → act [tap the chat, type the message into the box, tap Send] with done "Sent." when the call can finish.' },
 };

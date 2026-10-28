@@ -96,3 +96,39 @@ What is phone-specific today:
 - **Lease.** Callers other than Termux (adb/Mac) never get the "own request = grant" path. The bench already turns the lease card off (`require_user_lease:false`), so it still works. Unlock: the broker refuses adb callers on a locked screen; settle.js wakes and swipes.
 - **Apps and package names.** Tasks assume `com.google.android.deskclock`, `com.google.android.calculator`, Chrome, and Pigeon (`demo-apps/`). AOSP images ship `com.android.deskclock` and `com.android.calculator2`: install the Google apps or edit `TASKS`.
 - **Numbers.** The emulator uses the Mac's network (no hotspot) and a faster CPU, so its times aren't comparable with the phone's. Compare variants on the same machine only.
+
+# Round 3 (2026-10-28 night, Moto G, real phone)
+
+## Bench (new task set, `node bench/bench.js --tasks r3`)
+Founder limits for tonight: read-only in real apps; changes only to the torch (turned back off) and our own Pigeon/Beacon; **no task may delete anything, send anything or raise an approval card**. So the round-1 tasks that wiped Clock (`pm clear`) or sent replies are gone, and Calculator is reset with the CLEAR key instead of `pm clear`.
+
+| Task | What it exercises |
+|---|---|
+| pigeon: "Open Pigeon and tell me Alex's last message." | UI read in our app (open_app → answer) |
+| beacon: "Open Beacon and tell me the uid it shows." | UI read in our app |
+| torch: "Turn on the flashlight." | direct API (`phone_settings`) |
+| calendar: "When is the hackathon judging?" | memory/context, or `find_events` (read) |
+| notifs: "Summarize my notifications in one sentence." | notifications (answer is stored only as its length) |
+| calc: "Use the Calculator app to work out 234 times 17." | UI driving with a multi-step `act` |
+
+Harness changes: the lock (same as `scripts/withphone`, pid inside) is held per task and released for 10 s between tasks so other agents interleave; `lockWait` per row marks runs that queued behind someone else. `bench/snap.sh` deploys the bench agentd from a clean HEAD snapshot (the worktree is shared, and copying it once crashed the bench on another agent's uncommitted import). `bench/ping.js` measures the model alone ("Say ok", no phone actions). `turn.done` now carries `prep` (agentd time before the model sees the request).
+
+## What the night's numbers say
+- **Network-affected window, 01:29–02:15:** the phone kept dropping Wi-Fi (the hotspot, then home Wi-Fi). Model calls then took 5–30 s and app-server kept reconnecting. Nothing below is based on runs from that window (r3-smoke, r3-base and the first pings are kept only as raw rows). `bench/usb-net.js` gives the bench Codex the Mac's internet over USB (`adb reverse`); `deploy/codex-bench.sh` puts the bench Codex on its own proxy port 18081, so this never touches the live agentd's 18080.
+- **Network path, once Wi-Fi was back (03:00, 3 interleaved rounds × 4 pings, 17.1k-token prompt):** phone Wi-Fi + android-connect-proxy, median per round 2.65 / 3.11 / 2.46 s; Mac over USB 2.43 / 3.18 / 2.38 s. No real difference: the proxy and Wi-Fi aren't a lever while they're up.
+- **agentd overhead is small:** `prep` (context block: notifications, memory lines, guard) 30–400 ms, ~1 s on the first request after a restart. thread/start per request ~0.2 s, except the first after an app-server start (~4 s, the model connection's warm-up; the keyboard track's `warmSuggest()` warms that connection at start).
+- **Where a task's time goes now (r3ab-base, terra):** the first model call (to the first tool call) is 4.5–8.7 s (median 5.4 s) on a ~17k-token prompt; later calls are short. Phone side: cold `open_app` of Pigeon/Beacon 1.6–3.4 s, `phone_settings` ~0.9 s, each Calculator key tap ~0.73 s (7–9 taps = 5–7 s).
+- Prompt grew from ~13.4k (round 2) to ~17.1k tokens with tonight's new tools (81 tools ≈ 8.9k tokens of schemas).
+
+## Models and plugins mode (`climb.js --ab base,luna56,luna6,reserve,plugins --rounds 2 --prefix r3ab`, 03:10–03:40, all 12/12 each)
+The catalog on the phone (models_cache.json, 10-28): gpt-6.1-sol, gpt-6-astra, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, gpt-5.6-sol/terra/luna, and hidden `gpt-reserve` ("Fast and affordable agentic coding model"). Every listed one offers the priority (Fast) tier; `low` is still the lowest effort.
+
+| Variant | Sum of per-task medians | Success | First call (median, p25–p75) | 1st-call tokens |
+|---|---|---|---|---|
+| base (gpt-6.1-terra, all tools) | 44.6 s | 12/12 | 5.4 s (4.5–8.7) | 17.1k |
+| gpt-5.6-luna | 43.0 s | 12/12 | 5.7 s (4.1–8.7) | 15.0k |
+| gpt-6-luna | 47.7 s | 12/12 | 6.2 s (4.9–7.7) | 17.1k |
+| gpt-reserve | 41.0 s (−8 %) | 12/12 | 6.0 s (4.0–7.4) | 15.0k |
+| AGENTD_TOOLS=plugins | 46.1 s | 12/12 | 5.7 s (4.0–6.8) | 10.0–12.4k |
+
+All inside the noise (the same call ranges 1–18 s between runs); none beats terra by the 5 % KEEP bar on per-call time, and round 1 saw luna fail harder UI tasks. **Kept terra and `all`.** The one real difference was behavioural: gpt-5.6-luna and gpt-reserve typed `234*17` into Calculator's display in one step instead of tapping 9 keys, which is what the next experiment turns into a prompt line.
