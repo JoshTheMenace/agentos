@@ -23,7 +23,7 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
 | 10 | Auto on-device fallback when offline (DEMO-WOW #5) | GPT-6.1 Sol | done (b516bb5, deployed; warm offline ask 2.3 s, cold 24 s, so keep llama warm before stage; label handoff in POLISH-TODO) |
 | 14 | Review all overnight commits (security + crash) | GPT-6 Astra | done (edc95bb: reviewer rechecks live flags after grading [high]; voice.heard routing [medium]; REVIEW-NIGHT.md) |
-| 16 | Stage preflight script (check + safe --fix) | GPT-6 Astra | running |
+| 16 | Stage preflight script (check + safe --fix) | GPT-6 Astra | done (3467473; `scripts/preflight.sh [--fix warm,ime,home,…]`) |
 | 12 | Keyboard replies that know your calendar (DEMO-WOW #8) | GPT-6 Astra | running |
 | 11 | Morning integration deploy (~8 AM): push all agentd changes incl. reviewer, one restart, smoke test every demo beat, update STATUS.md | Claude | queued (after others finish) |
 | S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra | done (3430c2e; navy/gold + promoted rows removed, vanilla pixel-identical) |
