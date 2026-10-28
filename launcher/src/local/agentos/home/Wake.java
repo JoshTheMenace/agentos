@@ -191,7 +191,8 @@ public class Wake extends Service {
     Log.i(TAG, "wake word");
     release(); voice(true); setState("paused", "voice");
     chime();
-    startActivity(new Intent(this, Home.class).setAction(WAKE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    if (Home.front) startActivity(new Intent(this, Home.class).setAction(WAKE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    else Bar.open(this, true); // inside another app: the assistant bar opens in place, listening, instead of jumping Home
   }
   /** Two soft sine notes (E6 then A6, 90 ms each, quick fade), at assistant-sonification volume. */
   static void chime() {

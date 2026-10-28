@@ -63,8 +63,8 @@ import org.json.JSONObject;
 public class Home extends Activity {
   static final String TAG = "AgentOSHome", ORIGIN = "https://agentos.home", DEV_FLAG = "/data/local/tmp/agentos-home.dev";
   WebView web; PermissionRequest pendingMic; String devOrigin; boolean wakeOnLoad;
-  final Map<String, byte[]> icons = new HashMap<>();
   float density; int insTop, insBottom, insIme; boolean imeAnim; // imeAnim: the keyboard is sliding; its frames drive insIme
+  static volatile boolean front; // Home is the resumed activity (Wake: wake word -> voice mode here, else the assistant bar over the app)
 
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
@@ -135,9 +135,11 @@ public class Home extends Activity {
     super.onNewIntent(i); js(Wake.WAKE.equals(i.getAction()) ? "window.app&&app.wake&&app.wake()" : "window.app&&app.home&&app.home()");
   }
   @Override protected void onResume() { // also (re)starts the wake word if it's on: we're in front, so the mic is allowed
-    super.onResume(); js("window.app&&app.resume&&app.resume()");
+    super.onResume(); front = true; js("window.app&&app.resume&&app.resume()");
     if (Wake.self == null && Wake.prefs(this).getBoolean("on", false)) Wake.set(this, true);
+    Bar.home(this, true); // the assistant bar (Bar.java): no edge handle on Home, and an open bar closes
   }
+  @Override protected void onPause() { super.onPause(); front = false; Bar.home(this, false); }
   @Override protected void onDestroy() { Wake.listener = null; super.onDestroy(); }
   @Override public void onBackPressed() { js("window.app&&app.back&&app.back()"); } // never leave home
   // Attach (＋): Camera = the system camera writing into our private shot file; Photos = Android's photo picker (no storage
@@ -194,25 +196,27 @@ public class Home extends Activity {
   }
 
   // Bundled page: https://agentos.home/<file> -> assets/web/<file>; https://agentos.home/icon/<pkg> -> the app icon as PNG.
-  WebResourceResponse serve(Uri u) {
+  WebResourceResponse serve(Uri u) { return serve(this, u); }
+  static WebResourceResponse serve(android.content.Context c, Uri u) { // also the assistant bar's page (Bar.java)
     if (!ORIGIN.equals(u.getScheme() + "://" + u.getHost())) return null;
     String path = u.getPath() == null ? "" : u.getPath().substring(1);
     try {
-      if (path.startsWith("icon/")) return new WebResourceResponse("image/png", null, new ByteArrayInputStream(icon(path.substring(5))));
+      if (path.startsWith("icon/")) return new WebResourceResponse("image/png", null, new ByteArrayInputStream(icon(c, path.substring(5))));
       String mime = path.endsWith(".html") ? "text/html" : path.endsWith(".css") ? "text/css" : path.endsWith(".js") ? "text/javascript"
           : path.endsWith(".woff2") ? "font/woff2" : path.endsWith(".svg") ? "image/svg+xml" : "application/octet-stream";
-      return new WebResourceResponse(mime, "utf-8", getAssets().open("web/" + path));
+      return new WebResourceResponse(mime, "utf-8", c.getAssets().open("web/" + path));
     } catch (Exception e) { return new WebResourceResponse("text/plain", "utf-8", 404, "not found", Collections.emptyMap(), new ByteArrayInputStream(new byte[0])); }
   }
 
-  byte[] icon(String pkg) throws Exception {
+  static final Map<String, byte[]> icons = new HashMap<>();
+  static byte[] icon(android.content.Context c, String pkg) throws Exception {
     synchronized (icons) {
       byte[] b = icons.get(pkg);
       if (b != null) return b;
-      Drawable d = getPackageManager().getApplicationIcon(pkg);
-      int sz = Math.round(60 * density);
+      Drawable d = c.getPackageManager().getApplicationIcon(pkg);
+      int sz = Math.round(60 * c.getResources().getDisplayMetrics().density);
       Bitmap bm = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888);
-      Canvas c = new Canvas(bm); d.setBounds(0, 0, sz, sz); d.draw(c);
+      Canvas cv = new Canvas(bm); d.setBounds(0, 0, sz, sz); d.draw(cv);
       ByteArrayOutputStream o = new ByteArrayOutputStream(); bm.compress(Bitmap.CompressFormat.PNG, 90, o); bm.recycle();
       icons.put(pkg, b = o.toByteArray());
       return b;
@@ -220,7 +224,7 @@ public class Home extends Activity {
   }
 
   String file(String name) { return readFile(this, name); }
-  static String readFile(Activity a, String name) { try { return new String(Files.readAllBytes(new File(a.getFilesDir(), name).toPath()), StandardCharsets.UTF_8).trim(); } catch (Exception e) { return null; } }
+  static String readFile(android.content.Context a, String name) { try { return new String(Files.readAllBytes(new File(a.getFilesDir(), name).toPath()), StandardCharsets.UTF_8).trim(); } catch (Exception e) { return null; } }
 
   /** The JS side of the frame. Every method is a request; nothing here grants anything. Runs on a WebView worker thread. */
   class Bridge {

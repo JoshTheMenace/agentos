@@ -100,3 +100,30 @@ Say the word, hear a soft two-note chime, and voice mode opens (the same `voice.
 - Styling on the Mac without the phone: `python3 -m http.server 5173 -d web`, then `index.html#demo` (feed + a running task), `#demo-blockers`, `#demo-center`. Only in a browser, never on the phone.
 - `shots/climb-b/` (2026-10-27 PM, secondary screens hill-climb): `01-center-before` → `01-center-after-final`, `05-center-scrolled-before` → `05-center-scrolled-after-loop7` (tiles), `02-blockers-before` → `02-blockers-after-loop6`, `07-perms-before` → `07-perms-after-final`.
 - `shots/` (phone, 2026-10-27): `home` = `home-idle` (phone, nothing running: next event + "All caught up"), `home-feed-mac` (Mac `#demo` render: Now card + For you; the phone's agentd predates the feed), `center` (Activity log with tags, Blockers link), `blockers` (empty state), `memory`, `permissions`, `drawer`, `voice`, `ask-*`.
+
+## Assistant bar (`Bar.java`, `web/bar.html` + `bar.js` + `bar.css`; 10-28, Fable; shots in `shots/assistant-bar/`)
+Help from the agent inside any app, without leaving it. Think of a sticky note on the bottom of whatever is open: a small A2 glass
+card with a mic, a text field, a two-line transcript and ×. The app underneath stays visible and usable.
+- **Open:** tap the slim grey handle on the right edge (it shows in every app, never on Home: Home has its own ask bar), or say
+  the wake word while in another app (`Wake.wake()` opens the bar listening instead of jumping Home; on Home it still opens voice
+  mode). From the Mac: `adb shell su -c "am start-foreground-service -n local.agentos.home/.Bar -a local.agentos.home.BAR_OPEN [--ez listen true]"`.
+  **Close:** ×, swipe the card down, 30 s idle (45 s while the mic is open), or Home coming to the front.
+- **Asks** are plain agentd `ask`s on the bar's own WebSocket: "Thinking · 4 s" → tool steps ("Opening Chrome") → "Done · 6.8 s"
+  and the answer (two lines, clamped). A voice delegation shows the task's step and result. Approvals are never here: the line reads
+  "Waiting for your approval" and the native card stays the only gate. The island keeps showing progress at the top.
+- **Voice** is the same GPT Live session as voice mode (`voice.start` over WebRTC, one session per socket), the same echo gate
+  (`voice-audio.js`) and the same tap: the orb breathes while listening, tap = mute, tap while it speaks = interrupt.
+  `Native.wake('voice:1/0')` hands the mic between the bar and the wake word.
+- **Windows:** two `TYPE_APPLICATION_OVERLAY` windows from a foreground service (microphone type, one silent minimised
+  notification; a cached launcher process got killed by lmkd, which took the handle with it). The bar window is cut to the card's
+  height (`Native.size`) so taps around it reach the app. It is below the native island and approval cards
+  (`TYPE_ACCESSIBILITY_OVERLAY` is a higher layer), so it can never obscure a card (HumanTouch). The agent never sees or taps
+  it: `screen.read` skips windows of `local.agentos.home` (android `Guard.offLimits`), checked with the bar open over Chrome.
+- **Keyboard:** the window starts `FLAG_NOT_FOCUSABLE`, so the app underneath keeps its own keyboard behaviour. Tapping the field
+  flips the flag (`Native.focus(true)`), the keyboard (AgentOS keys) comes up under the bar (`ADJUST_RESIZE` lifts the card),
+  and sending or tapping the app underneath (`FLAG_WATCH_OUTSIDE_TOUCH`) flips it back. Verified 4/4 after moving the IME request
+  into `onWindowFocusChanged` (a ViewTreeObserver listener is lost when the view is re-added to the window manager).
+- Tested on the phone over Chrome: typed "what percent battery do I have" (Done · 4.5 s), "In Chrome, scroll down the page"
+  (the agent took a Chrome lease and scrolled the page under the bar, Done · 14.5 s), voice "Listening" with GPT Live connected.
+  `shots/assistant-bar/`: `listening.png`, `working.png` (island + bar), `done.png`, `open-type-done.mp4` + frames.
+  `drive.mjs` evaluates JS inside the bar's WebView (DevTools) for review scripts.

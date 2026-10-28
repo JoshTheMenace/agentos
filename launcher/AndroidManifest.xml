@@ -29,6 +29,8 @@
     <activity android:name=".MicroApp" android:exported="false" android:launchMode="singleTop" android:taskAffinity="local.agentos.home.apps"
         android:screenOrientation="portrait" android:windowSoftInputMode="adjustResize" android:configChanges="orientation|screenSize|keyboardHidden"/>
     <service android:name=".Wake" android:exported="false" android:foregroundServiceType="microphone"/>
+    <!-- Assistant bar (Bar.java): the edge handle + the bar overlay over any app; mic foreground service while the bar is open -->
+    <service android:name=".Bar" android:exported="false" android:foregroundServiceType="microphone"/>
     <!-- The system camera's one write target for Attach › Camera (Home.Shot); per-capture grant only -->
     <provider android:name=".Home$Shot" android:authorities="local.agentos.home.shot" android:exported="false" android:grantUriPermissions="true"/>
   </application>
