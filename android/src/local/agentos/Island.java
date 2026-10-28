@@ -59,6 +59,7 @@ final class Island extends FrameLayout {
     final LinearLayout pill;
     final Orb orb;
     final TextView label;
+    final TextView tag;
     final Ring ring;
     private float sw, sh, sr, pillW;   // current shape and the pill's target width (px)
     private int accent = IDLE;
@@ -93,6 +94,9 @@ final class Island extends FrameLayout {
         label = text(c, "AgentOS", 14, 600, L1);
         label.setSingleLine(); label.setEllipsize(TextUtils.TruncateAt.END); label.setMaxWidth(dp(150));
         pill.addView(label, margin(dp(8), 0));
+        tag = text(c, "", 10.5f, 600, L2); // a calm capsule after the step label while the owner's Full access switch is on (Broker.setFull)
+        tag.setBackground(capsule(c, FILL14, 0, 0)); tag.setPadding(dp(7), dp(2), dp(7), dp(2)); tag.setSingleLine(); tag.setVisibility(GONE);
+        pill.addView(tag, margin(dp(6), 0));
         pill.addView(ring = new Ring(c, accent), new LinearLayout.LayoutParams(dp(20), dp(20)) {{ leftMargin = dp(8); }});
         ring.setVisibility(GONE);
         addView(pill, new LayoutParams(-2, dp(PILL_H), Gravity.TOP | Gravity.CENTER_HORIZONTAL));
@@ -107,12 +111,19 @@ final class Island extends FrameLayout {
         removeCallbacks(autoHide);
         if (st != null && !st.equals(state)) { state = st; tint(color(st)); orb.state(st); }
         active = "working".equals(state); // only a running task keeps the pill; other states are moments that fade
-        label.setMaxWidth(dp(p >= 0 ? 150 : 190)); // a moment without the ring ("Blocked · Google Analytics") can use the ring's room
+        label.setMaxWidth(dp(p >= 0 ? 150 : 190) - (tag.getVisibility() == VISIBLE ? dp(78) : 0)); // a moment without the ring ("Blocked · Google Analytics") can use the ring's room
         if (p >= 0 != (ring.getVisibility() == VISIBLE)) { ring.setVisibility(p >= 0 ? VISIBLE : GONE); fit(); }
         if (p >= 0) ring.to(p / 100f);
         pct = p;
         if (lbl != null && !lbl.contentEquals(label.getText())) swap(lbl);
         if ("done".equals(state)) postDelayed(autoHide, 3000);
+    }
+
+    /** The small tag after the label ("Full access"); null hides it. */
+    void tag(String s) {
+        tag.setText(s == null ? "" : s); tag.setVisibility(s == null ? GONE : VISIBLE);
+        label.setMaxWidth(dp(pct >= 0 ? 150 : 190) - (s == null ? 0 : dp(78)));
+        if (shown) fit();
     }
 
     static int color(String st) {

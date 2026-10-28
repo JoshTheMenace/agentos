@@ -100,6 +100,7 @@ const auditLine = (e) => { // one human line per audit entry: what happened, in 
     case 'app.deepmod.disable': return [`Deep mods off · ${/disconnected/.test(e.reason || '') ? 'app closed' : short(e.reason || '', 30)}`, ''];
     case 'task.pause': return [/human/.test(e.reason || '') ? 'Paused · you touched the screen' : 'Paused', ''];
     case 'task.resume': return ['Resumed', ''];
+    case 'access.set': return [e.full ? 'Full access on' : 'Full access off', ''];
     case 'tap': return [bad ? (d === 'blocked' && !e.task ? `Stopped a tap outside a task${inApp}` : `Tap ${tgt} not approved${inApp}`) : `Tapped ${tgt}${inApp}`, c];
     case 'type': return [code ? `Stopped a message with a code from the screen${inApp}` : bad ? `Typing not approved${inApp}` : e.text ? `Typed "${short(e.text, 26)}"${inApp}` : `Typed${inApp}`, c];
     case 'press': return [`Pressed ${e.target || 'a key'}`, 'a'];
@@ -379,17 +380,18 @@ function renderCenter() {
   const today = Math.max(new Date().setHours(0, 0, 0, 0), (S.since || 0) + 1); // after a demo reset, only what came since
   const day = S.audit.filter((e) => e.ts >= today), recent = day.slice(-60).reverse();
   $('#recentNote').textContent = day.length ? `${day.length >= 500 ? '500+' : day.length} today` : 'quiet today';
-  $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Caught' : /blocked|refused/.test(e.decision || '') ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (/^(reviewer|policy)$/.test(e.approver || e.channel) ? 'Auto' : 'Approved') : '';
+  $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Caught' : /blocked|refused/.test(e.decision || '') ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (/^(reviewer|policy|full access)$/.test(e.approver || e.channel) ? 'Auto' : 'Approved') : '';
     return el('li', c === 'c' ? 'flag' : '', `<time>${fmtT(e.ts)}</time><i class="${c}"></i><span>${esc(txt)}</span>${tg ? `<em class="tg ${c === 'g' ? 'g' : ''}">${tg}</em>` : ''}`); }));
   if (!recent.length) $('#recent').replaceChildren(el('li', '', `<span class="empty">Nothing yet</span>`));
   $('#modNote').textContent = S.mods?.length ? `${S.mods.length} added` : 'none yet';
   $('#vaultNote').textContent = S.vault?.length ? `${S.vault.length} saved` : 'none yet';
-  $('#permNote').textContent = t ? `${(t.apps || []).length} app${t.apps?.length === 1 ? '' : 's'} granted` : 'no grants';
+  $('#permNote').textContent = S.full ? 'Full access' : t ? `${(t.apps || []).length} app${t.apps?.length === 1 ? '' : 's'} granted` : 'no grants';
+  $('#accessNote').textContent = S.full ? 'Full access' : '';
   const nb = (S.trackers || []).reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0);
   $('#blockNote').textContent = S.trackers ? `${nb} blocked` : '';
   // Protected today: the security story in three calm numbers, from the real audit + tracker data (no pop-ups, just a tally).
   const ads = S.adsBlocked || 0, stopped = day.filter((e) => e.tool !== 'guard.flag' && /blocked|denied|refused/.test(e.decision || '')).length;
-  const appr = day.filter((e) => e.decision === 'approved'), auto = appr.filter((e) => /reviewer|policy/.test(e.approver || e.channel || '')).length;
+  const appr = day.filter((e) => e.decision === 'approved'), auto = appr.filter((e) => /reviewer|policy|full access/.test(e.approver || e.channel || '')).length;
   const stat = (n, l, c, v) => `<button class="stat ${c}" data-v="${v}"><b>${n}</b><span>${l}</span></button>`; // a tile is the tap: Blockers or the Activity list
   $('#stats').innerHTML = stat(nb, nb === 1 ? 'tracker blocked' : 'trackers blocked', 'g', 'blockers') + stat(ads, 'ads blocked', 'g', 'blockers') + stat(stopped, stopped === 1 ? 'action stopped' : 'actions stopped', 'g', 'activity') + stat(appr.length, appr.length === 1 ? 'approval' : 'approvals' + (auto ? ` · ${auto} auto` : ''), 'b', 'activity');
   const open_ = (S.trackers || []).filter((a) => a.trackers.some((t) => !t.blocked)); // apps still sending to unblocked trackers: one row, tap = Blockers
@@ -416,7 +418,17 @@ $('#prov').onclick = (e) => { const p = e.target.dataset.p; if (!p) return; hap(
 $('#kill').onclick = async () => { hap('heavy'); S.queue.length = 0; send({ type: 'stop' }); await rpc('task.stop', {}); S.turn = false; S.pending = null; refresh(); };
 
 // ---------- permissions ----------
-function openPerms() { open('perms'); renderGrants(); renderFirewall(); renderSources($('#psources')); $('#never').replaceChildren(...FORBIDDEN.map((n) => el('span', 'chip', `<i></i>${n}`))); }
+// Full access (owner switch, default off): the broker skips tap/voice approval cards and the lease card for the owner's own untainted tasks
+// (audit approver "full access"). Still asked: the fingerprint, tasks with flagged or copied text, remote assistants. The switch goes over
+// the owner line (access.set: launcher uid or adb only); a tag shows in Command center and on the island pill while it is on.
+async function loadAccess() { const r = await phone('access.get', {}); if (r && 'full' in r) S.full = !!r.full; renderAccess(); renderCenter(); }
+function renderAccess() {
+  const on_ = !!S.full, row = el('div', 'rowi', `<span class="appic" style="background:var(--${on_ ? 'orange' : 'blue'})"><svg width="16" height="16"><use href="#i-key"/></svg></span><div>Full access<span class="s">Skips approval cards · fingerprint, flagged or copied text and remote assistants still ask</span></div><div class="r"><button class="toggle${on_ ? ' on' : ''}" aria-label="${on_ ? 'On' : 'Off'}"></button></div>`);
+  const t = $('button', row); t.onclick = async () => { hap(on_ ? 'click' : 'heavy'); t.classList.toggle('on'); t.style.opacity = .5; const r = await phone('access.set', { full: !on_ }); if (!r?.ok) hap('heavy'); loadAccess(); };
+  $('#access').replaceChildren(row);
+}
+on('access.changed', loadAccess);
+function openPerms() { open('perms'); renderAccess(); loadAccess(); renderGrants(); renderFirewall(); renderSources($('#psources')); $('#never').replaceChildren(...FORBIDDEN.map((n) => el('span', 'chip', `<i></i>${n}`))); }
 function renderGrants() {
   const t = S.active, box = $('#grants');
   $('#grantNote').textContent = t ? 'expires' : '';
@@ -703,7 +715,7 @@ on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.st
   if (m.retryable && m.code !== 'turn_failed') return setSheet('Reconnecting…', 'working'); // codex/agentd retries: one calm state, not a line per attempt
   body.append(el('div', 'msg err', esc(/proxy|websocket|network|connect|dns|stream|exited|timed? ?out/i.test(m.message) ? 'Couldn’t reach the AI. Check the connection and try again.' : short(m.message, 160)))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
 on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done', m.ms); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); const q = S.queue.shift(); if (q) sendUser(...q); });
-on('ws.open', () => { refresh(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.queue.length = 0; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
+on('ws.open', () => { refresh(); loadAccess(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.queue.length = 0; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- wake word (launcher Wake.java): a toggle in the command center, a small mic on the home status line ----------
 const WHY = { voice: 'Paused · voice open', call: 'Paused · call', mic: 'Paused · mic in use', screen: 'Paused · screen off' };

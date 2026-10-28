@@ -66,7 +66,7 @@
 
   <!-- 2 COMMAND CENTER -->
   <section class="page scroll" id="center">
-    <h2 class="title"><span class="orb" id="corb"></span>Command center<button class="kill" id="kill"><i><svg width="11" height="11"><use href="#i-power"/></svg></i>Stop all</button></h2>
+    <h2 class="title"><span class="orb" id="corb"></span>Command center<span class="k" id="accessNote"></span><button class="kill" id="kill"><i><svg width="11" height="11"><use href="#i-power"/></svg></i>Stop all</button></h2>
     <div class="mod rise shield"><div class="k"><svg width="13" height="13"><use href="#i-shield"/></svg>Protected today<span id="shieldNote"></span></div><div class="stats" id="stats"></div><div id="watch"></div></div>
     <div class="mod rise" style="animation-delay:.04s"><div class="k">Tasks<span id="taskCount"></span></div><div id="tasks"></div></div>
     <div class="mod rise" style="animation-delay:.08s"><div class="k">Model</div><div class="seg" id="prov"><button data-p="codex">Codex</button><button data-p="claude">Claude</button><button data-p="local">Local</button></div><div class="provnote" id="provNote"></div></div>
@@ -98,6 +98,7 @@
 <section class="over slide" id="perms">
   <div class="bar"><button class="back" id="permsBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Permissions</h2></div>
   <div class="scroll body">
+    <div class="mod"><div class="k">Approvals</div><div id="access"></div></div>
     <div class="mod"><div class="k">Grants<span id="grantNote"></span></div><div id="grants"></div></div>
     <div class="mod"><div class="k">Network<button class="k lnk" id="toBlockers2">Blockers ›</button></div><div class="fw" id="fw"></div></div>
     <div class="mod"><div class="k">Memory sources</div><div id="psources"></div></div>

@@ -102,6 +102,10 @@ final class Broker {
     private final Audit audit;
     private final Object actLock = new Object(), startLock = new Object();
     private final LeaseCard leaseCard;
+    /** Full access (owner switch in Command center › Permissions, files/access.json, default off): the owner's own untainted
+     *  tasks run without tap/voice cards or a lease card. Never skipped: the fingerprint (money, installs, vault), a task
+     *  Prompt Guard flagged or that copied untrusted text (the prompt-injection defense), a remote assistant's outward steps. */
+    private volatile boolean full;
     /** App mods (Mods.java): buttons drawn on top of other apps. */
     final Mods mods;
     final DeepMods deepMods;
@@ -135,6 +139,9 @@ final class Broker {
         Wake.listen(svc);
         Api.init(svc);
         Plugins.init(svc);
+        try { full = new JSONObject(new String(Files.readAllBytes(new File(svc.getFilesDir(), "access.json").toPath()), StandardCharsets.UTF_8)).optBoolean("full"); }
+        catch (Exception e) { full = false; }
+        svc.main.post(() -> svc.island.tag(full ? "Full access" : null));
         self = this;
     }
 
@@ -172,6 +179,7 @@ final class Broker {
                 return audit.markBreaks(p.optString("reason", "marked by the operator over adb"));
             case "audit.demo_reset": { // owner (long-press "Protected today") or adb: one demo.reset line; the launcher counts from it, the chain stays whole
                 if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", "audit.demo_reset only from the launcher or adb, not from " + who(uid));
+                ScamWatch.reset(); // the trap message may show its card again
                 JSONObject e = new JSONObject().put("task", "").put("tool", "demo.reset").put("decision", "auto").put("reason", uid == 2000 ? "operator over adb" : "owner (command center)");
                 audit.log(e);
                 return ok(true).put("since", e.getLong("ts"));
@@ -213,6 +221,10 @@ final class Broker {
             case "plugins.set": // the owner's Plugins screen (launcher uid) or adb; never agentd or a model tool
                 if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", "plugins.set only from the Plugins screen or adb, not from " + who(uid));
                 return Plugins.set(p.getString("id"), p.optBoolean("on"), uid == 2000 ? "operator over adb" : "owner (Plugins screen)", audit);
+            case "access.get": return ok(true).put("full", full); // anyone may read the switch (the launcher's tag, agentd)
+            case "access.set": // the owner's Permissions screen (launcher uid) or adb; never agentd or a model tool
+                if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", "access.set only from the Permissions screen or adb, not from " + who(uid));
+                return setFull(p.optBoolean("full"), uid == 2000 ? "operator over adb" : "owner (Permissions screen)");
             case "approval.deny": return deny(p);
             case "schedule.alarm": return schedule(p, uid);
             case "remote.read": { // agentd (mcp-remote.js): a paired outside assistant read phone_brief or memory_lookup; one chain line, no card
@@ -272,7 +284,8 @@ final class Broker {
             // A paired remote assistant (Grok/Dots via agentd, founder 10-28) also needs no lease card for ordinary apps. It stays untrusted
             // and not "asked": it can't unlock the phone or skip a mod card, and every outward step still waits for a person (reviewer holds it).
             boolean remote = plain && !asked && "remote".equals(p.optString("origin")) && p.optBoolean("untrusted");
-            if (asked || remote) granted = true;
+            boolean skipped = full && plain && !asked && !remote && !"remote".equals(p.optString("origin")); // full access: the owner's own task needs no lease card
+            if (asked || remote || skipped) granted = true;
             else if (settings().optBoolean("require_user_lease", true)) {
                 if (same && prev.granted && prev.apps.containsAll(apps)) expires = Math.min(expires, prev.expires);
                 else {
@@ -299,7 +312,7 @@ final class Broker {
             }
             svc.main.post(svc.autoPause::start);
             audit.log(entry("task.start", l).put("goal", l.goal).put("apps", new JSONArray(apps)).put("refused_apps", refused)
-                    .put("caller", caller).put("user_granted", granted).put("by_request", asked).put("by_paired_remote", remote).put("carried_over", same));
+                    .put("caller", caller).put("user_granted", granted).put("by_request", asked).put("by_paired_remote", remote).put("carried_over", same).put("full_access", skipped));
             Events.emit("task.state", task(l).put("state", "started"));
             island(l, "Starting");
             awake(l); // a scheduled task on a locked phone: open it now, so the first screen read is the real one
@@ -493,6 +506,9 @@ final class Broker {
             if (l != null && l.unlockedFor != null && pol[0] == FINGERPRINT_ONLY) // nobody may be holding the phone: money, installs, vault
                 return finish(log, ok(false), "blocked", "needs the owner's fingerprint, which a remote assistant can't ask for on a phone it unlocked", null);
             @SuppressWarnings("unchecked") List<String> channels = (List<String>) pol[0];
+            boolean taint = copy || notificationAction && "MALICIOUS".equals(nr.label) || tool.equals("intent") && tier == 3;
+            if (skips(l, channels, taint)) { log.put("approver", "full access").put("allowed_channels", new JSONArray(channels)); decision = "approved"; }
+            else {
             Approvals.Pending a = approve(tool, pkg, target, text, l, TIER[tier], why, r2, channels, (String) pol[1],
                     Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
             log.put("allowed_channels", new JSONArray(a.channels)).put("because", a.because == null ? JSONObject.NULL : a.because);
@@ -506,6 +522,7 @@ final class Broker {
                     || tool.equals("tap") && !draft(l, pkg).equals(text)))
                 return finish(log, ok(false), "blocked", "screen changed after approval; nothing done", null);
             decision = "approved";
+            }
         }
 
         if (tool.equals("type")) { l.h.typed.add(norm(text)); l.field = node; }
@@ -633,13 +650,16 @@ final class Broker {
         JSONObject r2 = new JSONObject().put("untrusted", l != null && l.h.untrusted).put("private", false).put("outward", false);
         if (l != null && p.optBoolean("tainted")) l.h.flagged = true;
         List<String> channels = modChannels(l, p, pkg, ModMask.is(spec), l != null && callerIn(uid, "lease_callers") && l.caller.equals(who(uid)));
-        Approvals.Pending a = approve("app.mod.apply", pkg, target, text, l, "T2 UI change", "changes the appearance of " + app, r2, channels,
-                channels == ORDINARY ? null : "remote, tainted, unbound or button mods need a person", Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
-        log.put("allowed_channels", new JSONArray(a.channels));
-        if (a.channel.isEmpty()) return finish(log, ok(false), "denied", a.reason, null);
+        if (skips(l, channels, p.optBoolean("tainted"))) log.put("approver", "full access").put("allowed_channels", new JSONArray(channels));
+        else {
+            Approvals.Pending a = approve("app.mod.apply", pkg, target, text, l, "T2 UI change", "changes the appearance of " + app, r2, channels,
+                    channels == ORDINARY ? null : "remote, tainted, unbound or button mods need a person", Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
+            log.put("allowed_channels", new JSONArray(a.channels));
+            if (a.channel.isEmpty()) return finish(log, ok(false), "denied", a.reason, null);
+            log.put("approver", a.channel);
+            if (!a.note.isEmpty()) log.put("utterance", a.note);
+        }
         if (!mods.previewed(spec)) return finish(log, ok(false), "blocked", "preview expired or mods disabled/removed during approval; preview again", null);
-        log.put("approver", a.channel);
-        if (!a.note.isEmpty()) log.put("utterance", a.note);
         AccessibilityNodeInfo root = svc.getRootInActiveWindow();
         boolean front = root != null && pkg.equals(pkg(root));
         if (front) { /* already there */ }
@@ -676,6 +696,23 @@ final class Broker {
         }
     }
 
+    /** Full access skips this card: never a fingerprint, a tainted step or task (flagged / copied: the prompt-injection defense), or a remote assistant. */
+    private boolean skips(Lease l, List<String> channels, boolean taint) {
+        return full && !channels.equals(FINGERPRINT_ONLY) && !taint && (l == null || !"remote".equals(l.origin) && !l.h.flagged && !l.h.copied);
+    }
+
+    /** access.set (owner or adb only): persist, audit, tell every listener, and tag the island so it is never on unknowingly. */
+    private synchronized JSONObject setFull(boolean on, String by) throws Exception {
+        File f = new File(svc.getFilesDir(), "access.json"), tmp = new File(f.getPath() + ".tmp");
+        Files.write(tmp.toPath(), new JSONObject().put("full", on).toString().getBytes(StandardCharsets.UTF_8));
+        Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+        full = on;
+        audit.log(new JSONObject().put("task", "").put("tool", "access.set").put("full", on).put("decision", "auto").put("reason", "by the " + by));
+        Events.emit("access.changed", new JSONObject().put("full", on));
+        svc.main.post(() -> svc.island.tag(on ? "Full access" : null));
+        return ok(true).put("full", on);
+    }
+
     /** Show the card, wait (approval_timeout_s, default 60 s) for a tap / fingerprint / voice / reviewer, Deny or Stop. */
     private Approvals.Pending approve(String tool, String pkg, String target, String text, Lease l, String tier, String why, JSONObject r2,
             List<String> channels, String fp, long timeoutMs) throws Exception {
@@ -700,7 +737,9 @@ final class Broker {
             }
             @Override public void deny() { a.finish(null, "denied by user"); }
         };
-        a.card = () -> { if (a.done.getCount() > 0) { shownAt[0] = SystemClock.uptimeMillis(); svc.card.show(m, ui); } }; // channelsFor(m) picks up an escalation
+        a.card = () -> { if (a.done.getCount() > 0) { shownAt[0] = SystemClock.uptimeMillis(); svc.card.show(m, ui);
+            // fingerprint-only: the system prompt opens by itself once the card has landed (the card's control re-opens it, Deny is Deny)
+            if (a.channels.equals(FINGERPRINT_ONLY)) svc.main.postDelayed(() -> { if (a.done.getCount() > 0 && current == a) ui.approve(); }, 900); } }; // channelsFor(m) picks up an escalation
         a.because = fp;
         Approvals.pending.put(a.id, a);
         current = a;
@@ -864,11 +903,20 @@ final class Broker {
 
     /** A Prompt Guard hit: audited and sent as guard.flag (the launcher's log shows it). No pop-up (founder, 10-27). */
     private void flag(Lease l, String pkg, String sender, String snippet, Object score, JSONArray ids) throws JSONException {
+        flag(l, pkg, sender, snippet, score, ids, "Prompt Guard: likely prompt injection");
+    }
+    private void flag(Lease l, String pkg, String sender, String snippet, Object score, JSONArray ids, String reason) throws JSONException {
         JSONObject e = new JSONObject().put("task_id", l == null ? "" : l.id).put("pkg", pkg).put("sender", sender)
                 .put("snippet", Guard.clip(snippet, 160)).put("score", score).put("node_ids", ids == null ? new JSONArray() : ids);
         Events.emit("guard.flag", e);
         audit.log(new JSONObject().put("task", l == null ? "" : l.id).put("tool", "guard.flag").put("pkg", pkg).put("sender", sender)
-                .put("text", Guard.clip(snippet, 160)).put("score", score).put("decision", "flagged").put("reason", "Prompt Guard: likely prompt injection"));
+                .put("text", Guard.clip(snippet, 160)).put("score", score).put("decision", "flagged").put("reason", reason));
+    }
+
+    /** ScamWatch (passive, no task): audited like a guard flag, so Activity shows "Scam message caught · <app>". */
+    static void scamCaught(String pkg, String sender, String text, Object score, String why) throws JSONException {
+        Broker b = self;
+        if (b != null) b.flag(null, pkg, sender, text, score, null, "Scam watch: " + why);
     }
 
     /** Notifs: a message that arrived flagged. */

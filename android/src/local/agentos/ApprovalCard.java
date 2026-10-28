@@ -20,8 +20,9 @@ import static local.agentos.Island.*;
 /**
  * The native cards that open out of the Island (TYPE_ACCESSIBILITY_OVERLAY; AI or web content can never draw them).
  * Progressive disclosure: each card shows only the essentials; a tap on the card body reveals the details.
- *  - show(Model, Listener): approval. App + exact action (+ the exact text as a blue bubble), Deny / Approve.
- *    Approve only calls Listener.approve(); the card itself never grants anything.
+ *  - show(Model, Listener): approval. App + exact action (+ the exact text as a blue bubble), Deny / Approve; a
+ *    fingerprint-only card has no Approve, just the fingerprint control ("Touch the sensor to approve") and Deny.
+ *    Approve and the control only call Listener.approve(); the card itself never grants anything.
  *  - alert(...): prompt injection caught. One headline, the source app, Block / OK; score and snippet behind a tap.
  *  - lease(...): "Allow agent in <app> for N min?" Deny / Allow.
  *  - task(): the task sheet behind a pill tap, with the always-available Stop.
@@ -61,8 +62,8 @@ final class ApprovalCard {
         ((LinearLayout) details).addView(chips(new String[]{"Untrusted input", "Private data", "Outward action"},
                 new boolean[]{m.untrusted, m.priv, m.outward}, BLUE), margin(0, dp(8)));
         f.addView(details);
-        View hint = finger ? hint("finger", BLUE, "Fingerprint required") : new View(svc);
-        f.addView(acts(hint, button("Deny", FILL14, L1, l::deny), button("Approve", BLUE, L1, l::approve)));
+        if (finger) f.addView(acts(sensor(l::approve), button("Deny", FILL14, L1, l::deny))); // no plain Approve: the finger is the approval
+        else f.addView(acts(new View(svc), button("Deny", FILL14, L1, l::deny), button("Approve", BLUE, L1, l::approve)));
         disclose(f, details);
         open(f, BLUE);
     }
@@ -213,11 +214,28 @@ final class ApprovalCard {
         return r;
     }
 
+    /** The fingerprint control: a blue glass capsule with the fingerprint glyph. A real tap (re)opens the system prompt (Broker opens it by itself too). */
+    private View sensor(Runnable onTap) {
+        LinearLayout r = row();
+        r.setGravity(Gravity.CENTER);
+        r.setMinimumHeight(dp(40));
+        r.setPadding(dp(12), 0, dp(14), 0);
+        r.setBackground(capsule(svc, (BLUE & 0x00FFFFFF) | 0x2E000000, (BLUE & 0x00FFFFFF) | 0x66000000, 0));
+        r.addView(new Glyph(svc, "finger", BLUE), new LinearLayout.LayoutParams(dp(22), dp(22)));
+        r.addView(text("Touch the sensor to approve", 13, 600, L1), margin(dp(8), 0));
+        return press(r, onTap);
+    }
+
     private TextView button(String label, int bg, int fg, Runnable onTap) {
         TextView b = text(label, 15, 600, fg);
         b.setGravity(Gravity.CENTER);
         b.setPadding(dp(18), 0, dp(18), 0);
         b.setBackground(capsule(svc, bg, 0, 0));
+        return press(b, onTap);
+    }
+
+    /** Real-touch filter + iOS press for any control: only a real finger, >= 500 ms after the card appeared, reaches onTap (HumanTouch). */
+    private <V extends View> V press(V b, Runnable onTap) {
         b.setFilterTouchesWhenObscured(true);
         b.setOnTouchListener((v, e) -> { // only a real finger, >= 500 ms after the card appeared, reaches onClick (HumanTouch)
             if (!HumanTouch.real(e, shownAt)) return true;
