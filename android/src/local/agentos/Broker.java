@@ -186,6 +186,11 @@ final class Broker {
                 }
             case "approval.list": return approvals();
             case "app.mod.list": return ok(true).put("mods", mods.list());
+            case "bar.rect": { // the launcher's assistant bar: its window rect, or {} once closed. App-mod masks stop at its top edge (Mods.clip).
+                if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", "bar.rect only from the launcher or adb, not from " + who(uid));
+                mods.bar(p.has("top") ? new android.graphics.Rect(p.getInt("left"), p.getInt("top"), p.getInt("right"), p.getInt("bottom")) : null);
+                return ok(true);
+            }
             case "app.mod.targets": return mods.targets();
             case "app.mod.preview": return mods.preview(p.getJSONObject("spec"));
             case "app.mod.disable": return mods.disable(p.optString("package"), "kill switch");

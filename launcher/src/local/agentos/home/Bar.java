@@ -48,6 +48,9 @@ import org.json.JSONObject;
  * only while the text field is active (focus(true)) and gives focus back afterwards. ADJUST_RESIZE lifts the bar above the IME.
  * The agent never sees or taps the bar: screen.read skips windows of local.agentos.home (android Guard.offLimits).
  * Mic from a service needs a microphone foreground service while the bar is open (SYSTEM_ALERT_WINDOW exempts while-in-use).
+ * The broker's app-mod masks are a layer ABOVE this window, so the bar reports its window rect over the owner line (bar.rect) on every
+ * layout and clears it on close; masks stop at that edge (android Mods.clip). Accessibility window bounds can't serve: they are
+ * clipped by the windows above, i.e. by the masks themselves.
  */
 public class Bar extends Service {
   static final String TAG = "AgentOSBar", CH = "bar", OPEN = "local.agentos.home.BAR_OPEN", CLOSE = "local.agentos.home.BAR_CLOSE", HOME = "local.agentos.home.BAR_HOME";
@@ -63,7 +66,7 @@ public class Bar extends Service {
 
   @Override public IBinder onBind(Intent i) { return null; }
   @Override public void onCreate() {
-    super.onCreate(); self = this;
+    super.onCreate(); self = this; report(null); // a restarted service: no stale rect in the broker
     wm = (WindowManager) getSystemService(WINDOW_SERVICE); density = getResources().getDisplayMetrics().density;
     NotificationManager nm = getSystemService(NotificationManager.class);
     nm.createNotificationChannel(new NotificationChannel(CH, "Assistant bar", NotificationManager.IMPORTANCE_MIN));
@@ -85,6 +88,25 @@ public class Bar extends Service {
   @Override public void onDestroy() { hide(); if (handle != null) try { wm.removeView(handle); } catch (Exception ignored) {} self = null; super.onDestroy(); }
 
   int px(float dp) { return Math.round(dp * density); }
+  String lastRect = "";
+  /** The bar's window rect to the broker (null = closed), only when it changed. */
+  void report(int[] r) {
+    JSONObject j = new JSONObject();
+    try { if (r != null) j.put("left", r[0]).put("top", r[1]).put("right", r[2]).put("bottom", r[3]); } catch (Exception ignored) {}
+    if (j.toString().equals(lastRect)) return;
+    lastRect = j.toString();
+    new Thread(() -> { try { Log.i(TAG, "bar.rect " + j + " -> " + rpc("bar.rect", j)); } catch (Exception e) { Log.w(TAG, "bar.rect: " + e); } }, "bar-rect").start();
+  }
+  /** One call on the owner line (files/phone.token; the broker knows this app by its uid). Blocking: not on the main thread. */
+  JSONObject rpc(String method, JSONObject params) throws Exception {
+    java.net.HttpURLConnection h = (java.net.HttpURLConnection) new java.net.URL("http://127.0.0.1:7777/rpc").openConnection();
+    h.setConnectTimeout(1500); h.setReadTimeout(3000); h.setRequestMethod("POST"); h.setDoOutput(true);
+    h.setRequestProperty("Authorization", "Bearer " + Home.readFile(this, "phone.token")); h.setRequestProperty("Content-Type", "application/json");
+    h.getOutputStream().write(new JSONObject().put("method", method).put("params", params).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); byte[] buf = new byte[4096]; int n;
+    try (java.io.InputStream in = h.getInputStream()) { while ((n = in.read(buf)) > 0) bo.write(buf, 0, n); }
+    return new JSONObject(bo.toString("UTF-8"));
+  }
   void js(String code) { ui.post(() -> { if (web != null) web.evaluateJavascript(code, null); }); }
 
   // ---- the edge handle: a 5 dp pill inside an invisible 22x72 dp touch target, mid-right ----
@@ -134,15 +156,7 @@ public class Bar extends Service {
   void foreground() {
     new Thread(() -> {
       try {
-        String tok = Home.readFile(this, "phone.token");
-        java.net.HttpURLConnection h = (java.net.HttpURLConnection) new java.net.URL("http://127.0.0.1:7777/rpc").openConnection();
-        h.setConnectTimeout(1500); h.setReadTimeout(3000); h.setRequestMethod("POST"); h.setDoOutput(true);
-        h.setRequestProperty("Authorization", "Bearer " + tok); h.setRequestProperty("Content-Type", "application/json");
-        h.getOutputStream().write("{\"method\":\"notifications.list\",\"params\":{\"n\":0}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); byte[] buf = new byte[4096]; int n;
-        try (java.io.InputStream in = h.getInputStream()) { while ((n = in.read(buf)) > 0) bo.write(buf, 0, n); }
-        JSONObject r = new JSONObject(bo.toString("UTF-8"));
-        JSONObject fg = r.optJSONObject("foreground");
+        JSONObject fg = rpc("notifications.list", new JSONObject().put("n", 0)).optJSONObject("foreground");
         if (fg != null && !fg.optString("pkg").isEmpty()) js("window.bar&&bar.app(" + new JSONObject().put("pkg", fg.optString("pkg")).put("label", fg.optString("app")) + ")");
       } catch (Exception e) { Log.w(TAG, "foreground: " + e); }
     }, "bar-fg").start();
@@ -152,7 +166,7 @@ public class Bar extends Service {
     if (!open) return;
     open = false; focus(false);
     try { wm.removeView(web); } catch (Exception e) { Log.w(TAG, "remove: " + e); }
-    showHandle();
+    showHandle(); report(null);
   }
   /** Keyboard focus: only while the text field is active. Otherwise the app underneath keeps focus and its own keyboard. */
   void focus(boolean on) {
@@ -173,6 +187,11 @@ public class Bar extends Service {
       @Override public void onWindowFocusChanged(boolean has) {
         super.onWindowFocusChanged(has);
         if (has && focusable) { if (!isFocused()) requestFocus(); js("window.bar&&bar.refocus()"); ui.postDelayed(() -> getSystemService(InputMethodManager.class).showSoftInput(this, 0), 80); }
+      }
+      // Every placement (open, Native.size, the keyboard lifting the window): tell the broker where the bar is.
+      @Override protected void onLayout(boolean c, int l, int t, int r, int b) {
+        super.onLayout(c, l, t, r, b);
+        post(() -> { if (!open) return; int[] xy = new int[2]; getLocationOnScreen(xy); report(new int[]{xy[0], xy[1], xy[0] + getWidth(), xy[1] + getHeight()}); }); // after this traversal: the window's new position is final
       }
     };
     web.setBackgroundColor(0); web.setFocusable(true); web.setFocusableInTouchMode(true); // requestFocus() must work in touch mode (focus(true))

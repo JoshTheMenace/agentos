@@ -21,7 +21,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -83,7 +82,7 @@ final class Mods {
     private final Runnable clearPreview = this::clearPreview;
     private volatile boolean watching, closed;
     private Process watcher;
-    private int barTop = Integer.MAX_VALUE; // the assistant bar's top edge at the last refresh (Integer.MAX_VALUE: no bar)
+    private Rect bar; // the launcher's assistant bar (Broker bar.rect, owner line): a layer below our masks, so every mask stops at its top edge
     private String fgPkg = ""; private long fgSince, scrollUntil; // fgSince: sample colors only after the app's launch animation has settled; scrollUntil: a fling is still moving, re-place masks every frame
 
     Mods(AgentA11y svc, Audit audit) {
@@ -124,7 +123,7 @@ final class Mods {
                 String pkg = root == null ? "" : String.valueOf(root.getPackageName());
                 if (!pkg.equals(fgPkg)) { clearPreview(); hideAll(); }
                 if (root != null && (e.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_WINDOWS_CHANGED
-                        ? e.getWindowId() != root.getWindowId() && barTop() == barTop : !pkg.equals("local.agentos"))) return; // another window: only the bar's edge moving matters
+                        ? e.getWindowId() != root.getWindowId() : !pkg.equals("local.agentos"))) return;
             } catch (RuntimeException error) { hideAll(); return; }
         }
         recheck = true; windowEpoch++; // secure flags can change without a new window id: re-ask root, keep the last verdict meanwhile
@@ -193,7 +192,7 @@ final class Mods {
                 AccessibilityNodeInfo root = svc.getRootInActiveWindow();
                 need(root != null && spec.optString("package").contentEquals(root.getPackageName()), "open the target app first");
                 List<Rect> rects;
-                if (ModMask.is(spec)) rects = ModMask.bounds(root, spec);
+                if (ModMask.is(spec)) { rects = ModMask.bounds(root, spec); clip(rects); }
                 else {
                     AccessibilityNodeInfo n = find(root, spec.optString("package"), spec.opt("anchor"));
                     need(n != null, "anchor is not on screen"); Rect r = new Rect(); n.getBoundsInScreen(r);
@@ -537,8 +536,7 @@ final class Mods {
                 List<Rect> rects = ModMask.bounds(root, m.spec, scrollUntil > SystemClock.uptimeMillis(), m.track);
                 Integer fill = rects.isEmpty() ? null : fill(m, rects.get(0));
                 if (fill == null) { hide(m); continue; } // nothing to cover, or the app's background is still being sampled
-                barTop = barTop(); // the bar is a lower layer than our masks, so they stop at its edge; it covers the rest of the item itself
-                for (Iterator<Rect> it = rects.iterator(); it.hasNext(); ) { Rect r = it.next(); r.bottom = Math.min(r.bottom, barTop); if (r.height() <= 0) it.remove(); }
+                clip(rects);
                 boolean peek = m.peekUntil > SystemClock.uptimeMillis();
                 if (m.masks.size() != rects.size() || m.peeking != peek) { ModMask.clear(wm, m.masks); m.peeking = peek; }
                 for (int i = 0; i < rects.size(); i++) {
@@ -705,17 +703,14 @@ final class Mods {
         return new Rect(x, y, x + w, y + hh);
     }
 
-    /** The assistant bar's top edge (launcher/Bar.java: a wide TYPE_APPLICATION_OVERLAY window of the launcher at the bottom;
-     *  the edge handle is taller than wide). Our masks are TYPE_ACCESSIBILITY_OVERLAY, a layer above it, so they clip to this. */
-    private int barTop() {
-        int top = Integer.MAX_VALUE; Rect b = new Rect();
-        for (AccessibilityWindowInfo w : svc.getWindows()) {
-            if (w.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
-            w.getBoundsInScreen(b); if (b.width() <= b.height()) continue;
-            AccessibilityNodeInfo r = w.getRoot();
-            if (r != null && "local.agentos.home".contentEquals(r.getPackageName())) top = Math.min(top, b.top);
-        }
-        return top;
+    /** The launcher reports its assistant bar's window rect (null = closed). Not read from getWindows(): accessibility window
+     *  bounds are clipped by the windows above them, i.e. by our own masks, so a mask over the bar would hide the edge it must stop at. */
+    void bar(Rect r) { svc.main.post(() -> { bar = r; if (!closed) refresh(); }); }
+
+    /** Masks stop at the bar's top edge (the bar covers the rest of the item itself); nothing left above it = no mask. */
+    private void clip(List<Rect> rects) {
+        if (bar == null) return;
+        for (Iterator<Rect> it = rects.iterator(); it.hasNext(); ) { Rect r = it.next(); r.bottom = Math.min(r.bottom, bar.top); if (r.height() <= 0) it.remove(); }
     }
 
     private static WindowManager.LayoutParams params() {
