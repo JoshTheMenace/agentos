@@ -56,9 +56,9 @@ h1 em{font-style:normal;color:var(--l2)}
 /* screen mode: one slide at a time, scaled */
 @media screen{
   body{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px;background:#000}
-  .slide{transform-origin:top center;box-shadow:0 20px 80px rgba(0,0,0,.6);border-radius:12px}
+  .slide{transform-origin:top center;box-shadow:0 20px 80px rgba(0,0,0,.6);border-radius:12px;transform:scale(var(--k,1));margin-bottom:calc(900px*var(--k,1) - 900px)}
   body.present{display:block;padding:0;overflow:hidden;height:100vh}
-  body.present .slide{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--s,1));display:none;border-radius:0}
+  body.present .slide{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--s,1));display:none;border-radius:0;margin:0}
   body.present .slide.on{display:block}
   #hint{position:fixed;right:16px;bottom:12px;font:600 12px Inter,-apple-system,sans-serif;color:rgba(235,235,245,.35);z-index:9}
 }
@@ -73,25 +73,25 @@ h1 em{font-style:normal;color:var(--l2)}
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="k">The problem</div>
   <h1>Your phone has an assistant.<br>It still can't <em>do</em> anything for you.</h1>
-  <p class="sub">The agents that can act in your apps read whatever is on the screen. A stranger's text message becomes a command.</p>
+  <p class="sub">You can ask it the weather. You can't say "tell Mom I'm 10 minutes late" and trust it to go do that: in your real apps, by voice, on the phone you already own.</p>
 
   <div class="row" style="position:absolute;left:80px;top:400px;gap:20px;width:800px">
     <div class="glass tile" style="flex:1">
-      <div class="n">5 <small>phone agents</small> · 7 <small>attacks</small></div>
-      <div class="t">Every open-source agent tested fell to at least 6 of 7 attack types. <span class="tag">arXiv 2607.00333</span></div>
+      <div class="n">6 <small>apps</small></div>
+      <div class="t">Today's flagship phone agent works in a handful of partner apps, cloud-only, and hands back before checkout. <span class="tag">reported</span></div>
     </div>
     <div class="glass tile" style="flex:1">
-      <div class="n">6 <small>apps</small></div>
-      <div class="t">Today's flagship phone agent works in a handful of partner apps, cloud-only, with no rules outside the model. <span class="tag">reported</span></div>
+      <div class="n">~45 <small>s</small></div>
+      <div class="t">Reported time for that agent to order one ride, about 10 s by hand. Slow enough that people stop using it. <span class="tag">reported</span></div>
     </div>
   </div>
   <div class="glass tile" style="position:absolute;left:80px;top:590px;width:800px;padding:20px 24px">
-    <div class="t" style="font-size:17px;color:var(--l1);margin:0;line-height:1.4">The people an agent helps most, Utahns who can't easily tap a touchscreen, are the ones a hijacked agent hurts most.</div>
+    <div class="t" style="font-size:17px;color:var(--l1);margin:0;line-height:1.4">And to let it act, it has to be safe: the open-source phone agents tested in July each fell to at least 6 of 7 published attacks. <span class="tag">arXiv 2607.00333</span></div>
   </div>
 
   <div style="position:absolute;right:120px;top:120px;display:flex;flex-direction:column;align-items:center;width:420px">
-    <div class="phone"><img src="img/attack-pigeon.png" alt="A message in our test app tries to steer the agent; AgentOS flags it on-device"></div>
-    <div class="cap" style="text-align:center"><span class="dot" style="background:var(--red)"></span>A text tries to steer the agent. Caught on the phone.<small>Our own test app, on our phone. No real contacts.</small></div>
+    <div class="phone"><img src="img/voice.png" alt="AgentOS voice mode: hold the orb to talk"></div>
+    <div class="cap" style="text-align:center"><span class="dot" style="background:var(--purple)"></span>Say it. It does it, in your real apps.<small>AgentOS voice mode on our Moto G, Oct 27.</small></div>
   </div>
   <div class="foot"><span><b>AgentOS</b> · Nucleus Institute × Startup State open call · Oct 28, 2026</span><span>1 / 5</span></div>
 </section>
@@ -119,14 +119,14 @@ h1 em{font-style:normal;color:var(--l2)}
       <div class="glass tile" style="flex:1;padding:16px 18px"><div class="n" style="font-size:30px">7.5 <small>s</small></div><div class="t" style="font-size:13px">"Set an alarm for 7 AM", request to done.</div></div>
     </div>
     <div class="row" style="gap:12px">
-      <div class="glass tile" style="flex:1;padding:16px 18px"><div class="n" style="font-size:30px">118 <small>commits</small></div><div class="t" style="font-size:13px">Oct 26 to Oct 28, timestamped in git.</div></div>
-      <div class="glass tile" style="flex:1;padding:16px 18px"><div class="n" style="font-size:30px">19.8k <small>lines</small></div><div class="t" style="font-size:13px">Java and JavaScript, our count.</div></div>
+      <div class="glass tile" style="flex:1;padding:16px 18px"><div class="n" style="font-size:30px">1.7 <small>s</small></div><div class="t" style="font-size:13px">By voice: end of your sentence to the task starting. "Done" spoken ~1 s after it finishes.</div></div>
+      <div class="glass tile" style="flex:1;padding:16px 18px"><div class="n" style="font-size:30px">123 <small>commits</small></div><div class="t" style="font-size:13px">Oct 26 to Oct 28, timestamped in git.</div></div>
     </div>
     <div class="glass tile" style="padding:16px 18px">
       <div class="k" style="color:var(--l3)">Before this week</div>
       <div class="t" style="font-size:13.5px;margin-top:4px;color:var(--l1)">Island overlay prototype · SystemUI experiments · Codex running on the phone.</div>
       <div class="k" style="color:var(--green);margin-top:12px">Built this week, Oct 26 to 28</div>
-      <div class="t" style="font-size:13.5px;margin-top:4px;color:var(--l1)">The gate (leases, Rule of Two, fingerprint-signed approvals, audit chain) · agentd with Codex, Claude or an on-device model · live voice · AI keyboard · per-app firewall · cross-app memory · proactive cards · app mods and micro-apps · scheduled tasks on a locked phone · automatic offline fallback.</div>
+      <div class="t" style="font-size:13.5px;margin-top:4px;color:var(--l1)">The gate (leases, Rule of Two, fingerprint-gated approvals, audit chain) · agentd with Codex, Claude or an on-device model · live voice · AI keyboard · per-app firewall · cross-app memory · proactive cards · app mods and micro-apps · scheduled tasks on a locked phone · automatic offline fallback.</div>
     </div>
   </div>
   <div class="foot"><span><b>AgentOS</b> · Moto G 5G (2023), Android 13, rooted lab phone · Codex, Claude or an on-device model</span><span>2 / 5</span></div>
@@ -136,7 +136,7 @@ h1 em{font-style:normal;color:var(--l2)}
 <section class="slide" id="s3">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="k">Hard tech · below the app layer</div>
-  <h1>The model proposes. The OS decides.<br><em>Your fingerprint signs the exact action.</em></h1>
+  <h1>The model proposes. The OS decides.<br><em>The riskiest steps require your fingerprint.</em></h1>
 
   <!-- diagram -->
   <div class="row" style="position:absolute;left:80px;top:250px;width:990px;gap:0;align-items:stretch">
@@ -146,7 +146,7 @@ h1 em{font-style:normal;color:var(--l2)}
     <div class="arrow"></div>
     <div class="wall"><span>models stop here</span></div>
     <div class="arrow"></div>
-    <div class="glass box" style="width:290px;box-shadow:0 4px 24px rgba(10,132,255,.25)"><div class="h">local.agentos <span style="color:var(--l3);font-weight:500">· the gate</span></div><div class="d">Leases · Rule of Two · on-device Prompt Guard 2 · fingerprint-signed approvals · hash-chained audit · per-app firewall</div></div>
+    <div class="glass box" style="width:290px;box-shadow:0 4px 24px rgba(10,132,255,.25)"><div class="h">local.agentos <span style="color:var(--l3);font-weight:500">· the gate</span></div><div class="d">Leases · Rule of Two · on-device Prompt Guard 2 · approvals bound to the exact action, fingerprint for payments and passwords · hash-chained audit · per-app firewall</div></div>
     <div class="arrow"></div>
     <div class="glass box" style="width:120px"><div class="h">Your apps</div><div class="d">Unmodified.</div></div>
   </div>
@@ -162,7 +162,7 @@ h1 em{font-style:normal;color:var(--l2)}
 
   <div style="position:absolute;right:80px;top:250px;display:flex;gap:24px">
     <div style="width:190px"><div class="phone sm xs"><img src="img/fingerprint-card.png" alt="Native approval card: Fingerprint required, Untrusted content chip"></div><div class="cap" style="font-size:13px"><span class="dot" style="background:var(--blue)"></span>Native card. Untrusted content is labeled.</div></div>
-    <div style="width:190px"><div class="phone sm xs"><img src="img/center.png" alt="Command center: protected today, model switcher, activity log"></div><div class="cap" style="font-size:13px"><span class="dot" style="background:var(--green)"></span>Every decision logged. Switch brains in one tap.</div></div>
+    <div style="width:190px"><div class="phone sm xs"><img src="img/attack-pigeon.png" alt="A planted message in our test app tries to steer the agent; flagged on-device"></div><div class="cap" style="font-size:13px"><span class="dot" style="background:var(--red)"></span>A planted attack in our test app, flagged on the phone.</div></div>
   </div>
   <div class="foot"><span><b>AgentOS</b> · Accessibility layer + Android Keystore + kernel firewall · the model's plan can be fooled; an outward action without your approval cannot happen</span><span>3 / 5</span></div>
 </section>
@@ -196,7 +196,7 @@ h1 em{font-style:normal;color:var(--l2)}
     <div class="glass tile"><div class="n">Utah LLC <small>· Utah-based founder</small></div><div class="t">Built here. Eligible now for UTIF, SBIR with Nucleus Grow, and the Nucleus Fund. Second market: state agencies adopting AI with safeguards (EO 2026-08) and Utah's device-management industry.</div></div>
   </div>
 
-  <div style="position:absolute;right:80px;top:300px;width:207px"><div class="phone sm"><img src="img/voice.png" alt="Voice mode: hold the orb to talk"></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>Say it. It does it. No tapping needed.</div></div>
+  <div style="position:absolute;right:80px;top:300px;width:207px"><div class="phone sm"><img src="img/keyboard.png" alt="AgentOS AI keyboard suggesting replies inside a chat app"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Its own keyboard drafts replies in any app. Sending still goes through the gate.</div></div>
   <div class="foot"><span><b>AgentOS</b> · "target channel", not partner: no agreements signed yet</span><span>4 / 5</span></div>
 </section>
 
@@ -237,18 +237,17 @@ h1 em{font-style:normal;color:var(--l2)}
 </section>
 
 <script>
-// Screen mode only. Print/PDF ignores this.
+// Screen mode only: scaling lives in @media screen CSS variables, so print/PDF is untouched.
 (function(){
-  var slides=[].slice.call(document.querySelectorAll('.slide')),i=0,b=document.body;
-  function fit(){var s=Math.min(innerWidth/1600,innerHeight/900);slides.forEach(function(e){e.style.setProperty('--s',s)});
-    if(!b.classList.contains('present')){var k=Math.min(1,(innerWidth-48)/1600);slides.forEach(function(e){e.style.transform='scale('+k+')';e.style.marginBottom=(900*k-900)+'px'})}}
+  var slides=[].slice.call(document.querySelectorAll('.slide')),i=0,b=document.body,root=document.documentElement;
+  function fit(){root.style.setProperty('--s',Math.min(innerWidth/1600,innerHeight/900));root.style.setProperty('--k',Math.min(1,(innerWidth-48)/1600))}
   function show(n){i=(n+slides.length)%slides.length;slides.forEach(function(e,j){e.classList.toggle('on',j===i)});location.hash='s'+(i+1)}
   addEventListener('keydown',function(e){
-    if(e.key==='p'||e.key==='P'){b.classList.toggle('present');slides.forEach(function(e){e.style.transform='';e.style.marginBottom=''});fit();show(i);return}
+    if(e.key==='p'||e.key==='P'){b.classList.toggle('present');show(i);return}
     if(!b.classList.contains('present'))return;
-    if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);if(e.key==='Escape'){b.classList.remove('present');fit()}});
+    if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);if(e.key==='Escape')b.classList.remove('present')});
   addEventListener('resize',fit);fit();
-  var q=/[?&]slide=(\d+)/.exec(location.search);if(q){b.classList.add('present');slides.forEach(function(e){e.style.transform='';e.style.marginBottom=''});fit();show(+q[1]-1)}
+  var q=/[?&]slide=(\d+)/.exec(location.search);if(q){b.classList.add('present');show(+q[1]-1)}
 })();
 </script>
 </body>

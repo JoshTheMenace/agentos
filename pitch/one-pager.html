@@ -46,8 +46,8 @@ td:first-child{font-weight:600;white-space:nowrap}
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="k">AgentOS · one-page plan · Nucleus Institute × Startup State open call · Oct 28, 2026 · draft</div>
   <h1>The Siri we should have. <em>An AI-native phone OS, built security-first.</em></h1>
-  <p style="margin-top:6px"><b>What it is.</b> You say it, agents do it in your real apps. The model proposes; a gate in the OS decides; risky steps wait for a tap or your fingerprint; payments and passwords always need a fingerprint; everything is logged in a hash chain.</p>
-  <p><b>Where it stands.</b> Working on a rooted Moto G 5G (2023), Android 13, our lab phone. <span class="muted">Before this week:</span> an island overlay prototype, SystemUI experiments, Codex running on the phone. <span class="muted">Built Oct 26 to 28, 118 commits:</span> the gate (leases, Rule of Two, on-device Prompt Guard 2, fingerprint-signed approvals, audit chain, per-app kernel firewall); agentd with Codex, Claude or an on-device model; cross-app memory; proactive cards; scheduled tasks on a locked phone; automatic offline fallback; live voice; an AI keyboard; app mods and micro-apps; the launcher.</p>
+  <p style="margin-top:6px"><b>What it is.</b> You say it, agents do it in your real apps. The model proposes; a gate in the OS decides; risky steps wait for a tap or your fingerprint; payments and passwords always require a fingerprint; everything is logged in a hash chain.</p>
+  <p><b>Where it stands.</b> Working on a rooted Moto G 5G (2023), Android 13, our lab phone. <span class="muted">Before this week:</span> an island overlay prototype, SystemUI experiments, Codex running on the phone. <span class="muted">Built Oct 26 to 28, 123 commits:</span> the gate (leases, Rule of Two, on-device Prompt Guard 2, fingerprint-gated approvals, audit chain, per-app kernel firewall); agentd with Codex, Claude or an on-device model; cross-app memory; proactive cards; scheduled tasks on a locked phone; automatic offline fallback; live voice; an AI keyboard; app mods and micro-apps; the launcher.</p>
   <p><b>Company.</b> Utah-based founder, Utah LLC already formed: eligible now for UTIF microgrants, SBIR/STTR with Nucleus Grow, and the Nucleus Fund. <b>90-day goal.</b> From one rooted lab phone to a shippable build, a 10-person Utah pilot, and an SBIR Phase I proposal ready to submit.</p>
 
   <div class="nums">
@@ -105,7 +105,7 @@ td:first-child{font-weight:600;white-space:nowrap}
       </div>
     </div>
   </div>
-  <div class="foot"><span><b>Sources:</b> every number is from a results file in the repo; per-claim sources in pitch/claims-check.md and pitch/deck/notes.md. Voice latency on the current build is not yet measured. "Target channel" means no agreement signed yet.</span><span>pitch/one-pager.md</span></div>
+  <div class="foot"><span><b>Sources:</b> every number is from a results file in the repo; per-claim sources in pitch/claims-check.md and pitch/deck/notes.md. Voice: 1.7 s from end of speech to task start, spoken "done" ~0.9 s after (spikes/voice/results.jsonl, 7 synthetic-voice runs). "Target channel" means no agreement signed yet.</span><span>pitch/one-pager.md</span></div>
 </div>
 </body>
 </html>
