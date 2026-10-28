@@ -107,6 +107,7 @@ export class Voice {
     switch (msg.type) {
       case 'voice.start': return this.#start(String(msg.sdp || ''), !!msg.client_handoffs);
       case 'voice.stop': return this.close();
+      case 'voice.audio': return log(`voice audio ${String(msg.event).slice(0, 80)} role=${String(msg.role).slice(0, 16)} mic=${!!msg.mic}`);
       case 'voice.say': return this.say(String(msg.text || ''));
       case 'voice.delegate': return this.#delegate(String(msg.item_id), String(msg.text || ''), msg.handoff_id, msg.turn_id); // page saw delegation.created first
       case 'voice.heard': return this.#heard(String(msg.text || ''), String(msg.turn_id || ''));

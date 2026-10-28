@@ -1,6 +1,7 @@
 <!doctype html><meta charset="utf-8"><title>AgentOS voice</title>
 <button id="go">Start voice</button> <button id="end">Stop</button> <button id="cam" hidden>Camera</button>
 <audio id="spk" autoplay></audio><video id="view" playsinline muted hidden width="240"></video><pre id="out"></pre>
+<button id="interrupt">Mute / interrupt</button><script src="/voice-audio.js"></script>
 <script>
 // Bare voice client for agentd (browser or the island WebView; restyle freely, keep the WebRTC part).
 // Open http://127.0.0.1:8787/voice#token=<agentd token>. ?auto starts at once; ?wav=<url> plays a speech file instead of the mic.
@@ -11,7 +12,7 @@ const T0 = performance.now(), now = () => Math.round(performance.now() - T0), $ 
 const out = (s) => { console.log(`${now()} ${s}`); $('out').textContent += `${now()} ${s}\n`; };
 const q = new URLSearchParams(location.search), token = new URLSearchParams(location.hash.slice(1)).get('token');
 const ws = new WebSocket(`ws://${location.host}/`, 'agentos.bearer.' + token);
-let pc, mic, idle, unmeter, t, cam, lastShot = 0, lastMic = 0, doneAt = 0;
+let pc, mic, audioGate, idle, unmeter, t, cam, lastShot = 0, lastMic = 0, doneAt = 0;
 const trace = (event, data = {}) => { if (q.has('bench')) fetch('/log', { method: 'POST', body: JSON.stringify({ at: now(), event, ...data }) + '\n' }); };
 trace('page');
 
@@ -26,8 +27,9 @@ ws.onmessage = async (e) => {
 async function start() {
   if (mic?.getAudioTracks()[0]?.readyState === 'live') return;
   clearTimeout(idle); t = now(); lastMic = doneAt = 0; trace('mic_on');
-  mic = q.get('wav') ? await fileStream(q.get('wav')) : await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-  $('spk').muted = false;
+  mic = q.get('wav') ? await fileStream(q.get('wav')) : await navigator.mediaDevices.getUserMedia({ audio: voiceConstraints });
+  if (pc?.connectionState === 'connected' && audioGate) { audioGate.track = mic.getAudioTracks()[0]; audioGate.active = true; audioGate.muted = false; audioGate.apply(); }
+  else audioGate = new VoiceAudio(mic.getAudioTracks()[0], $('spk'), out);
   if (pc?.connectionState === 'connected') {
     await pc.getSenders()[0].replaceTrack(mic.getAudioTracks()[0]);
     unmeter = meter(mic, $('spk').srcObject); trace('ready', { ms: now() - t, reused: true });
@@ -39,6 +41,11 @@ async function start() {
   dc.onopen = () => { out(`datachannel open +${now() - t}ms`); trace('ready', { ms: now() - t }); setTimeout(() => mic.play?.(), 1000); };
   dc.onmessage = (e) => {
     const m = JSON.parse(e.data);
+    audioGate?.event(m);
+    if (/^(turn\.(created|done)|input_audio_buffer\.|output_audio_buffer\.|response\.|conversation\.item\.truncated|error)/.test(m.type) && !/delta/.test(m.type)) {
+      trace(m.type, { role: m.turn?.role, mic: mic.getAudioTracks()[0].enabled });
+      ws.send(JSON.stringify({ type: 'voice.audio', event: m.type, role: m.turn?.role, mic: mic.getAudioTracks()[0].enabled }));
+    }
     if (m.type === 'delegation.created') // hand it to agentd at once (agentd also hears it via app-server; it dedupes)
       ws.send(JSON.stringify({ type: 'voice.delegate', item_id: m.item.id, handoff_id: m.item.handoff_id, turn_id: m.item.user_bidi_turn_id, text: m.item.content.map((c) => c.text).join('') }));
     if (m.type === 'turn.done' && m.turn?.role === 'user') ws.send(JSON.stringify({ type: 'voice.heard', turn_id: m.turn.id, text: m.turn.transcript }));
@@ -65,6 +72,7 @@ function meter(micStream, remote) {
   let lastSpk = 0, micOn = false, spkOn = false;
   const timer = setInterval(() => {
     const tt = now();
+    audioGate?.sample(lvl(spkA));
     if (lvl(micA) > 0.02) { lastMic = tt; if (!micOn) { micOn = true; out('mic speech start'); snap(); } }
     if (micOn && tt - lastMic > 400) { micOn = false; out('mic speech end'); trace('speech_end', { end: lastMic }); }
     if (lvl(spkA) > 0.01) { if (!spkOn) { spkOn = true; trace('audio', { sinceSpeech: tt - lastMic, sinceDone: doneAt ? tt - doneAt : null }); out(`REPLY AUDIO start, ${micOn ? 'while user talking' : tt - lastMic + 'ms after mic end'}`); } lastSpk = tt; }
@@ -101,8 +109,10 @@ $('cam').onclick = async () => {
   $('view').srcObject = cam; $('view').hidden = false; await $('view').play(); ws.send(JSON.stringify({ type: 'voice.camera', on: true }));
 };
 $('go').onclick = () => start().catch((e) => out('ERR ' + e));
-function drop() { clearTimeout(idle); ws.send(JSON.stringify({ type: 'voice.stop' })); pc?.close(); pc = null; }
+$('interrupt').onclick = () => audioGate?.toggle();
+function drop() { clearTimeout(idle); audioGate = null; ws.send(JSON.stringify({ type: 'voice.stop' })); pc?.close(); pc = null; }
 $('end').onclick = () => {
+  if (audioGate) { audioGate.active = false; audioGate.apply(); }
   mic?.getTracks().forEach((t) => t.stop()); mic?.dispose?.(); unmeter?.(); $('spk').muted = true;
   clearTimeout(idle);
   if (pc?.connectionState === 'connected') { pc.getSenders()[0].replaceTrack(null).catch(() => {}); idle = setTimeout(drop, 60000); }

@@ -108,6 +108,7 @@ const http = createServer((req, res) => {
     return res.writeHead(404).end();
   }
   if (req.url.split(/[?#]/)[0] === '/voice') return res.writeHead(200, { 'content-type': 'text/html' }).end(readFileSync(VOICE_PAGE)); // no secrets in it
+  if (req.url === '/voice-audio.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(readFileSync(new URL('../web/voice-audio.js', import.meta.url)));
   res.writeHead(req.url === '/health' ? 200 : 404).end(req.url === '/health' ? 'ok\n' : '');
 });
 const wss = new WebSocketServer({
@@ -213,7 +214,7 @@ wss.on('connection', (ws, req) => {
         const result = await rpc(msg.method, msg.params && typeof msg.params === 'object' ? msg.params : {}, ms).catch((e) => ({ ok: false, error: e.message }));
         return send({ type: 'rpc.result', id: msg.id, method: msg.method, result });
       }
-      case 'voice.start': case 'voice.stop': case 'voice.say': case 'voice.delegate': case 'voice.heard': case 'voice.text': case 'voice.camera': case 'voice.frame': case 'voice.image': return voice.handle(msg);
+      case 'voice.start': case 'voice.stop': case 'voice.say': case 'voice.delegate': case 'voice.heard': case 'voice.text': case 'voice.camera': case 'voice.frame': case 'voice.image': case 'voice.audio': return voice.handle(msg);
       case 'task.start': return taskman.start(String(msg.goal || ''), { origin: 'typed' }); // background task; progress comes as task.update
       case 'task.list': return send({ type: 'task.list', tasks: taskman.list() });
       case 'task.cancel': return taskman.stop(String(msg.id || ''));

@@ -7,6 +7,7 @@ const home = process.env.PRODUCTION ? '.agentos' : '.agentos-voice-latency';
 const token = execFileSync('adb', ['shell', 'su', '-c', `cat /data/data/com.termux/files/home/${home}/agentd.token`], { encoding: 'utf8' }).trim();
 const http = createServer((req, res) => {
   if (req.url === '/log') { req.on('data', (d) => appendFileSync(process.env.LOG || 'spikes/voice/out/latency.jsonl', d)); return req.on('end', () => res.end('ok')); }
+  if (req.url === '/voice-audio.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(readFileSync(new URL('../../web/voice-audio.js', import.meta.url)));
   const path = req.url.startsWith('/voice') ? '../../agentd/voice.html' : './out/battery.wav';
   res.setHeader('content-type', path.endsWith('html') ? 'text/html' : 'audio/wav');
   res.end(readFileSync(new URL(path, import.meta.url)));
