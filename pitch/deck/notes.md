@@ -1,172 +1,163 @@
-# AgentOS deck: speaker notes and sources (v2, 2026-10-28)
+# AgentOS deck: speaker notes and sources (v3, 2026-10-28)
 
-Deck: `pitch/deck/index.html` (open in a browser, press **P** to present, arrows to move), `pitch/deck/AgentOS-deck.pdf`, and one PNG per slide in `pitch/deck/slides/`. The wordier first draft is kept as `pitch/deck/index-v1.html`.
+Deck: `pitch/deck/index.html` (open in a browser, press **P** to present, arrows to move), `pitch/deck/AgentOS-deck.pdf`, one PNG per slide in `pitch/deck/slides/` and `slides/overview.png` (all five tiled). Earlier drafts: `index-v1.html` (wordy), `index-v2.html` (numbers); v2 notes are in `notes-v2.md`.
 
-**v2 rule:** each slide is one headline, 2–3 big numbers (or one line), and screenshots. Everything that used to be on the slides is now in these notes, under "Say it, not on the slide". Judges listen; they don't read.
+**v3 rule:** one headline per slide, real phone screenshots with 2–4 word labels, Ready features only. **No task times or speed numbers on the slides**: the founder shows speed live. Those numbers, with sources, are at the bottom under "Numbers the founder shows live". Trackers are a built-in privacy setting (Command center › Blockers, Protected today), not something you ask the agent for.
 
-Re-export (PDF, then PNGs):
+Re-export (PDF, then PNGs, then the overview):
 ```
 CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 "$CH" --headless=new --no-pdf-header-footer --print-to-pdf=$PWD/pitch/deck/AgentOS-deck.pdf file://$PWD/pitch/deck/index.html
 for n in 1 2 3 4 5; do "$CH" --headless=new --hide-scrollbars --window-size=1600,900 --screenshot=pitch/deck/slides/slide-$n.png "file://$PWD/pitch/deck/index.html?slide=$n"; done
+# overview: a 2-column HTML grid of the five PNGs at 800×450, screenshot at 1610×1370
 ```
 
-Status key: **MEASURED** = a number from a results file in this repo, taken on the real phone or in our harness. **REPO** = checked in the repo or git. **SECONDARY** = press/aggregator, say with attribution. **UNVERIFIED** = soften or cut if challenged. Screenshot sources are in `SOURCES.md`.
+Status key: **MEASURED** = a number from a results file in this repo, taken on the real phone or in our harness. **REPO** = checked in the repo or git. **SECONDARY** = press/aggregator, say with attribution. Screenshot sources are in `SOURCES.md`; feature readiness is in `pitch/FEATURES.md` and `pitch/SECURITY-FEATURES.md`.
 
 The founder is writing the live demo order; these notes only cover the slides.
 
 ---
 
-## Slide 1 · The problem (~35 s)
+## Slide 1 · The problem (~30 s)
 
-On the slide: **"Your assistant still can't do anything for you."** · 6 apps · 45 s · 6 of 7 · voice-mode screenshot ("AgentOS: say it, it does it.").
+On the slide: **"Your assistant still can't do anything for you."** · "It can tell you the weather. It can't tell Mom you're running late." · 6 apps · 6 of 7 · voice-mode screenshot ("AgentOS: say it, it does it.").
 
 Say it, not on the slide:
-- "You can ask it the weather. You can't say 'tell Mom I'm 10 minutes late' and trust it to go do that: in your real apps, by voice, on the phone you already own."
 - 6 apps: today's flagship phone agent works in a handful of partner apps, cloud-only, and hands back before checkout (reported).
-- 45 s: one reviewer's time for that agent to order one ride, about 10 s by hand. Slow enough that people stop using it (reported).
 - 6 of 7: the open-source phone agents tested in July each fell to at least 6 of 7 published attacks (arXiv 2607.00333).
-- The screenshot is AgentOS voice mode on our Moto G, Oct 27.
+- Slow: one reviewer timed that agent at about 45 s to order one ride (say it, don't show it).
 
-Suggested words: "Everyone's phone has an assistant, and it still can't do anything for you. You can ask it the weather. You can't say 'tell Mom I'm ten minutes late' and trust it to go do that in your real apps. The first phone agents are arriving: a handful of partner apps, cloud-only, and slow enough that one reviewer timed a single ride order at 45 seconds. And to let an agent act, it has to be safe: the open-source phone agents tested this July each fell to at least six of seven published attacks. So we built the phone OS we wanted: it does the task, fast, in any app, and the safety lives in the OS, not in the model."
+Suggested words: "Everyone's phone has an assistant, and it still can't do anything for you. It can tell you the weather. It can't tell Mom you're running late in the app you actually use. The first phone agents are arriving: a handful of partner apps, cloud-only, and slow enough that one reviewer timed a single ride order at 45 seconds. And to let an agent act, it has to be safe: the open-source phone agents tested this July each fell to at least six of seven published attacks. So we built the phone OS we wanted. Say it, it does it, in any app, and the safety lives in the OS, not in the model."
 
 | On the slide | Source | Status |
 |---|---|---|
-| "6 apps", flagship phone agent, partner apps only, cloud-only, hands back before checkout | Gemini task automation on Galaxy S26 (9to5Google 2026-03-12); `agentd/research/DEMO-WOW.md` "Where we can visibly beat them" | SECONDARY, tagged "reported" on the slide. Say "today"; it may change fast. |
-| "~45 s" to order one ride, about 10 s by hand | one hands-on review (gimmie.ai, Aug 2026), linked from the sources list in `agentd/research/DEMO-WOW.md` | SECONDARY, a single review, tagged "reported". If challenged: "one published hands-on timed it at about 45 seconds". "People stop using it" is that reviewer's conclusion, not a study. |
-| Open-source phone agents each fell to at least 6 of 7 attacks | arXiv 2607.00333 (Zhang et al., Jul 2026), via CSA research note; `research/08-pitch-utah.md` §4, `pitch/claims-check.md` B1 | SECONDARY. Read the paper's results table before saying "5", "7", "6" out loud. |
+| "6 apps", partner apps only, cloud-only, hands back before checkout | Gemini task automation on Galaxy S26 (9to5Google 2026-03-12); `agentd/research/DEMO-WOW.md` | SECONDARY, tagged "reported". It may change fast; say "today". |
+| Open-source phone agents each fell to at least 6 of 7 attacks | arXiv 2607.00333 (Zhang et al., Jul 2026); `research/08-pitch-utah.md` §4; `pitch/claims-check.md` B1 | SECONDARY. Read the results table before saying numbers out loud. |
+| ~45 s to order one ride (spoken only) | one hands-on review (gimmie.ai, Aug 2026), linked from `agentd/research/DEMO-WOW.md` | SECONDARY, a single review. |
 | Screenshot: voice mode | `launcher/shots/voice.png` (Oct 27) | REPO. |
 
 Do not say: "unhackable", "we beat the paper". Say "we block these attack types in our test setup".
 
-## Slide 2 · The solution, running today (~45 s)
+## Slide 2 · What it does: say it, it does it (~50 s)
 
-On the slide: **"AgentOS: the Siri we should have."** · 30 s → 11 s · 1.7 s · 157 commits · four screenshots (home, approval card, blockers, offline).
+On the slide: **"Say it. It does it. In any app."** · six shots: Voice, any app · Keyboard writes replies · "What did I miss?" · Apps made by asking · Scheduled, even locked · Point the camera, ask.
 
-Say it, not on the slide:
-- Kicker: an AI-native phone OS, built security-first, running today on a budget Android phone (Moto G 5G 2023, Android 13, rooted lab phone).
-- 30 s → 11 s: median task time before → after this week, same phone, real apps. "Set an alarm for 7 AM" is 7.5 s request to done.
-- 1.7 s: by voice, end of your sentence to the task starting. "Done" is spoken about 1 s after it finishes.
-- 157 commits: Oct 26 to Oct 28, timestamped in git.
-- Home shows what agents did, and what the OS stopped.
-- Risky steps: a tap, or your fingerprint. The exact text is shown.
-- "Any trackers?" "Block them." Per app, by company name, in the kernel.
-- No signal? The phone's own model keeps working.
-- Before this week: island overlay prototype, SystemUI experiments, Codex running on the phone.
-- Built this week (Oct 26–28): the gate (leases, Rule of Two, fingerprint-gated approvals, audit chain) · agentd with Codex, Claude or an on-device model · live voice · AI keyboard · per-app firewall · cross-app memory · proactive cards · app mods and micro-apps · scheduled tasks on a locked phone · automatic offline fallback.
+Say it, not on the slide (one line per shot, all Ready in `FEATURES.md`):
+- **Voice, any app.** Talk to it; each job becomes a background task and it tells you when it's done. It reads the screen and taps like a person, so any app works, no partner deals. "Turn on the flashlight, then open Pigeon and read me Mom's last message": one sentence, two apps.
+- **Keyboard writes replies.** Our own keyboard, in every app's text box: three whole replies from the chat on screen, rewrite and fix modes, "write for me", translate. It knows your calendar: when a chat asks "Are you free Thursday at 3?", the reply says what's actually free. Pixel Magic Cue, but in every app on a budget phone.
+- **"What did I miss?"** Unanswered messages, your next event, a promise you made, and a scam message hidden, plus one spoken or typed line. It summarizes *and* offers to act.
+- **Apps made by asking.** "Make me a habit tracker": a small sandboxed app appears under My apps. Five on the phone now. An app store of one.
+- **Scheduled, even locked.** "Tomorrow at 11, remind me to charge the phone." It fires on time from deep sleep; a locked phone unlocks, does the task and re-locks. A house sitter with a lockbox. Recurring works too.
+- **Point the camera, ask.** Voice mode can see: "What does this sign say?", "What plant is this?", as fast as a plain question.
 
-Suggested words: "This is AgentOS on a budget Moto G. Home shows what agents are doing and what the OS stopped. Risky steps get a card: a tap for most things, a fingerprint for payments and passwords. Ask 'any trackers?' in a real app, say 'block them', and a kernel firewall blocks them by company while the app keeps working. Put it in airplane mode and the phone's own small model keeps going. Speed is a feature: this week median task time went from about 30 seconds to about 11 on the same phone. Before this week we had an island prototype and Codex running on the phone. Everything else you see was built in three days, over a hundred commits, by one founder directing AI coding agents. By voice, the task is under way under two seconds after you stop talking."
+Suggested words: "Here's what it does today. You talk to it and it works in your real apps by reading the screen, like a person would, so there are no partner deals. Our keyboard writes whole replies in any app and knows your calendar. Ask 'what did I miss?' and it shows the messages you haven't answered, your next event and the promises you made, then offers to act. Ask for an app and it builds one. Schedule something and the phone does it later, even locked: it unlocks, does the job, and locks again. And it can look through the camera."
 
 | On the slide | Source | Status |
 |---|---|---|
-| ~30 s → ~11 s median task time, ~2.7× | `agentd/bench/RESULTS.md` round 1 table: median ~30 s → ~11 s, 15 of 16 runs passed; real apps (Clock, Chrome, Calculator, Pigeon), request to `turn.done`, lease card off | MEASURED (10-27). Round 2's prompt tweaks got alarm to 6.0 s but were "not a production default" at the time of that file; commit c3474c7 later made fast mode + finish the default. Quote 7.5 s, the round-1 table number. |
-| 7.5 s "Set an alarm for 7 AM" | same file, same table (33.0 s → 7.5 s, 8 → 2 model calls) | MEASURED. Typed request, not voice: voice adds its own time (not measured yet, see slide 3 notes). |
-| 1.7 s by voice, end of speech → task starting; "done" spoken ~1 s after | `spikes/voice/results.jsonl` (7 runs, 10-28; definitions in `spikes/voice/LATENCY.md`): speech end → `task.update/running` median 1,686 ms (range 1,262–2,415); task done → spoken completion median 927 ms (792–1,280); speech end → first spoken acknowledgement median 2,239 ms; session ready 8–9 ms warm, 1.1–1.7 s cold | MEASURED on the phone's own Codex app-server with a **synthetic voice** (macOS `say`, one battery-level question, no app driving, no approvals). Say "about two seconds" if rounding up. |
-| 157 commits, Oct 26 to Oct 28 | `git rev-list --count HEAD` = 157 at 09:20 on 10-28 (was 123 at 03:10) on branch `t3/agent-native-android-hackathon`. The first commit is dated 2026-10-26 21:47, so `git rev-list --count --since=2026-10-26 HEAD` gives the same number. Includes docs and pitch commits. | REPO. The number grows during the day: re-run the command and edit slide 2 before the final export. Code size if asked: ~19.8k lines of Java/JS (`wc -l` over `android agentd keyboard launcher web`, excluding node_modules and the build copy of web/app.js). |
-| Before this week: island overlay prototype, SystemUI experiments, Codex running on the phone | `pitch/claims-check.md` C5; `research/05`, `research/00` | REPO. Don't name the third-party app used in the Frida experiments. |
-| Built this week list | git log 10-26 21:47 → 10-28 (`git log --format='%ad %s'`), STATUS.md "Done" | REPO. All on the phone; the "watch" word on slide 3 is a built Wear OS app tested on the phone as a stand-in, not yet paired to a real watch (STATUS "Waiting on the user"). |
-| "Budget Android phone" | Moto G 5G (2023), Android 13, rooted (`research/00-device-baseline.md`) | REPO. Price not checked: don't say "$150" (claims-check C2). |
-| Screenshots | home, approval card, blockers: `launcher/shots/polish-night-2/` (10-28 02:40); offline: `pitch/rehearsal/11-local-airplane.png` (airplane mode, on-device Qwen3.5-0.8B) | REPO. The offline shot also shows a denied firewall approval and a cancelled fingerprint: that is a real log, not an error. |
+| Voice assistant, cross-app tasks, operate any app by its screen | `FEATURES.md` §1–2; `pitch/rehearsal/DEPLOY-FINAL.md` | Ready (voice cold start is the stage risk: warm it first). |
+| Keyboard: context replies, calendar-aware replies, rewrite/fix, write for me, translate | `FEATURES.md` §3; `keyboard/LATENCY.md` | Ready. Catch-me-up and image generation are Fragile: don't promise them. |
+| "What did I miss?" | `FEATURES.md` §4 | Ready (clear private notifications first). |
+| Micro-apps | `FEATURES.md` §8; `agentd/README.md` 5/5 built | Ready. |
+| Scheduled task, unlocks itself, recurring | `FEATURES.md` §11; `SECURITY-FEATURES.md` §10 (lockbox PIN, clean tasks only) | Ready. Refuses to unlock if a guard flagged anything earlier. |
+| Camera by voice | `FEATURES.md` §7; `LIVE-VISION.md` | Ready on 10-27, not re-smoked 10-28. |
+| Screenshots | voice `launcher/shots/voice.png`; keyboard `pitch/rehearsal/04-keyboard.png`; catch-up frame cropped from `launcher/shots/polish-night-3/catchup-zoom2.png`; app `launcher/shots/apps-habit-streaks.png`; schedule `launcher/shots/climb-a/05-after-sched-chip.png`; camera `launcher/shots/vision-voice-realcam.png` | REPO. |
 
-Honest framing if asked: root is the lab (slide 5). The phone is one device; nothing is in a store.
+## Slide 3 · What it does: knows you, guards you, yours to change (~50 s)
 
-## Slide 3 · Hard tech (~45 s)
-
-On the slide: **"The model proposes. The OS decides."** · diagram You → Model → [models stop here] → The gate → Your apps · 6 of 6 · 26 of 30 · 476 · two screenshots (fingerprint card, planted attack caught).
+On the slide: **"It knows you. It guards you. You can change it."** · six shots: Proactive For you cards · Knows your people · Trackers blocked, one tap · Hide LinkedIn ads · Add buttons to apps · Codex, Claude or on-device.
 
 Say it, not on the slide:
-- The riskiest steps require your fingerprint.
-- You reach it by voice, the AI keyboard, the home screen, or a watch.
-- The model (agentd, "the brains"): Codex, Claude, or Qwen 0.8B on the phone. Swappable. No shell, no root. It sees only 16 phone tools.
-- The gate (`local.agentos`): leases · Rule of Two · on-device Prompt Guard 2 · approvals bound to the exact action, fingerprint for payments and passwords · hash-chained audit · per-app firewall. Your apps stay unmodified.
+- **Proactive For you cards.** The home screen is the agent. A question in a chat becomes "Reply to Alex?" with a draft; a promise you typed becomes a reminder. Cards only ever *start* a task; nothing proactive is sent without you.
+- **Knows your people.** Cross-app memory on the phone: contacts, calendar, messages, photos, only with consent. "Who is Mom and when did I last message her?" You can read and fix what it knows (Command center › What I know).
+- **Trackers blocked, one tap.** A built-in privacy setting, not an agent feature: Blockers shows which tracker companies each app talks to and blocks them at the kernel firewall, per app, by company name, while the app keeps working. The AI can't touch these settings; only you can. Protected today on the Command center keeps the tally.
+- **Hide LinkedIn ads.** "Hide Promoted posts in LinkedIn": a mask colored like the app that follows the feed, with an "Ad hidden" chip. Edit a real app with words.
+- **Add buttons to apps.** "Add a tip button to my calculator": a native-looking button that presses the app's own keys. Mods can never press Send or Pay.
+- **Codex, Claude or on-device.** Same tools, same rules, different brain. The on-device model (Qwen 0.8B) takes over automatically when the signal drops; Siri says "can't connect", this keeps going.
+
+Suggested words: "It also knows you. The home screen is the agent: it notices a question you haven't answered and offers a reply, and it turns your promises into reminders. It builds a memory of your people across apps, on the phone, and you can read and correct it. Privacy is a setting, not a favor: one tap blocks the trackers inside Spotify or Weather at the kernel, and the AI can't change that setting, only you can. You can change your apps with words: hide the promoted posts in LinkedIn, add a button to the calculator. And you pick the brain: Codex, Claude, or a small model on the phone that keeps working with no signal."
+
+| On the slide | Source | Status |
+|---|---|---|
+| AI home screen, For you, moments | `FEATURES.md` §4 | Ready. Proactive nudges from a real teammate message are "Needs setup": the shot is real, the live beat needs a teammate. |
+| Memory, What I know, memory graph, connectors with consent | `FEATURES.md` §5 | Ready (MEMORY_V2=1 on the phone; memory can be stale). |
+| Tracker radar, one-tap blocks, Protected today | `FEATURES.md` §10 (owner settings since 10-28); `android/README.md` (476 tracker domains, iptables by app uid) | Ready. Rules reset on reboot. Nothing in the deck says "ask the agent to block". |
+| Hide parts of a real app (LinkedIn Promoted) | `FEATURES.md` §9; `APP-MODS.md` | Fragile on stage (needs a Promoted post in the feed). The screenshot is real. Founder asked for it on the slide. |
+| Add a button to a real app | `FEATURES.md` §9 | Ready (needs your tap). The shot shows a "Double" button; say "tip button" only if you demo one. |
+| Multi-provider brains, auto offline fallback | `FEATURES.md` §12–13; `agentd/runs/2026-10-28-offline-fallback.md` | Codex and local Ready; Claude on the phone is Fragile (installed, never benchmarked). Say "pluggable" if pressed. |
+| Screenshots | For you `launcher/shots/proactive-home-request.png`; memory `launcher/shots/memory.png`; Blockers `launcher/shots/trackers-night/blockers.png`; LinkedIn `launcher/shots/mods-linkedin-polished.png`; calculator `launcher/shots/mods-calculator-button.png`; Command center `launcher/shots/foryou/after-center.png` | REPO. |
+
+## Slide 4 · The OS decides (~45 s)
+
+On the slide: **"The model proposes. The OS decides."** · diagram You / Grok · ChatGPT (can ask, can't approve) → Model → [models stop here] → The gate → Your apps · three rules (Rule of Two · Fingerprint · Audit) · two shots (fingerprint card, planted attack caught).
+
+Say it, not on the slide:
+- The model (agentd, "the brains"): Codex, Claude, or Qwen on the phone. Swappable. No shell, no root. It only sees phone tools.
+- The gate (`local.agentos`): the only thing that can tap, type or call an API. Leases · Rule of Two · on-device Prompt Guard 2 · approvals bound to the exact action · fingerprint for payments and passwords · hash-chained audit · per-app firewall. Your apps stay unmodified.
 - Rule of Two: untrusted text + private data + outward action = a human decides. Codes read from the screen can never be typed out.
-- 6 of 6: injections flagged on our test set by Prompt Guard 2 (22M, int8 ONNX) running on the phone, 0 false flags.
-- 1.86 s: median auto-reviewer decision on a low-risk step (Mac-side measurement; see table).
-- 38/38 · 12/12: cross-app memory, "reply that I'm late" finds the right person and app; held-out set 12/12, one model call instead of 2 to 3.
-- 26 of 30: Qwen3.5-0.8B on the phone drives real tasks offline (was 0/30). It switches in automatically when the network drops.
-- 476 tracker domains: kernel firewall by app ID. The SNI watcher names the company; one tap blocks it, the app keeps working.
-- Screenshots: native approval card with the "Untrusted content" label; a planted attack in our own test app, flagged on the phone.
-- Footer claim from v1 (precise wording): the model's plan can be fooled; an outward action without your approval cannot happen.
+- Grok or ChatGPT can send a task to the phone through MCP; every one shows a "From Grok" lease card, no auto-approve, no unlock, no scheduling. "Grok can ask, it can't approve." (This needs the remote relay set up: it is a design claim today, don't offer to demo it.)
+- Approval cards show the exact app, button and text; a tap or your own spoken "yes"; the riskiest steps need your fingerprint. Any touch pauses the task; a one-second volume-down hold stops everything.
+- Screenshots: the native approval card with the "Untrusted content" label; a planted attack in our own test app, flagged on the phone.
+- Precise claim: the model's plan can be fooled; an outward action without your approval cannot happen.
 
-Suggested words: "The model is the brains, and we assume it can be fooled. So it never gets a shell or root; it only sees phone tools. Everything it proposes goes through one gate, an Android app that owns the accessibility layer, the keystore and the kernel firewall. Three rules do most of the work. Rule of Two: untrusted text plus private data plus an outward action means a person decides, and a code read from the screen can never be typed out. Prompt Guard 2 runs on the phone and labels suspicious text before the model sees it. And every approval is bound to the exact action, app, button, text; payments and saved passwords require your fingerprint, and every decision lands in a hash-chained log. The same gate lets us swap brains: Codex, Claude, or a 0.8-billion-parameter model on the phone that now drives 26 of 30 real tasks and takes over automatically when the network drops."
+Suggested words: "The model is the brains, and we assume it can be fooled. So it never gets a shell or root; it only sees phone tools. Everything it proposes goes through one gate, an Android app that owns the accessibility layer, the keystore and the kernel firewall. Three rules do most of the work. Rule of Two: untrusted text plus private data plus an outward action means a person decides, and a code read from the screen can never be typed out. Payments and saved passwords need your fingerprint. And every decision lands in a hash-chained log. Other assistants can ask the phone to do things, Grok, ChatGPT, but only you can approve. The same gate lets us swap brains."
 
 | On the slide | Source | Status |
 |---|---|---|
-| Models get no shell, no root; only phone tools ("16 phone tools") | `ARCHITECTURE.md` rules 1–2; commit 2a570ca "16-tool core + 12 owner-toggled plugins" | REPO (design and config). Gotcha from `agentd/README.md`: Codex still sees some non-shell tools; its own approval requests are declined. |
-| Rule of Two; screen codes never typed (P3) | `ARCHITECTURE.md` rule 3; `android/README.md` e2e (OTP block, P3); `pitch/claims-check.md` C10 | REPO, verified on phone for the OTP case. |
-| 6/6 injections flagged, 0 false flags | `android/guard-tests/README.md` table (10-27): agentd regex after 6/6 precision 1.00 recall 1.00; on-device Prompt Guard 2 alone 4/4 precision, 4/6 recall; "either guard" 6/6. 31-case set per commit 0c10770 | MEASURED on a small set. Say "on our test set"; the 6/6 is both guards together. Prompt Guard 2 is the 22M int8 ONNX model (`android/README.md`). |
-| 1.86 s median auto-reviewer decision | `agentd/reviewer-results.md`: 2,273.5 ms → 1,859 ms median on 18 actions, Mac-side run; live cases 27/28 | MEASURED on the Mac, not the phone. On the phone the auto-approve wait is 2.5–4.6 s (`agentd/bench/RESULTS.md` header). |
-| Fingerprint for payments and passwords always | STATUS.md decisions (fingerprint only for the most sensitive); `agentd/reviewer-results.md` "payment/password fingerprint rules" | REPO. |
-| "The riskiest steps require your fingerprint"; approvals bound to the exact action; audit chain | `android/README.md`: fingerprint-only list (pay, buy, install, vault), card and system fingerprint prompt verified on the phone, `chain_ok` re-checked on the Mac; `pitch/rehearsal/RUN.md` beats 7–8: "touch the sensor (needs presenter)" | REPO for the gate. **Not yet seen end to end:** `android/README.md` "Device results" still says a full *approved* action (fingerprint → signature verified → act) has not been observed; the rehearsal shots show the card and the prompt only. So the deck says "require your fingerprint", not "your fingerprint signs". If the founder completes `python3 android/tools-client.py e2e --press-approve` before 5 PM, "signs the exact action" can go back in. Hardware backing (TEE/StrongBox) not checked: say "Android Keystore" (C9). The prompt text is drawn by our app (known limit). |
-| 38/38 · 12/12 cross-app memory | `agentd/memory/eval/RESULTS.md`: end-to-end Codex 22/38 → 38/38 tuning, 12/12 held-out; 1.2 model calls per question vs 2.6; re-run 50/50 | MEASURED, synthetic multi-app world on the Mac with the real model. On the phone with real data: 2.2–4.1 s per question. |
-| 26/30 offline tasks (was 0/30), automatic fallback | `agentd/runs/2026-10-27-local-model.md` total row 26/30 (26/27 supported), router 30/30; `agentd/runs/2026-10-28-offline-fallback.md`: warm local ask 2.3 s, worker 3.4 s, cold 24.3 s (llama-server stopped) | MEASURED on the phone. Qwen3.5-0.8B Q4_0 via llama.cpp. Cold start is slow: start llama-server before the demo. |
-| 476 tracker domains; kernel firewall by app ID; SNI watcher names the company | `android/README.md` line ~193 (`res/raw/trackers.txt`, 476 domains, Exodus signatures); iptables owner-uid rules | REPO. Firewall rules and counters reset on reboot (README limit). |
-| Screenshot: planted attack flagged on-device | `pitch/rehearsal/07-security-alert.png`: Pigeon, **our own test app**, Prompt Guard 2 flag card ("Ignored instructions in a message") | REPO. Always say it is our test app, no real contacts. |
-| Codex · Claude · Local switch (Q&A only now) | `launcher/shots/polish-night-2/after-center.png` model row; Claude provider works on the phone (commit 5bbe0da) | REPO. Claude not benchmarked live: say "pluggable" if pressed (claims E6). |
-| Keyboard suggestions 7.3 s → 3.5 s (not on the slide; good Q&A number) | `keyboard/LATENCY.md` After table | MEASURED on the phone, 10-28 night. |
-| Voice latency | see the slide 2 row: `spikes/voice/results.jsonl` (7 runs), definitions in `spikes/voice/LATENCY.md`. The older 1.9 s spike number in `spikes/voice/README.md` was via a Mac relay; don't mix the two. | MEASURED (synthetic voice, phone's own Codex). |
-| Proactive cards precision (not on the slide) | `agentd/research/PROACTIVE.md`: 99–100 % precision, 92–95 % recall over 5 runs, 152 threads; blind set 100 % / 91–97 % | MEASURED on labeled threads (synthetic + blind set). |
+| Broker is the only executor; models get no shell | `SECURITY-FEATURES.md` §1; `ARCHITECTURE.md` rules 1–2 | Ready (design and config). |
+| Rule of Two; screen codes never typed | `ARCHITECTURE.md` rule 3; `android/README.md` e2e (OTP block) | Ready, verified on the phone for the OTP case. |
+| Fingerprint for money, installs, saved passwords; exact-text binding | `SECURITY-FEATURES.md` §2 | Fragile: a real finger has not completed end to end; the prompt is black on screen capture. Say "require your fingerprint", not "your fingerprint signs". |
+| Hash-chained audit | `SECURITY-FEATURES.md` §5; `android/README.md` `chain_ok` | Ready. |
+| Grok · ChatGPT can ask, can't approve | `SECURITY-FEATURES.md` §8; `REMOTE-MCP.md` (7.1 s real-phone test) | Needs setup (REMOTE_MCP off, relay + pairing ~15 min; never tried with real Grok). Design claim only. |
+| Prompt Guard 2 on device, planted attack flagged | `SECURITY-FEATURES.md` §3; `android/guard-tests/README.md` | Fragile (misses some polite injections; the broker rules are the real defense). Always say "our own test app". |
+| Screenshots | `android/shots/card-approval-fingerprint.png`; `pitch/rehearsal/07-security-alert.png` (Pigeon, our test app) | REPO. |
 
-Footer line claim: "the model's plan can be fooled; an outward action without your approval cannot happen". That is the precise claim from `pitch/deck.md` slide 3. Root is above everything (known limit): a rooted attacker is out of scope.
+Known limits to volunteer: root is above everything; the approval sheet text is drawn by our app (no Protected Confirmation); firewall rules reset on reboot.
 
-## Slide 4 · Why it matters for Utah (~35 s)
+## Slide 5 · Why it matters for Utah (~30 s)
 
-On the slide: **"AI must be human-guided." Built into the OS.** (kicker credits Gov. Cox, Pro-Human AI initiative) · 7,000+ · 12 % · Utah LLC · Utah map with four pins · keyboard screenshot.
+On the slide: **"AI must be human-guided." Built into the OS.** (kicker credits Gov. Cox, Pro-Human AI initiative) · 7,000+ · 12 % · Utah map with four pins · approval-card screenshot ("Risky steps wait for you").
 
 Say it, not on the slide:
 - Every outward action on this phone waits for a person. That sentence is our permission system.
 - 7,000+ Utahns served by the Division of Services for People with Disabilities. First users: people who can't easily use a touchscreen. Target pilot channel: the Utah Assistive Technology Program at USU (Logan pin). Say "target channel", never "partner".
 - ~12 % of Utahns are 65+; projection 1 in 4 by 2065. "Grandma says it, the agent does it, anything risky waits for her fingerprint or the family's okay."
-- Utah LLC, Utah-based founder. Eligible now for UTIF, SBIR with Nucleus Grow, and the Nucleus Fund. Second market: state agencies adopting AI with safeguards (EO 2026-08) and Utah's device-management industry.
+- Utah-based founder, built here. Second market: state agencies adopting AI with safeguards (EO 2026-08) and Utah's device-management industry.
 - Pins: Logan (USU assistive tech program) · Salt Lake City (state agencies, Cyber Center) · Draper (Nucleus at The Point) · rural Utah (works with no signal).
-- Keyboard screenshot: its own keyboard drafts replies in any app; sending still goes through the gate.
 
-Suggested words: "Governor Cox's Pro-Human AI values say, word for word, AI must be human-guided. That sentence is our permission system. Who needs it first? Utahns who can't easily use a touchscreen: the Division of Services for People with Disabilities serves over seven thousand people, and the state's assistive technology program at USU already runs demo and loan libraries. Then older adults, and families who want a grandparent to say it and have it done, with anything risky waiting for a fingerprint. It runs on the phone people already own and keeps working with no signal, which matters outside the Wasatch Front. We're a Utah LLC with a Utah-based founder, so UTIF, SBIR through Nucleus Grow and the Nucleus Fund are open to us now."
+Suggested words: "Governor Cox's Pro-Human AI values say, word for word, AI must be human-guided. That sentence is our permission system. Who needs it first? Utahns who can't easily use a touchscreen: the Division of Services for People with Disabilities serves over seven thousand people, and the state's assistive technology program at USU already runs demo and loan libraries. Then older adults, and families who want a grandparent to say it and have it done, with anything risky waiting for a fingerprint. It runs on the phone people already own and keeps working with no signal, which matters outside the Wasatch Front. We're building it here."
 
 | On the slide | Source | Status |
 |---|---|---|
 | "AI must be human-guided" (Gov. Cox, Pro-Human AI initiative) | prohumanai.utah.gov; `research/08` §2; claims D1 | VERIFIED (state site). Quote exactly. |
 | 7,000+ Utahns served by DSPD | DSPD FY2024 Annual Report PDF; claims D3 | VERIFIED (primary). |
-| Utah Assistive Technology Program (USU), Logan; demo and loan libraries | idrpp.usu.edu/uatp; claims D6 | VERIFIED. Say **"target pilot channel"**, never "partner". No agreement exists. |
-| ~12 % of Utahns 65+; 1 in 4 by 2065 | KSL; KPCW (Gardner Institute projections); claims D5 | SECONDARY. Marked "projection" on the slide. |
-| Utah LLC, Utah-based founder; eligible for UTIF, SBIR, Nucleus Fund | founder (claims E2); UTIF rules are aggregator figures | VERIFIED (founder). Have the LLC name and date ready. Say "apply for", no UTIF dollar amount. |
-| EO 2026-08: state agencies adopting AI with safeguards | GovTech; claims D2 | SECONDARY. One line only. |
-| Utah's device-management industry | SiliconANGLE on Ivanti; claims D11 | SECONDARY, no company named on the slide. Never imply a relationship. |
-| Nucleus at The Point, Draper; Nucleus Grow free SBIR help | startup.utah.gov; Deseret News; claims D8 | SECONDARY. |
-| Utah Cyber Center (SLC pin) | cybercenter.utah.gov; SB 123 (2026); `research/08` §2 | SECONDARY; context only. |
-| "Works with no signal" (rural pin) | offline fallback, see slide 3 | MEASURED on the phone (airplane mode). Rural coverage framing is ours, not a study. |
-| Screenshot: AI keyboard | `pitch/rehearsal/04-keyboard.png`: our keyboard (`local.agentos.keys`) suggesting replies in Pigeon | REPO. Suggestions fill the box; Send still goes through the gate. |
-| Map | hand-drawn outline (rectangle with the NE notch); pins are approximate | n/a |
-
-## Slide 5 · Path to reality and the $10K (~40 s)
-
-On the slide: **"A 10-person Utah pilot in 90 days."** · budget bar $2,500 / $3,000 / $2,500 / $1,000 / $1,000 (8 phones · Utah pilot · independent red team · model credits · legal) · Day 30 / 60 / 90 · one ask line.
-
-Say it, not on the slide:
-- From one rooted phone to a 10-person Utah pilot and an SBIR proposal, in 90 days.
-- 8 phones: off root, onto the shippable path (managed-device app, Android AppFunctions).
-- Utah pilot: 10 users, stipends, an assistive-tech specialist, travel to Logan.
-- Independent red team: outside proof of the safety claim.
-- Legal: registrations (SBIR, SAM.gov is free) and consent forms.
-- Day 30: off root; open threat model and test suite; SBIR topic chosen with Nucleus Grow.
-- Day 60: 10 pilot users enrolled through an assistive-tech channel; independent red-team review done, fixes merged.
-- Day 90: pilot results published; SBIR Phase I proposal ready for the first open solicitation; results to the Nucleus Fund.
-- One founder plus AI coding agents built this week's phone; the founder sets direction and reviews every security decision.
-- Footer: root is the lab, not the product.
-
-Suggested words: "Root is our lab, not our product. The shippable paths are a managed-device app, the way device-management tools already work, and Android's AppFunctions. The ten thousand buys the phones to make that move, a ten-person pilot here in Utah through an assistive-tech channel, and an outside red team so the safety claim isn't just ours. Day 30: off root, open threat model, SBIR topic picked with Nucleus Grow. Day 60: pilot enrolled, red-team done. Day 90: results published and a Phase I proposal ready for the first open solicitation. What we need besides money: an intro to a university co-PI and to the assistive technology program at USU."
-
-| On the slide | Source | Status |
-|---|---|---|
-| $2,500 devices · $3,000 pilot · $2,500 red team · $1,000 model credits · $1,000 registrations and legal | `pitch/deck.md` slide 5, `pitch/one-pager.md`, `research/08` §6 (adjusted because the LLC already exists); claims E3 | Our estimate. Phone prices ($150–250) and $150 stipends are assumptions. SAM.gov registration is free. |
-| "8 phones" | 6 low-cost Android phones + 2 Pixels (one-pager) | Plan. |
-| Managed-device app, Android AppFunctions as the off-root path | Android Developers Blog (AppFunctions, Feb 2026); claims E5 | SECONDARY; **none built yet**, it is the plan. |
-| SBIR "proposal ready", not "submitted", at day 90 | SBIR reauthorized 2026-04-13 through FY2031 (Mondaq), agencies restarting cycles; claims D9/D10 | SECONDARY. Check sbir.gov before saying the date. |
-| Independent red team | plan | Not started. |
-| One founder plus AI coding agents | claims E1 | VERIFIED. |
-| Ask: university co-PI (U of U or USU), UATP intro | one-pager "People needed" | Ask, not a claim. |
+| Utah Assistive Technology Program (USU), Logan | idrpp.usu.edu/uatp; claims D6 | VERIFIED. Say **"target pilot channel"**, never "partner". No agreement exists. |
+| ~12 % of Utahns 65+; 1 in 4 by 2065 | KSL; KPCW (Gardner Institute projections); claims D5 | SECONDARY. |
+| EO 2026-08; device-management industry (spoken only) | GovTech; SiliconANGLE; claims D2, D11 | SECONDARY. No company named. |
+| Nucleus at The Point, Draper | startup.utah.gov; claims D8 | SECONDARY. |
+| "Works with no signal" (rural pin) | offline fallback, `agentd/runs/2026-10-28-offline-fallback.md` | MEASURED on the phone (airplane mode). Rural framing is ours. |
+| Screenshot: approval card | `launcher/shots/polish-night-2/after-card-approval.png` ("Tap Send?" with the exact text, Deny / Approve) | REPO. |
+| Map | hand-drawn outline; pins approximate | n/a |
 
 ---
+
+## If asked: $10K (spoken, no slide)
+
+"Ten thousand turns one rooted lab phone into a ten-person Utah pilot in ninety days. About a quarter buys eight phones so we move off root onto the shippable path, a managed-device app and Android's AppFunctions. About a third funds the pilot itself: ten users through an assistive-technology channel, stipends, a specialist, travel to Logan. A quarter pays an independent red team, so the safety claim isn't just ours. The rest is model credits and the registrations for SBIR. Day 30: off root, open threat model. Day 60: pilot enrolled, red team done. Day 90: results published and a Phase I proposal ready. Beyond money, the ask is an intro to a university co-PI and to USU's assistive technology program."
+
+Breakdown if pressed (our estimate, `pitch/one-pager.md`): $2,500 phones (6 low-cost Android + 2 Pixels) · $3,000 pilot · $2,500 independent red team · $1,000 model credits · $1,000 registrations and legal. Phone prices and $150 stipends are assumptions; SAM.gov registration is free; none of the off-root path is built yet.
+
+## Numbers the founder shows live (not on the slides)
+
+| Number | Source | Status |
+|---|---|---|
+| Median task ~30 s → ~11 s this week; "Set an alarm for 7 AM" 7.5 s | `agentd/bench/RESULTS.md` round 1 | MEASURED 10-27, typed request, real apps. |
+| Voice: 1.7 s from end of sentence to task starting; "done" spoken ~1 s after | `spikes/voice/results.jsonl`, `spikes/voice/LATENCY.md` | MEASURED with a synthetic voice; say "about two seconds". |
+| 157+ commits Oct 26–28 | `git rev-list --count HEAD` | REPO; re-run before quoting. |
+| 6 of 6 injections flagged on our test set, 0 false flags | `android/guard-tests/README.md` | MEASURED on a small set, both guards together. |
+| 26 of 30 tasks fully offline (was 0/30) | `agentd/runs/2026-10-27-local-model.md` | MEASURED on the phone. Start llama-server before the demo. |
+| 476 tracker domains in the kernel firewall | `android/README.md` | REPO. |
+| Keyboard suggestions 7.3 s → 3.5 s | `keyboard/LATENCY.md` | MEASURED on the phone. |
+| Proactive cards 99–100 % precision on 152 threads | `agentd/research/PROACTIVE.md` | MEASURED on labeled threads. |
 
 ## Q&A crib (from `pitch/deck.md`, still current)
 
@@ -176,10 +167,7 @@ Suggested words: "Root is our lab, not our product. The shippable paths are a ma
 - **Which AI do you use?** Demo: the founder's ChatGPT plan through OpenAI's Codex app-server, plus a local model; Claude plugs in through an API key. Product: API keys or local models, not personal subscriptions.
 - **Known limits to volunteer:** root is above everything; the approval prompt text is drawn by our app (no Protected Confirmation); firewall rules reset on reboot; `task.start` isn't human-approved.
 
-## Numbers deliberately left off the slides
-- Voice "first spoken reply" (2.2 s median) and cold session start (1.1–1.7 s): true but less flattering than task start; in the notes only.
-- Code line count (~19.8k): a count, not a quality claim; in the notes only.
-- "$150 phone" (unverified price).
-- DSPD technology pilot "$5K per person" (aggregator, unverified).
-- Humane / Rabbit funding figures (conflicting sources).
-- B2 "2 % opacity text read 18 of 20 times" (inconsistent in our notes).
+## Deliberately left off the slides
+- All task times and speed numbers (above; shown live).
+- Company details (LLC, founder residence) and the $10K budget bar (spoken answer above).
+- Voice "first spoken reply" (2.2 s) and cold session start; code line count (~19.8k); "$150 phone"; DSPD "$5K per person"; Humane / Rabbit funding figures.

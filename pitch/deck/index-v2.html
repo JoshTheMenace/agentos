@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AgentOS · Nucleus Institute × Startup State open call · 5 slides</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* A2 · Calm Glass iOS Dark (design/A2-tokens.md). Slides are 1600×900. v2: headline + numbers + screenshot; words live in notes.md. */
+@page { size: 1600px 900px; margin: 0; }
+:root{
+  --bg:#050506; --grp3:#3A3A3C;
+  --l1:#fff; --l2:rgba(235,235,245,.6); --l3:rgba(235,235,245,.3);
+  --blue:#0A84FF; --green:#30D158; --orange:#FF9F0A; --red:#FF453A; --purple:#BF5AF2; --teal:#64D2FF;
+  --r:22px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;color:var(--l1);font-family:Inter,-apple-system,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss03";-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.slide{width:1600px;height:900px;position:relative;overflow:hidden;background:var(--bg);break-after:page;page-break-after:always;padding:72px 88px}
+.slide:last-child{break-after:auto;page-break-after:auto}
+.blob{position:absolute;border-radius:50%;pointer-events:none}
+.b1{width:560px;height:560px;left:-120px;top:-160px;background:radial-gradient(circle,rgba(70,60,220,.36),rgba(70,60,220,0) 70%)}
+.b2{width:560px;height:560px;right:-140px;top:120px;background:radial-gradient(circle,rgba(40,170,190,.22),rgba(40,170,190,0) 70%)}
+.b3{width:480px;height:480px;left:520px;bottom:-240px;background:radial-gradient(circle,rgba(230,90,150,.2),rgba(230,90,150,0) 70%)}
+.k{font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--l3)}
+h1{font-size:76px;font-weight:700;letter-spacing:-.045em;line-height:1.04;margin:18px 0 0;max-width:1000px}
+h1 em{font-style:normal;color:var(--l2)}
+.sub{font-size:30px;font-weight:500;color:var(--l2);letter-spacing:-.02em;line-height:1.3;margin:24px 0 0;max-width:900px}
+.glass{background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.06));border-radius:var(--r);position:relative}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(160deg,rgba(255,255,255,.28),rgba(255,255,255,.07) 40%,rgba(255,255,255,.03) 70%,rgba(255,255,255,.14));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.foot{position:absolute;left:88px;right:88px;bottom:40px;display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:var(--l3);letter-spacing:.01em}
+.foot b{color:var(--l2);font-weight:600}
+/* phone frame: 540×1200 shots → 9:20 */
+.phone{width:306px;height:680px;border-radius:48px;background:#000;padding:10px;box-shadow:0 30px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.14);position:relative;flex:none}
+.phone img{display:block;width:100%;height:100%;object-fit:cover;border-radius:38px}
+.phone.md{width:234px;height:520px;border-radius:38px;padding:8px}.phone.md img{border-radius:30px}
+.phone.sm{width:207px;height:460px;border-radius:34px;padding:8px}.phone.sm img{border-radius:27px}
+.phone.xs{width:185px;height:411px;border-radius:31px;padding:7px}.phone.xs img{border-radius:25px}
+.cap{font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--l2);margin-top:14px;line-height:1.3;text-align:center}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:2px}
+/* big numbers */
+.nums{display:flex;gap:56px}
+.num .n{font-size:88px;font-weight:700;letter-spacing:-.05em;line-height:1;white-space:nowrap}
+.num .n small{font-size:30px;font-weight:600;color:var(--l2);letter-spacing:-.02em;margin-left:6px}
+.num .t{font-size:17px;font-weight:600;color:var(--l2);margin-top:12px;letter-spacing:-.01em}
+/* diagram */
+.box{padding:20px 22px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;text-align:center}
+.box .h{font-size:22px;font-weight:600;letter-spacing:-.02em}
+.box .h span{display:block;font-size:14px;font-weight:600;color:var(--l3);margin-top:4px;letter-spacing:0}
+.arrow{width:44px;height:2px;background:rgba(255,255,255,.25);position:relative;align-self:center;flex:none}
+.arrow::after{content:"";position:absolute;right:-1px;top:-5px;border:6px solid transparent;border-left-color:rgba(255,255,255,.35)}
+.wall{width:14px;align-self:stretch;border-radius:8px;background:linear-gradient(180deg,var(--red),#ff6b61);box-shadow:0 0 24px rgba(255,69,58,.45);position:relative;flex:none}
+.wall span{position:absolute;left:50%;top:-32px;transform:translateX(-50%);white-space:nowrap;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
+.seg{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:26px;letter-spacing:-.02em}
+.lab{font-size:18px;font-weight:600;color:var(--l2);letter-spacing:-.01em}
+.lab b{color:var(--l1);font-weight:700}
+/* screen mode */
+@media screen{
+  body{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px;background:#000}
+  .slide{transform-origin:top center;box-shadow:0 20px 80px rgba(0,0,0,.6);border-radius:12px;transform:scale(var(--k,1));margin-bottom:calc(900px*var(--k,1) - 900px)}
+  body.present{display:block;padding:0;overflow:hidden;height:100vh}
+  body.present .slide{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--s,1));display:none;border-radius:0;margin:0}
+  body.present .slide.on{display:block}
+  #hint{position:fixed;right:16px;bottom:12px;font:600 12px Inter,-apple-system,sans-serif;color:rgba(235,235,245,.35);z-index:9}
+}
+@media print{#hint{display:none}}
+body.present #hint{display:none}
+</style>
+</head>
+<body>
+<div id="hint">P = present · ← → · Esc</div>
+
+<!-- ───────── 1 · PROBLEM ───────── -->
+<section class="slide" id="s1">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">The problem</div>
+  <h1>Your assistant still can't<br><em>do</em> anything for you.</h1>
+
+  <div class="nums" style="position:absolute;left:88px;top:440px">
+    <div class="num"><div class="n">6<small>apps</small></div><div class="t">Today's flagship phone agent</div></div>
+    <div class="num"><div class="n">45<small>s</small></div><div class="t">To order one ride, reported</div></div>
+    <div class="num"><div class="n">6<small>of 7</small></div><div class="t">Attacks that beat open-source agents</div></div>
+  </div>
+
+  <div style="position:absolute;right:140px;top:88px;display:flex;flex-direction:column;align-items:center">
+    <div class="phone"><img src="img/voice.png" alt="AgentOS voice mode: hold the orb to talk"></div>
+    <div class="cap"><span class="dot" style="background:var(--purple)"></span>AgentOS: say it, it does it.</div>
+  </div>
+  <div class="foot"><span><b>AgentOS</b> · Nucleus Institute × Startup State open call · Oct 28, 2026</span><span>1 / 5</span></div>
+</section>
+
+<!-- ───────── 2 · SOLUTION / PROGRESS ───────── -->
+<section class="slide" id="s2">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">The solution · running today on a budget Android phone</div>
+  <h1 style="max-width:1400px">AgentOS: the Siri we should have.</h1>
+
+  <div class="nums" style="position:absolute;left:88px;top:230px;gap:48px">
+    <div class="num"><div class="n">30<small>s</small> → 11<small>s</small></div><div class="t">Median task, before → after this week</div></div>
+    <div class="num"><div class="n">1.7<small>s</small></div><div class="t">Voice: end of sentence to task starting</div></div>
+    <div class="num"><div class="n">157<small>commits</small></div><div class="t">Oct 26 to 28</div></div>
+  </div>
+
+  <div style="position:absolute;left:88px;right:88px;top:385px;display:flex;justify-content:space-between">
+    <div style="width:320px"><div class="phone xs" style="margin:0 auto"><img src="img/home.png" alt="Home: what agents are doing, blocks today, suggestions"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Home: what agents did</div></div>
+    <div style="width:320px"><div class="phone xs" style="margin:0 auto"><img src="img/approve-card.png" alt="Approval card: Tap Send? with the exact text, Deny / Approve"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Risky steps: a tap</div></div>
+    <div style="width:320px"><div class="phone xs" style="margin:0 auto"><img src="img/blockers.png" alt="Blockers: per-app trackers blocked, by company"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>"Any trackers?" "Block them."</div></div>
+    <div style="width:320px"><div class="phone xs" style="margin:0 auto"><img src="img/offline.png" alt="Airplane mode: the phone's own model reads the last message"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>No signal? Still works</div></div>
+  </div>
+  <div class="foot"><span><b>AgentOS</b> · Moto G 5G (2023), Android 13 · Codex, Claude or an on-device model</span><span>2 / 5</span></div>
+</section>
+
+<!-- ───────── 3 · HARD TECH ───────── -->
+<section class="slide" id="s3">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Hard tech · below the app layer</div>
+  <h1>The model proposes.<br><em>The OS decides.</em></h1>
+
+  <div style="position:absolute;left:88px;top:400px;width:1000px;display:flex;gap:0;align-items:stretch">
+    <div class="glass box" style="width:130px"><div class="h">You</div></div>
+    <div class="arrow"></div>
+    <div class="glass box" style="width:230px"><div class="h">Model<span>Codex · Claude · on-device</span></div></div>
+    <div class="arrow"></div>
+    <div class="wall"><span>models stop here</span></div>
+    <div class="arrow"></div>
+    <div class="glass box" style="width:270px;box-shadow:0 4px 24px rgba(10,132,255,.25)"><div class="h">The gate<span>fingerprint · firewall · audit</span></div></div>
+    <div class="arrow"></div>
+    <div class="glass box" style="width:130px"><div class="h">Your apps</div></div>
+  </div>
+
+  <div class="nums" style="position:absolute;left:88px;top:600px;gap:64px">
+    <div class="num"><div class="n">6<small>of 6</small></div><div class="t">Injections flagged on the phone</div></div>
+    <div class="num"><div class="n">26<small>of 30</small></div><div class="t">Tasks done fully offline</div></div>
+    <div class="num"><div class="n">476</div><div class="t">Tracker domains, kernel firewall</div></div>
+  </div>
+
+  <div style="position:absolute;right:88px;top:88px;display:flex;gap:28px">
+    <div style="width:207px"><div class="phone sm"><img src="img/fingerprint-card.png" alt="Native approval card: Fingerprint required, Untrusted content chip"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Fingerprint for payments</div></div>
+    <div style="width:207px"><div class="phone sm"><img src="img/attack-pigeon.png" alt="A planted message in our test app tries to steer the agent; flagged on-device"></div><div class="cap"><span class="dot" style="background:var(--red)"></span>Planted attack, caught</div></div>
+  </div>
+  <div class="foot"><span><b>AgentOS</b> · Accessibility layer + Android Keystore + kernel firewall</span><span>3 / 5</span></div>
+</section>
+
+<!-- ───────── 4 · UTAH ───────── -->
+<section class="slide" id="s4">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Why it matters for Utah · Gov. Cox, Pro-Human AI initiative</div>
+  <h1>"AI must be human-guided."<br><em>Built into the OS.</em></h1>
+
+  <div class="nums" style="position:absolute;left:88px;top:340px;gap:56px">
+    <div class="num"><div class="n">7,000<small>+</small></div><div class="t">Utahns served by DSPD: first users</div></div>
+    <div class="num"><div class="n">12<small>%</small></div><div class="t">Of Utahns are 65+</div></div>
+    <div class="num"><div class="n">Utah LLC</div><div class="t">Utah-based founder, built here</div></div>
+  </div>
+
+  <!-- Utah map -->
+  <svg viewBox="0 0 300 360" width="250" height="300" style="position:absolute;left:88px;top:520px;overflow:visible">
+    <defs><linearGradient id="ug" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="rgba(255,255,255,.14)"/><stop offset="1" stop-color="rgba(255,255,255,.05)"/></linearGradient></defs>
+    <path d="M20 20 H200 V110 H280 V340 H20 Z" fill="url(#ug)" stroke="rgba(255,255,255,.3)" stroke-width="1.5" stroke-linejoin="round"/>
+    <g font-family="inherit" font-size="15" font-weight="600" fill="#fff">
+      <circle cx="150" cy="40" r="7" fill="#0A84FF"/><circle cx="150" cy="40" r="13" fill="rgba(10,132,255,.25)"/><text x="168" y="45">Logan · USU assistive tech</text>
+      <circle cx="118" cy="120" r="7" fill="#30D158"/><circle cx="118" cy="120" r="13" fill="rgba(48,209,88,.25)"/><text x="136" y="125">Salt Lake City · state agencies</text>
+      <circle cx="122" cy="150" r="7" fill="#BF5AF2"/><circle cx="122" cy="150" r="13" fill="rgba(191,90,242,.25)"/><text x="140" y="155">Draper · Nucleus</text>
+      <circle cx="90" cy="300" r="7" fill="#64D2FF"/><circle cx="90" cy="300" r="13" fill="rgba(100,210,255,.25)"/><text x="108" y="305">Rural · no signal needed</text>
+    </g>
+  </svg>
+
+  <div style="position:absolute;right:140px;top:88px;display:flex;flex-direction:column;align-items:center">
+    <div class="phone"><img src="img/keyboard.png" alt="AgentOS AI keyboard suggesting replies inside a chat app"></div>
+    <div class="cap"><span class="dot" style="background:var(--blue)"></span>Its own keyboard drafts replies</div>
+  </div>
+  <div class="foot"><span><b>AgentOS</b> · USU assistive tech is a target pilot channel, not a partner</span><span>4 / 5</span></div>
+</section>
+
+<!-- ───────── 5 · $10K + PATH ───────── -->
+<section class="slide" id="s5">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">Path to reality · how we'd use the $10K</div>
+  <h1>A 10-person Utah pilot<br><em>in 90 days.</em></h1>
+
+  <!-- budget bar -->
+  <div style="position:absolute;left:88px;top:400px;width:1424px">
+    <div style="display:flex;height:84px;border-radius:20px;overflow:hidden;gap:3px">
+      <div class="seg" style="flex:25;background:var(--blue)">$2,500</div>
+      <div class="seg" style="flex:30;background:var(--green);color:#052">$3,000</div>
+      <div class="seg" style="flex:25;background:var(--purple)">$2,500</div>
+      <div class="seg" style="flex:10;background:var(--orange);color:#321">$1,000</div>
+      <div class="seg" style="flex:10;background:var(--grp3)">$1,000</div>
+    </div>
+    <div class="lab" style="display:flex;gap:3px;margin-top:14px">
+      <div style="flex:25"><b>8 phones</b></div>
+      <div style="flex:30"><b>Utah pilot</b></div>
+      <div style="flex:25"><b>Independent red team</b></div>
+      <div style="flex:10"><b>Model credits</b></div>
+      <div style="flex:10"><b>Legal</b></div>
+    </div>
+  </div>
+
+  <!-- timeline -->
+  <div style="position:absolute;left:88px;top:600px;width:1424px;display:flex;gap:24px">
+    <div class="glass" style="flex:1;padding:24px 28px"><div class="k" style="color:var(--blue)">Day 30</div><div style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:10px">Off root</div></div>
+    <div class="glass" style="flex:1;padding:24px 28px"><div class="k" style="color:var(--green)">Day 60</div><div style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:10px">Pilot enrolled, red team done</div></div>
+    <div class="glass" style="flex:1;padding:24px 28px"><div class="k" style="color:var(--purple)">Day 90</div><div style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:10px">Results out, SBIR proposal ready</div></div>
+  </div>
+
+  <p class="sub" style="position:absolute;left:88px;top:760px;margin:0;max-width:1424px">Ask beyond money: an intro to a university co-PI and to USU's assistive technology program.</p>
+  <div class="foot"><span><b>AgentOS</b> · Utah LLC · root is the lab, not the product</span><span>5 / 5</span></div>
+</section>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')),i=0,b=document.body,root=document.documentElement;
+  function fit(){root.style.setProperty('--s',Math.min(innerWidth/1600,innerHeight/900));root.style.setProperty('--k',Math.min(1,(innerWidth-48)/1600))}
+  function show(n){i=(n+slides.length)%slides.length;slides.forEach(function(e,j){e.classList.toggle('on',j===i)});location.hash='s'+(i+1)}
+  addEventListener('keydown',function(e){
+    if(e.key==='p'||e.key==='P'){b.classList.toggle('present');show(i);return}
+    if(!b.classList.contains('present'))return;
+    if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);if(e.key==='Escape')b.classList.remove('present')});
+  addEventListener('resize',fit);fit();
+  var q=/[?&]slide=(\d+)/.exec(location.search);if(q){b.classList.add('present');show(+q[1]-1)}
+})();
+</script>
+</body>
+</html>

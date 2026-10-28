@@ -5,7 +5,7 @@
 <title>AgentOS · Nucleus Institute × Startup State open call · 5 slides</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-/* A2 · Calm Glass iOS Dark (design/A2-tokens.md). Slides are 1600×900. v2: headline + numbers + screenshot; words live in notes.md. */
+/* A2 · Calm Glass iOS Dark (design/A2-tokens.md). Slides are 1600×900. v3: one headline + real screenshots with 2–4 word labels; no timings on slides (the founder shows them live). Words live in notes.md. */
 @page { size: 1600px 900px; margin: 0; }
 :root{
   --bg:#050506; --grp3:#3A3A3C;
@@ -32,27 +32,32 @@ h1 em{font-style:normal;color:var(--l2)}
 /* phone frame: 540×1200 shots → 9:20 */
 .phone{width:306px;height:680px;border-radius:48px;background:#000;padding:10px;box-shadow:0 30px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.14);position:relative;flex:none}
 .phone img{display:block;width:100%;height:100%;object-fit:cover;border-radius:38px}
-.phone.md{width:234px;height:520px;border-radius:38px;padding:8px}.phone.md img{border-radius:30px}
 .phone.sm{width:207px;height:460px;border-radius:34px;padding:8px}.phone.sm img{border-radius:27px}
 .phone.xs{width:185px;height:411px;border-radius:31px;padding:7px}.phone.xs img{border-radius:25px}
 .cap{font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--l2);margin-top:14px;line-height:1.3;text-align:center}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:2px}
+/* feature row */
+.row{position:absolute;left:88px;right:88px;display:flex;justify-content:space-between;align-items:flex-start}
+.row>div{display:flex;flex-direction:column;align-items:center;width:185px}
+.row .cap{white-space:nowrap}
+.card{width:301px;height:225px;border-radius:20px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.14);background:#1c1c1e}
+.card img{display:block;width:100%;height:100%}
 /* big numbers */
 .nums{display:flex;gap:56px}
 .num .n{font-size:88px;font-weight:700;letter-spacing:-.05em;line-height:1;white-space:nowrap}
 .num .n small{font-size:30px;font-weight:600;color:var(--l2);letter-spacing:-.02em;margin-left:6px}
 .num .t{font-size:17px;font-weight:600;color:var(--l2);margin-top:12px;letter-spacing:-.01em}
 /* diagram */
-.box{padding:20px 22px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;text-align:center}
+.box{padding:14px 18px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;text-align:center}
 .box .h{font-size:22px;font-weight:600;letter-spacing:-.02em}
 .box .h span{display:block;font-size:14px;font-weight:600;color:var(--l3);margin-top:4px;letter-spacing:0}
 .arrow{width:44px;height:2px;background:rgba(255,255,255,.25);position:relative;align-self:center;flex:none}
 .arrow::after{content:"";position:absolute;right:-1px;top:-5px;border:6px solid transparent;border-left-color:rgba(255,255,255,.35)}
 .wall{width:14px;align-self:stretch;border-radius:8px;background:linear-gradient(180deg,var(--red),#ff6b61);box-shadow:0 0 24px rgba(255,69,58,.45);position:relative;flex:none}
 .wall span{position:absolute;left:50%;top:-32px;transform:translateX(-50%);white-space:nowrap;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
-.seg{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:26px;letter-spacing:-.02em}
-.lab{font-size:18px;font-weight:600;color:var(--l2);letter-spacing:-.01em}
-.lab b{color:var(--l1);font-weight:700}
+.rule{flex:1;padding:22px 26px}
+.rule .k{margin-bottom:8px}
+.rule .h{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.25}
 /* screen mode */
 @media screen{
   body{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px;background:#000}
@@ -74,11 +79,11 @@ body.present #hint{display:none}
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="k">The problem</div>
   <h1>Your assistant still can't<br><em>do</em> anything for you.</h1>
+  <p class="sub">It can tell you the weather. It can't tell Mom you're running late.</p>
 
-  <div class="nums" style="position:absolute;left:88px;top:440px">
-    <div class="num"><div class="n">6<small>apps</small></div><div class="t">Today's flagship phone agent</div></div>
-    <div class="num"><div class="n">45<small>s</small></div><div class="t">To order one ride, reported</div></div>
-    <div class="num"><div class="n">6<small>of 7</small></div><div class="t">Attacks that beat open-source agents</div></div>
+  <div class="nums" style="position:absolute;left:88px;top:520px">
+    <div class="num"><div class="n">6<small>apps</small></div><div class="t">Today's flagship phone agent, reported</div></div>
+    <div class="num"><div class="n">6<small>of 7</small></div><div class="t">Attacks that beat open-source phone agents</div></div>
   </div>
 
   <div style="position:absolute;right:140px;top:88px;display:flex;flex-direction:column;align-items:center">
@@ -88,60 +93,76 @@ body.present #hint{display:none}
   <div class="foot"><span><b>AgentOS</b> · Nucleus Institute × Startup State open call · Oct 28, 2026</span><span>1 / 5</span></div>
 </section>
 
-<!-- ───────── 2 · SOLUTION / PROGRESS ───────── -->
+<!-- ───────── 2 · WHAT IT DOES · DO ───────── -->
 <section class="slide" id="s2">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">The solution · running today on a budget Android phone</div>
-  <h1 style="max-width:1400px">AgentOS: the Siri we should have.</h1>
+  <div class="k">What AgentOS does · running today on a budget Android phone</div>
+  <h1 style="max-width:1400px">Say it. It does it. <em>In any app.</em></h1>
 
-  <div class="nums" style="position:absolute;left:88px;top:230px;gap:48px">
-    <div class="num"><div class="n">30<small>s</small> → 11<small>s</small></div><div class="t">Median task, before → after this week</div></div>
-    <div class="num"><div class="n">1.7<small>s</small></div><div class="t">Voice: end of sentence to task starting</div></div>
-    <div class="num"><div class="n">157<small>commits</small></div><div class="t">Oct 26 to 28</div></div>
+  <div class="row" style="top:300px;align-items:center">
+    <div><div class="phone xs"><img src="img/voice.png" alt="Voice mode: hold the orb to talk"></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>Voice, any app</div></div>
+    <div><div class="phone xs"><img src="img/keyboard.png" alt="AgentOS keyboard suggesting whole replies inside a chat"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Keyboard writes replies</div></div>
+    <div style="width:301px"><div class="card"><img src="img/catchup.png" alt="What did I miss? Unanswered messages, next event, a promise, a scam hidden, one summary line"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>"What did I miss?"</div></div>
+    <div><div class="phone xs"><img src="img/apps.png" alt="Habit Streaks, a micro-app built by asking"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Apps made by asking</div></div>
+    <div><div class="phone xs"><img src="img/sched.png" alt="Home: a reminder scheduled for tomorrow 11 AM"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>Scheduled, even locked</div></div>
+    <div><div class="phone xs"><img src="img/camera.png" alt="Voice mode with the camera: What does this sign say?"></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>Point the camera, ask</div></div>
   </div>
-
-  <div style="position:absolute;left:88px;right:88px;top:385px;display:flex;justify-content:space-between">
-    <div style="width:320px"><div class="phone xs" style="margin:0 auto"><img src="img/home.png" alt="Home: what agents are doing, blocks today, suggestions"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Home: what agents did</div></div>
-    <div style="width:320px"><div class="phone xs" style="margin:0 auto"><img src="img/approve-card.png" alt="Approval card: Tap Send? with the exact text, Deny / Approve"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Risky steps: a tap</div></div>
-    <div style="width:320px"><div class="phone xs" style="margin:0 auto"><img src="img/blockers.png" alt="Blockers: per-app trackers blocked, by company"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>"Any trackers?" "Block them."</div></div>
-    <div style="width:320px"><div class="phone xs" style="margin:0 auto"><img src="img/offline.png" alt="Airplane mode: the phone's own model reads the last message"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>No signal? Still works</div></div>
-  </div>
-  <div class="foot"><span><b>AgentOS</b> · Moto G 5G (2023), Android 13 · Codex, Claude or an on-device model</span><span>2 / 5</span></div>
+  <div class="foot"><span><b>AgentOS</b> · Moto G 5G (2023), Android 13 · voice, keyboard or home screen · no partner deals needed</span><span>2 / 5</span></div>
 </section>
 
-<!-- ───────── 3 · HARD TECH ───────── -->
+<!-- ───────── 3 · WHAT IT DOES · KNOW / GUARD / CHANGE ───────── -->
 <section class="slide" id="s3">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">What AgentOS does · continued</div>
+  <h1>It knows you. It guards you.<br><em>You can change it.</em></h1>
+
+  <div class="row" style="top:330px">
+    <div><div class="phone xs"><img src="img/foryou.png" alt="Home, For you: Send Dana the deck, Bring Mom dessert"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Proactive For you cards</div></div>
+    <div><div class="phone xs"><img src="img/memory.png" alt="Memory graph of the people it knows"></div><div class="cap"><span class="dot" style="background:var(--purple)"></span>Knows your people</div></div>
+    <div><div class="phone xs"><img src="img/trackers.png" alt="Blockers: per-app trackers blocked, by company"></div><div class="cap"><span class="dot" style="background:var(--green)"></span>Trackers blocked, one tap</div></div>
+    <div><div class="phone xs"><img src="img/mod-linkedin.png" alt="LinkedIn with a Promoted post masked: Ad hidden"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>Hide LinkedIn ads</div></div>
+    <div><div class="phone xs"><img src="img/mod-button.png" alt="Calculator with an added Double button"></div><div class="cap"><span class="dot" style="background:var(--orange)"></span>Add buttons to apps</div></div>
+    <div><div class="phone xs"><img src="img/brains.png" alt="Command center: Protected today, Model: Codex, Claude, Local"></div><div class="cap"><span class="dot" style="background:var(--teal)"></span>Codex, Claude or on-device</div></div>
+  </div>
+  <div class="foot"><span><b>AgentOS</b> · Blockers and Protected today are built-in settings · the on-device model keeps working with no signal</span><span>3 / 5</span></div>
+</section>
+
+<!-- ───────── 4 · THE OS DECIDES ───────── -->
+<section class="slide" id="s4">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="k">Hard tech · below the app layer</div>
   <h1>The model proposes.<br><em>The OS decides.</em></h1>
 
-  <div style="position:absolute;left:88px;top:400px;width:1000px;display:flex;gap:0;align-items:stretch">
-    <div class="glass box" style="width:130px"><div class="h">You</div></div>
+  <div style="position:absolute;left:88px;top:340px;width:980px;display:flex;gap:0;align-items:stretch">
+    <div style="display:flex;flex-direction:column;gap:10px;width:190px">
+      <div class="glass box" style="flex:1"><div class="h">You<span>voice · keyboard · home</span></div></div>
+      <div class="glass box" style="flex:1"><div class="h">Grok · ChatGPT<span>can ask, can't approve</span></div></div>
+    </div>
     <div class="arrow"></div>
-    <div class="glass box" style="width:230px"><div class="h">Model<span>Codex · Claude · on-device</span></div></div>
+    <div class="glass box" style="width:220px"><div class="h">Model<span>Codex · Claude · on-device</span></div></div>
     <div class="arrow"></div>
     <div class="wall"><span>models stop here</span></div>
     <div class="arrow"></div>
-    <div class="glass box" style="width:270px;box-shadow:0 4px 24px rgba(10,132,255,.25)"><div class="h">The gate<span>fingerprint · firewall · audit</span></div></div>
+    <div class="glass box" style="width:250px;box-shadow:0 4px 24px rgba(10,132,255,.25)"><div class="h">The gate<span>fingerprint · firewall · audit</span></div></div>
     <div class="arrow"></div>
     <div class="glass box" style="width:130px"><div class="h">Your apps</div></div>
   </div>
 
-  <div class="nums" style="position:absolute;left:88px;top:600px;gap:64px">
-    <div class="num"><div class="n">6<small>of 6</small></div><div class="t">Injections flagged on the phone</div></div>
-    <div class="num"><div class="n">26<small>of 30</small></div><div class="t">Tasks done fully offline</div></div>
-    <div class="num"><div class="n">476</div><div class="t">Tracker domains, kernel firewall</div></div>
+  <div style="position:absolute;left:88px;top:640px;width:980px;display:flex;gap:20px">
+    <div class="glass rule"><div class="k" style="color:var(--red)">Rule of Two</div><div class="h">Untrusted text + your data + an outward action = you decide</div></div>
+    <div class="glass rule"><div class="k" style="color:var(--blue)">Fingerprint</div><div class="h">Money, installs and saved passwords</div></div>
+    <div class="glass rule"><div class="k" style="color:var(--green)">Audit</div><div class="h">Every decision in a hash-chained log</div></div>
   </div>
 
   <div style="position:absolute;right:88px;top:88px;display:flex;gap:28px">
     <div style="width:207px"><div class="phone sm"><img src="img/fingerprint-card.png" alt="Native approval card: Fingerprint required, Untrusted content chip"></div><div class="cap"><span class="dot" style="background:var(--blue)"></span>Fingerprint for payments</div></div>
     <div style="width:207px"><div class="phone sm"><img src="img/attack-pigeon.png" alt="A planted message in our test app tries to steer the agent; flagged on-device"></div><div class="cap"><span class="dot" style="background:var(--red)"></span>Planted attack, caught</div></div>
   </div>
-  <div class="foot"><span><b>AgentOS</b> · Accessibility layer + Android Keystore + kernel firewall</span><span>3 / 5</span></div>
+  <div class="foot"><span><b>AgentOS</b> · Accessibility layer + Android Keystore + kernel firewall · the model never gets a shell</span><span>4 / 5</span></div>
 </section>
 
-<!-- ───────── 4 · UTAH ───────── -->
-<section class="slide" id="s4">
+<!-- ───────── 5 · UTAH ───────── -->
+<section class="slide" id="s5">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="k">Why it matters for Utah · Gov. Cox, Pro-Human AI initiative</div>
   <h1>"AI must be human-guided."<br><em>Built into the OS.</em></h1>
@@ -149,7 +170,6 @@ body.present #hint{display:none}
   <div class="nums" style="position:absolute;left:88px;top:340px;gap:56px">
     <div class="num"><div class="n">7,000<small>+</small></div><div class="t">Utahns served by DSPD: first users</div></div>
     <div class="num"><div class="n">12<small>%</small></div><div class="t">Of Utahns are 65+</div></div>
-    <div class="num"><div class="n">Utah LLC</div><div class="t">Utah-based founder, built here</div></div>
   </div>
 
   <!-- Utah map -->
@@ -165,45 +185,10 @@ body.present #hint{display:none}
   </svg>
 
   <div style="position:absolute;right:140px;top:88px;display:flex;flex-direction:column;align-items:center">
-    <div class="phone"><img src="img/keyboard.png" alt="AgentOS AI keyboard suggesting replies inside a chat app"></div>
-    <div class="cap"><span class="dot" style="background:var(--blue)"></span>Its own keyboard drafts replies</div>
+    <div class="phone"><img src="img/approve-card.png" alt="Approval card: Tap Send? with the exact text, Deny / Approve"></div>
+    <div class="cap"><span class="dot" style="background:var(--blue)"></span>Risky steps wait for you</div>
   </div>
-  <div class="foot"><span><b>AgentOS</b> · USU assistive tech is a target pilot channel, not a partner</span><span>4 / 5</span></div>
-</section>
-
-<!-- ───────── 5 · $10K + PATH ───────── -->
-<section class="slide" id="s5">
-  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-  <div class="k">Path to reality · how we'd use the $10K</div>
-  <h1>A 10-person Utah pilot<br><em>in 90 days.</em></h1>
-
-  <!-- budget bar -->
-  <div style="position:absolute;left:88px;top:400px;width:1424px">
-    <div style="display:flex;height:84px;border-radius:20px;overflow:hidden;gap:3px">
-      <div class="seg" style="flex:25;background:var(--blue)">$2,500</div>
-      <div class="seg" style="flex:30;background:var(--green);color:#052">$3,000</div>
-      <div class="seg" style="flex:25;background:var(--purple)">$2,500</div>
-      <div class="seg" style="flex:10;background:var(--orange);color:#321">$1,000</div>
-      <div class="seg" style="flex:10;background:var(--grp3)">$1,000</div>
-    </div>
-    <div class="lab" style="display:flex;gap:3px;margin-top:14px">
-      <div style="flex:25"><b>8 phones</b></div>
-      <div style="flex:30"><b>Utah pilot</b></div>
-      <div style="flex:25"><b>Independent red team</b></div>
-      <div style="flex:10"><b>Model credits</b></div>
-      <div style="flex:10"><b>Legal</b></div>
-    </div>
-  </div>
-
-  <!-- timeline -->
-  <div style="position:absolute;left:88px;top:600px;width:1424px;display:flex;gap:24px">
-    <div class="glass" style="flex:1;padding:24px 28px"><div class="k" style="color:var(--blue)">Day 30</div><div style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:10px">Off root</div></div>
-    <div class="glass" style="flex:1;padding:24px 28px"><div class="k" style="color:var(--green)">Day 60</div><div style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:10px">Pilot enrolled, red team done</div></div>
-    <div class="glass" style="flex:1;padding:24px 28px"><div class="k" style="color:var(--purple)">Day 90</div><div style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:10px">Results out, SBIR proposal ready</div></div>
-  </div>
-
-  <p class="sub" style="position:absolute;left:88px;top:760px;margin:0;max-width:1424px">Ask beyond money: an intro to a university co-PI and to USU's assistive technology program.</p>
-  <div class="foot"><span><b>AgentOS</b> · Utah LLC · root is the lab, not the product</span><span>5 / 5</span></div>
+  <div class="foot"><span><b>AgentOS</b> · USU assistive tech is a target pilot channel, not a partner · root is the lab, not the product</span><span>5 / 5</span></div>
 </section>
 
 <script>
