@@ -17,10 +17,11 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 6 | Reviewer light polish | GPT-6.1 Sol | done (a333832; 2.27 → 1.86 s, 27/28; NOT yet deployed to phone) |
 | 7 | Bug hunt across demo flows | Claude Opus | done (91b0fa8; 8 fixes, BUGHUNT-NIGHT.md; Wi-Fi pinned, undo `cmd wifi reset-connected-score`) |
 | 13 | "What did I miss?" by voice/ask: one fast cross-app catch-up that can then act (DEMO-WOW #6) | Claude Opus | running |
-| 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | running |
+| 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | done (2f7f170, 69ed541) |
+| 15 | Live tracker counter with company names (DEMO-WOW #7) + spoken "Done, in 7 seconds" | Claude Fable | running |
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
 | 10 | Auto on-device fallback when offline (DEMO-WOW #5) | GPT-6.1 Sol | done (b516bb5, deployed; warm offline ask 2.3 s, cold 24 s, so keep llama warm before stage; label handoff in POLISH-TODO) |
-| 14 | Review all overnight commits (security + crash), fix confirmed high/medium | GPT-6.1 Sol | running |
+| 14 | Review all overnight commits (security + crash), fix confirmed high/medium | GPT-6 Astra (Sol at capacity) | running |
 | 12 | Keyboard replies that know your calendar (DEMO-WOW #8) | GPT-6 Astra | running |
 | 11 | Morning integration deploy (~8 AM): push all agentd changes incl. reviewer, one restart, smoke test every demo beat, update STATUS.md | Claude | queued (after others finish) |
 | S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra | done (3430c2e; navy/gold + promoted rows removed, vanilla pixel-identical) |
