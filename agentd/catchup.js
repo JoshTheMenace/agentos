@@ -108,7 +108,7 @@ export function plain(f) {
   if (f.calendar[0]) s.push(`Next up: ${short(f.calendar[0].title, 40)} at ${clock(f.calendar[0].start)}.`);
   const p = f.promises.find((x) => x.kind === 'commitment'); if (p) s.push(`You promised ${p.who} ${short(p.what || p.quote, 50)}${p.due ? `, due ${p.due}` : ''}.`);
   if (f.blocked[0]) s.push(`${f.blocked[0]}.`);
-  if (!s.length) return 'Nothing new: no unanswered messages, nothing coming up soon.';
+  if (!s.length) return 'No recent messages or activity in the notification feed, and nothing coming up soon.';
   if (a?.can_reply) s.push(`Want me to reply to ${a.who}?`);
   return s.slice(0, 4).join(' ');
 }

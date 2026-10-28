@@ -40,5 +40,6 @@ assert.match(plain(f), /To look at: LinkedIn/);
 assert.equal(catchupCards(f).length, 3);
 assert.ok(catchupCards(f).every((x) => !x.goal), 'digest rows cannot launch replies');
 assert.equal(cards(await digest([notification('Cara mentioned you', { removed: true })], rpc, now)).length, 0, 'removed history stays passive');
+assert.match(plain({ ...f, toLookAt: [] }), /in the notification feed/);
 assert.equal(typeof call, 'function'); // module registration/import cycle still loads
 console.log('activity: classification, guards, no navigation, masking, Home gate and catch-up passed');
