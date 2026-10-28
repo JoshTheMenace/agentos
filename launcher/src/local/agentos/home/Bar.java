@@ -56,7 +56,7 @@ public class Bar extends Service {
   static final String TAG = "AgentOSBar", CH = "bar", OPEN = "local.agentos.home.BAR_OPEN", CLOSE = "local.agentos.home.BAR_CLOSE", HOME = "local.agentos.home.BAR_HOME";
   static Bar self;
   final Handler ui = new Handler(Looper.getMainLooper());
-  WindowManager wm; WebView web; View handle; WindowManager.LayoutParams lp, hp; float density;
+  WindowManager wm; WebView web; View handle, back; FrameLayout box; WindowManager.LayoutParams lp, hp; float density;
   boolean open, focusable, homeFront, ready;
 
   public static void open(Context c, boolean listen) { c.startForegroundService(new Intent(c, Bar.class).setAction(OPEN).putExtra("listen", listen)); }
@@ -82,7 +82,7 @@ public class Bar extends Service {
     String a = i == null ? null : i.getAction();
     if (OPEN.equals(a)) show(i.getBooleanExtra("listen", false));
     else if (CLOSE.equals(a)) hide();
-    else if (HOME.equals(a)) { homeFront = i.getBooleanExtra("front", true); if (homeFront && open) { js("window.bar&&bar.close(true)"); hide(); } showHandle(); }
+    else if (HOME.equals(a)) { homeFront = i.getBooleanExtra("front", true); if (homeFront && open) hide(); showHandle(); }
     return START_STICKY;
   }
   @Override public void onDestroy() { hide(); if (handle != null) try { wm.removeView(handle); } catch (Exception ignored) {} self = null; super.onDestroy(); }
@@ -146,7 +146,7 @@ public class Bar extends Service {
       lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL; lp.setTitle("AgentOS bar");
       lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED;
       focusable = false;
-      try { wm.addView(web, lp); } catch (Exception e) { Log.w(TAG, "add: " + e); open = false; showHandle(); return; }
+      try { wm.addView(box, lp); } catch (Exception e) { Log.w(TAG, "add: " + e); open = false; showHandle(); return; }
     }
     if (ready) js("window.bar&&bar.open(" + listen + ")"); else pendingListen = listen ? 1 : 0;
     foreground();
@@ -164,8 +164,9 @@ public class Bar extends Service {
   int pendingListen = -1;
   void hide() {
     if (!open) return;
+    js("window.bar&&bar.close(true)"); // the page resets too (else a re-open keeps its old size and never re-sizes the window)
     open = false; focus(false);
-    try { wm.removeView(web); } catch (Exception e) { Log.w(TAG, "remove: " + e); }
+    try { wm.removeView(box); } catch (Exception e) { Log.w(TAG, "remove: " + e); }
     showHandle(); report(null);
   }
   /** Keyboard focus: only while the text field is active. Otherwise the app underneath keeps focus and its own keyboard. */
@@ -173,7 +174,7 @@ public class Bar extends Service {
     if (web == null || !open || focusable == on) return;
     focusable = on;
     if (on) lp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE; else lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-    try { wm.updateViewLayout(web, lp); } catch (Exception e) { Log.w(TAG, "focus: " + e); }
+    try { wm.updateViewLayout(box, lp); } catch (Exception e) { Log.w(TAG, "focus: " + e); }
     InputMethodManager imm = getSystemService(InputMethodManager.class);
     if (on) web.requestFocus(); // the keyboard is asked for once the window really has focus (onWindowFocusChanged in makeWeb)
     else imm.hideSoftInputFromWindow(web.getWindowToken(), 0);
@@ -215,6 +216,15 @@ public class Bar extends Service {
     });
     web.setOnTouchListener((v, e) -> { if (e.getAction() == MotionEvent.ACTION_OUTSIDE && focusable) { focus(false); js("window.bar&&bar.blur()"); } return false; });
     web.loadUrl(Home.ORIGIN + "/bar.html");
+    // An opaque capsule behind the page, the same gradient as the glass body (bar.css .body). Chromium paints tiles it has not
+    // rasterised yet as the WebView's background, i.e. transparent here, so a re-render while the voice talks let the app underneath
+    // flash through the card. With this behind it, a missing tile reads as the card itself. The page sizes it (Native.back).
+    back = new View(this);
+    GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF464652, 0xFF2A2A32, 0xFF16161C}); g.setCornerRadius(px(28));
+    back.setBackground(g); back.setVisibility(View.GONE);
+    box = new FrameLayout(this);
+    box.addView(back, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 0, Gravity.BOTTOM));
+    box.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
   }
 
   /** The page's side. Requests only. Runs on a WebView worker thread. */
@@ -223,7 +233,11 @@ public class Bar extends Service {
     @JavascriptInterface public String token(String which) { return Home.readFile(Bar.this, "agentd.token"); }
     @JavascriptInterface public void ready() { ready = true; if (pendingListen >= 0) { js("window.bar&&bar.open(" + (pendingListen == 1) + ")"); pendingListen = -1; } }
     /** The card's height in CSS px: the window is cut to it so the app underneath stays touchable. */
-    @JavascriptInterface public void size(float h) { ui.post(() -> { if (!open || lp == null) return; int p = px(h); if (p != lp.height) { lp.height = p; try { wm.updateViewLayout(web, lp); } catch (Exception ignored) {} } }); }
+    @JavascriptInterface public void size(float h) { ui.post(() -> { if (!open || lp == null) return; int p = px(h); if (p != lp.height) { lp.height = p; try { wm.updateViewLayout(box, lp); } catch (Exception e) { Log.w(TAG, "size: " + e); } } }); }
+    /** The capsule's height in CSS px (0 = hidden): the opaque backdrop follows the card (10 px side/bottom margins, as bar.css body). */
+    @JavascriptInterface public void back(float h) { ui.post(() -> { if (back == null) return; int p = px(h); if (p <= 0) { back.setVisibility(View.GONE); return; }
+      FrameLayout.LayoutParams l = (FrameLayout.LayoutParams) back.getLayoutParams(); if (l.height == p && back.getVisibility() == View.VISIBLE) return;
+      l.height = p; l.leftMargin = l.rightMargin = l.bottomMargin = px(10); back.setLayoutParams(l); back.setVisibility(View.VISIBLE); }); }
     @JavascriptInterface public void focus(boolean on) { ui.post(() -> Bar.this.focus(on)); }
     @JavascriptInterface public void close() { ui.post(Bar.this::hide); }
     @JavascriptInterface public void haptic(String kind) {

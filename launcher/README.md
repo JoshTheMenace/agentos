@@ -122,7 +122,9 @@ card with a mic, a text field, a two-line transcript and ×. The app underneath 
   height (`Native.size`) so taps around it reach the app. It is below the native island and approval cards
   (`TYPE_ACCESSIBILITY_OVERLAY` is a higher layer), so it can never obscure a card (HumanTouch). App-mod masks are in that higher layer too, so
   the bar reports its window rect to the broker over the owner line (`bar.rect`, `Bar.report`: every layout, `{}` on close) and the
-  masks stop at its top edge (android `Mods.clip`); the bar always reads on top of a hidden ad (`android/shots/mod-bar/`). The agent never sees or taps
+  masks stop at its top edge (android `Mods.clip`); the window never resizes while the mic is wanted or a turn runs (a resize or a
+  re-rasterised glass body painted not-ready tiles transparent: the app flashed through mid-sentence, 10-28 eve), an opaque native
+  capsule sits behind the page (`Native.back`) and the transcript is its own layer (`.txin will-change`); the bar always reads on top of a hidden ad (`android/shots/mod-bar/`). The agent never sees or taps
   it: `screen.read` skips windows of `local.agentos.home` (android `Guard.offLimits`), checked with the bar open over Chrome.
 - **Keyboard:** the window starts `FLAG_NOT_FOCUSABLE`, so the app underneath keeps its own keyboard behaviour. Tapping the field
   flips the flag (`Native.focus(true)`), the keyboard (AgentOS keys) comes up under the bar (`ADJUST_RESIZE` lifts the card),

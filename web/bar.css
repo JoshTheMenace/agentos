@@ -29,7 +29,7 @@ body{display:flex;flex-direction:column;justify-content:flex-end;padding:0 10px 
 /* edge: the Siri ring. A rotating conic gradient, masked to a 1.5 px ring; a tinted glow fades in with the voice */
 .edge{position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:4;opacity:0;transition:opacity .6s var(--ease);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;overflow:hidden}
-.edge i{position:absolute;left:50%;top:50%;width:240vmax;height:240vmax;margin:-120vmax 0 0 -120vmax;will-change:transform;
+.edge i{position:absolute;left:50%;top:50%;width:120vmax;height:120vmax;margin:-60vmax 0 0 -60vmax;will-change:transform;
   background:conic-gradient(#0A84FF,#BF5AF2,#FF375F,#FF9F0A,#64D2FF,#0A84FF);animation:spin 7s linear infinite}
 .bar.live .edge{opacity:calc(.55 + var(--la) * 1.6)}
 .bar.busy .edge{opacity:.35}
@@ -42,7 +42,7 @@ body{display:flex;flex-direction:column;justify-content:flex-end;padding:0 10px 
 
 /* transcript: closed to nothing until there is a state or text */
 .tx{position:relative;z-index:5;display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s var(--spring)}
-.txin{overflow:hidden;min-height:0;padding:0 20px;opacity:0;transform:translateY(6px);transition:opacity .35s var(--ease),transform .5s var(--spring)}
+.txin{overflow:hidden;min-height:0;padding:0 20px;opacity:0;transform:translateY(6px);transition:opacity .35s var(--ease),transform .5s var(--spring);will-change:transform} /* own layer: streamed words re-raster the text only, never the glass body (tiles not ready paint transparent) */
 .tx.on{grid-template-rows:1fr}
 .tx.on .txin{padding-top:15px;opacity:1;transform:none}
 .hd{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--l2);letter-spacing:-.01em;font-variant-numeric:tabular-nums;min-height:22px}

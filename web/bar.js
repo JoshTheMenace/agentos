@@ -4,7 +4,7 @@
    card is the gate. Live mic/speaker levels drive the orb, the waveform and the edge ring through CSS variables. */
 'use strict';
 const $ = (s) => document.querySelector(s), esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const N = window.Native || { info: () => '{"pkg":"browser"}', token: () => null, ready: () => {}, size: () => {}, focus: () => {}, close: () => {}, haptic: () => {}, wake: () => '{}', voiceMode: () => {} };
+const N = window.Native || { info: () => '{"pkg":"browser"}', token: () => null, ready: () => {}, size: () => {}, back: () => {}, focus: () => {}, close: () => {}, haptic: () => {}, wake: () => '{}', voiceMode: () => {} };
 const bar = window.bar = {}, hap = (k) => N.haptic(k || 'click');
 const card = $('#card'), tx = $('#tx'), hd = $('#hd'), st = $('#st'), orb = $('#orb'), U = $('#u'), A = $('#a'), inp = $('#in'), mic = $('#mic'), row = $('#form'), field = $('.field');
 
@@ -51,13 +51,21 @@ function render() {
   orb.className = 'orb sm ' + cls; hd.dataset.s = cls; $('#stop').hidden = !turn;
   const want = !!(text || plain(U) || plain(A) || $('#bviz').childElementCount);
   if (want !== tx.classList.contains('on')) { if (want) grow(96); tx.classList.toggle('on', want); }
-  touch();
+  touch(); fit();
 }
 setInterval(() => cls === 'working' && render(), 1000);
 // Window size: the overlay is cut to the card, so the app underneath stays touchable. Grow at once (so the card is never
-// clipped while it opens), shrink only once the size has settled.
-let sizeT, cur = 0;
-const fit = () => { const h = Math.ceil(card.getBoundingClientRect().height) + 10; clearTimeout(sizeT); if (h > cur) { cur = h; N.size(h); } else if (h < cur) sizeT = setTimeout(() => { cur = h; N.size(h); }, 160); };
+// clipped while it opens), shrink only once the size has settled, and never while a reply can still arrive (hold: the mic is
+// wanted or a turn runs): every window resize makes Chromium re-rasterise, and tiles not ready yet paint transparent, so the app
+// underneath flashed through the card mid-sentence. The headroom (grow 96) covers the full transcript, so a reply resizes nothing.
+// The native backdrop (Native.back, an opaque capsule behind the page) follows the card's layout height once the open animation is over.
+let sizeT, cur = 0, wantMic = false, backT, backOn = false;
+const hold = () => wantMic || turn;
+const fit = () => {
+  const h = Math.ceil(card.getBoundingClientRect().height) + 10; clearTimeout(sizeT);
+  if (h > cur) { cur = h; N.size(h); } else if (h < cur && !hold()) sizeT = setTimeout(() => { cur = h; N.size(h); }, 160);
+  if (backOn) N.back(card.offsetHeight);
+};
 const grow = (extra) => { const h = Math.ceil(card.getBoundingClientRect().height) + 10 + extra; if (h > cur) { cur = h; N.size(h); } };
 new ResizeObserver(fit).observe(card);
 
@@ -68,9 +76,11 @@ const busy = () => turn || (micTrack && Date.now() - lastAct < 45000) || documen
 function touch() { lastAct = Date.now(); clearTimeout(idleT); idleT = setTimeout(() => (busy() ? touch() : bar.close()), 30000); }
 bar.open = (listen) => {
   if (!card.classList.contains('on')) { cur = 0; card.classList.remove('out'); card.classList.add('on'); setText(U, ''); setText(A, ''); $('#bviz').replaceChildren(); turn = false; state('', ''); inp.value = ''; row.classList.remove('typed'); field.classList.remove('typed'); }
+  clearTimeout(backT); backT = setTimeout(() => { backOn = true; N.back(card.offsetHeight); }, 700); // after the slide-in
   touch(); if (listen) voiceStart();
 };
 bar.close = (fromShell) => {
+  clearTimeout(backT); backOn = false; N.back(0);
   clearTimeout(idleT); voiceStop(); inp.blur(); N.focus(false);
   if (fromShell) { card.classList.remove('on'); return; }
   card.classList.add('out'); card.classList.remove('on'); setTimeout(() => N.close(), 340);
@@ -120,7 +130,7 @@ let pc, micStream, micTrack, vad, voiceAudio, voiceLive = false, voiceIdle, voic
 function micState(s) { state(s, s === 'Listening' ? 'approval' : s.startsWith('Speaking') ? 'working' : s === 'Muted' ? '' : cls); mic.classList.toggle('talk', s.startsWith('Speaking')); mic.classList.toggle('muted', s === 'Muted'); }
 async function voiceStart() {
   if (micTrack?.readyState === 'live') return;
-  const epoch = ++voiceEpoch; clearTimeout(voiceIdle);
+  const epoch = ++voiceEpoch; wantMic = true; clearTimeout(voiceIdle);
   N.wake('voice:1'); mic.classList.add('live'); card.classList.add('live'); state('Connecting', 'approval');
   if (!wsOk) await new Promise((ok) => { const t = setTimeout(ok, 4000); on('ws.open', () => { clearTimeout(t); ok(); }); }); // a cold page: give the socket a moment
   if (!wsOk || epoch !== voiceEpoch) { if (epoch === voiceEpoch) { N.wake('voice:0'); mic.classList.remove('live'); card.classList.remove('live'); state('Agent offline', 'alert'); } return; }
@@ -156,7 +166,7 @@ function voiceMessage(m) {
 }
 function voiceDrop() { clearTimeout(voiceIdle); voiceAudio = null; voiceLive = false; if (pc) { send({ type: 'voice.stop' }); pc.close(); pc = null; } }
 function voiceStop() {
-  ++voiceEpoch; vad?.(); vad = null;
+  ++voiceEpoch; wantMic = false; vad?.(); vad = null;
   if (voiceAudio) { voiceAudio.active = false; voiceAudio.apply(); }
   micStream?.getTracks().forEach((t) => t.stop()); micStream = micTrack = null; N.wake('voice:0'); $('#spk').muted = true;
   mic.className = 'mic'; card.classList.remove('live', 'you'); level(0, 0);
