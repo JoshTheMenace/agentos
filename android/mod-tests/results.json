@@ -1,31 +1,31 @@
 {
   "mask_apply_remove_ms": [
-    325,
-    85,
-    94,
-    61,
-    41,
-    45,
-    118,
-    52,
-    46,
-    57
+    606,
+    99,
+    337,
+    486,
+    56,
+    60,
+    78,
+    75,
+    50,
+    51
   ],
   "screenshot_verified_ms": [
-    1026,
-    554,
-    580,
-    544,
-    537,
-    521,
-    585,
-    570,
-    529,
-    551
+    1347,
+    623,
+    1203,
+    994,
+    558,
+    547,
+    598,
+    565,
+    533,
+    533
   ],
   "production_preview_gate": "pass",
   "bad_spec": "rejected",
-  "target_pid_before_after_fault": "28666",
+  "target_pid_before_after_fault": "29751",
   "render_exception": [
     {
       "id": "mod-test",
@@ -34,7 +34,7 @@
       "label": "Mask test",
       "shown": false,
       "disabled": "render exception: IllegalArgumentException",
-      "created": 1793166328576,
+      "created": 1793167293053,
       "by": "test"
     }
   ],
@@ -47,15 +47,16 @@
       "label": "Hide promoted",
       "shown": false,
       "disabled": "target crash/ANR",
-      "created": 1793166330861,
+      "created": 1793167295504,
       "by": "test fixture"
     }
   ],
   "button": {
     "id": "mod-button-test",
     "shown": true,
-    "ms": 130
+    "ms": 94
   },
-  "apk_sha256": "1ad81c2890debaba981802a9d75e2332cecb3495b843445baeed279b9ffa0c45",
-  "measurement": "mask apply request to next-frame callback; screenshot verification includes 350ms deliberate sampling wait and capture/PNG time, excludes model/voice/owner wait"
+  "apk_sha256": "ef0b0fb456c294db5a1082f540bbcac995bd75dcd4529133ed48931a6abc01b6",
+  "measurement": "apply to next-frame callback; screenshot timings include 350ms deliberate wait and capture/PNG; excludes model, voice and owner wait",
+  "approval_window_regression": "window-results.txt: PASS, no touch dispatched"
 }
