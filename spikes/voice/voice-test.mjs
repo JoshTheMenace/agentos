@@ -79,3 +79,12 @@ test('a handoff before the user transcript prevents the fallback; close cancels 
   f.voice.handle({ type: 'voice.heard', turn_id: 'turn2', text: 'Read the battery' });
   f.voice.close(); t.mock.timers.tick(600); assert.equal(state.tasks.length, 1); f.voice.dispose();
 });
+test('a sideband report after a fallback cannot swallow a new repeated user turn', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = fixture(); state.tasks = []; await f.start('repeated');
+  f.voice.handle({ type: 'voice.heard', turn_id: 'turn1', text: 'Read the phone battery' });
+  t.mock.timers.tick(600); assert.equal(state.tasks.length, 1);
+  f.starts[0].on({ method: 'thread/realtime/itemAdded', params: { item: { type: 'handoff_request', handoff_id: 'handoff_2', input_transcript: 'Read the phone battery' } } });
+  await f.voice.handle({ type: 'voice.delegate', item_id: 'item2', handoff_id: 'handoff_2', turn_id: 'turn2', text: 'Read the phone battery' });
+  assert.equal(state.tasks.length, 2); f.voice.dispose();
+});

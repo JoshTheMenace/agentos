@@ -164,8 +164,9 @@ export class Voice {
   async #delegate(itemId, text, handoffId, turnId) {
     if (!text) return;
     const ids = [itemId, handoffId, turnId].filter(Boolean), seen = ids.some((id) => this.#seen.has(id));
-    ids.forEach((id) => this.#seen.add(id)); // remember every alias, including late reports of an already-started turn
-    if (seen || (!turnId && Date.now() - (this.#fallback.get(normalized(text)) || 0) < 15000)) return;
+    if (seen) { ids.forEach((id) => this.#seen.add(id)); return; } // attach late aliases to an already-started turn
+    if (!turnId && Date.now() - (this.#fallback.get(normalized(text)) || 0) < 15000) return;
+    ids.forEach((id) => this.#seen.add(id));
     if (BACKSTOP.test(text)) this.#handedAt = Date.now(); // the model handed this kind off itself
     if (this.#frame && Date.now() - this.#frame.at < (this.#camera ? 15_000 : 120_000) && CAMERA_Q.test(text)) // about the picture: not a task
       return this.#answerFromCamera(this.#frame, await this.#frame.p);
