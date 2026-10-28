@@ -29,7 +29,9 @@
 - Wi-Fi dropped 3×. **Wi-Fi is the #1 stage risk**: run `scripts/preflight.sh --fix wifi` after joining the venue network.
 - Calendar: 1,780 events all night, untouched.
 
-**In progress:** final deploy + smoke test + STATUS.md "how to demo it", due by 9:30.
+**Done 08:35:** final deploy live (agentd b49e4a3 + fresh APKs, one restart). Smoke beats pass. STATUS.md now opens with "What's new overnight + how to demo it" and "Before stage".
+
+**Correction:** never run `cmd wifi set-connected-score`. Re-applying it crashed Android at 07:03 (soft reboot). The night's advice to use it was wrong. Use only `scripts/preflight.sh --fix wifi`; if Wi-Fi drops, toggle Wi-Fi once, then `--fix wifi`.
 
 **For you:** run demo-reset and turn on DND before stage. Decide the Picovoice trial. Do one fingerprint test at the phone so the deck can say "signs". Recount commits before the final deck export.
 
@@ -65,7 +67,7 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 14 | Review all overnight commits (security + crash) | GPT-6 Astra | done (edc95bb: reviewer rechecks live flags after grading [high]; voice.heard routing [medium]; REVIEW-NIGHT.md) |
 | 16 | Stage preflight script (check + safe --fix) | GPT-6 Astra | done (3467473; `scripts/preflight.sh [--fix warm,ime,home,…]`) |
 | 12 | Keyboard replies that know your calendar (DEMO-WOW #8) | GPT-6 Astra | done (787ac15; empty-draft calendar replies 4 ms, typed +177 ms; backend in #11) |
-| 11 | Final morning deploy + smoke + STATUS "how to demo it" | Claude Opus | running (due 9:30) |
+| 11 | Final morning deploy + smoke + STATUS "how to demo it" | Claude Opus | done (b49e4a3 live, restart 07:03; 421727b reviewer fix; DEPLOY-FINAL.md) |
 | S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra | done (3430c2e; navy/gold + promoted rows removed, vanilla pixel-identical) |
 
 ## Oversight
@@ -74,7 +76,7 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 
 ## Incidents
 - 06:24 phone offline again (DNS failing while Wi-Fi was associated). Wi-Fi toggled once at ~06:30, then back online; low-latency mode and the score pin re-applied. Wi-Fi is the main stage risk: run `scripts/preflight.sh --fix wifi` after joining the venue network.
-- 04:06 Wi-Fi dropped again (blocklisted 40 min); the score pin from bug hunt 1 resets on any disconnect. It was reconnected by 04:21. A Mac-side loop now re-applies `cmd wifi set-connected-score 60` every 60 s while connected (stops when the orchestrator session ends; undo: `adb shell cmd wifi reset-connected-score`). Benchmark runs around 04:00–04:21 may be network-affected.
+- 04:06 Wi-Fi dropped again (blocklisted 40 min); the score pin from bug hunt 1 resets on any disconnect. It was reconnected by 04:21. A Mac-side loop re-applied `cmd wifi set-connected-score 60` until ~06:20 (it hit its time limit). **Superseded: don't use set-connected-score; it crashed Android at 07:03.** Benchmark runs around 04:00–04:21 may be network-affected.
 - 02:55 and ~03:15 (trackers track, Fable): local.agentos reinstalled twice (per-domain blocked counters in `trackers.list`, island "Blocked · …" moment) and the launcher reinstalled; the broker re-bound each time, audit chain checked OK after. agentd was NOT restarted (voice.js duration line goes in with the morning deploy). Beacon was pointed at google-analytics.com for the counter test, then put back to httpbin.org and stopped.
 - 02:50 the speed bench's 6:17 AM test alarm (Clock id 3, unlabeled, created by "Set an alarm for 6:17 AM, then delete it") was still on, because its delete timed out at the approval card. The orchestrator turned it OFF (not deleted; reversible) via alarms.delete off:true. The 10:15 "Before standup" alarm (id 4) was left alone.
 - 02:15 phone offline: Android kept dropping home Wi-Fi "BathroomCamera4" for a low connection score (blocklisted 01:29, 02:05), so Codex DNS failed and the voice tests stalled. Fix: `settings put global captive_portal_mode 0` (undo: `settings delete global captive_portal_mode`) plus a Wi-Fi off/on, after which it reconnected and chatgpt.com was reachable. The watchdog now also checks connectivity.
