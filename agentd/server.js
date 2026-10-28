@@ -225,7 +225,7 @@ wss.on('connection', (ws, req) => {
         // (web/app.js): facts with their source, one-tap fix/forget, linked cards per person, "same person?" cards. Owner only, reads
         // included: the facts go out raw (no [P:n]), and a model must never settle an identity or edit memory here (its tools need a card).
         if (!(owner ??= fromOwner(req.socket))) return send({ type: msg.type, ok: false, error: 'only the owner (launcher) can see or change memory' });
-        const ctx = { cloud: false, actor: 'user:owner' }, who = (x) => { const p = memory.person(x.id, ctx); return { ...x, apps: p?.apps || [], from: p?.from, rel: p?.relationship }; };
+        const ctx = { cloud: false, actor: 'user:owner' }, who = (x) => { const p = memory.person(x.id, ctx); return { ...x, apps: p?.apps || [], from: memory.cardFrom(x.id, ctx), rel: p?.relationship }; };
         const about = () => send({ type: 'memory.about', v2: process.env.MEMORY_V2 === '1', ...memory.about(ctx), facts: memory.facts({ history: true }, ctx), people: memory.knownPeople(ctx) });
         const identity = () => send({ type: 'memory.identity', pending: memory.identity.pending(ctx, 10).map((c) => ({ ...c, a: who(c.a), b: who(c.b) })) });
         if (msg.type === 'memory.identity.confirm') { const link = memory.identity.confirm(+msg.a, +msg.b, !!msg.same, ctx); log(`memory identity #${msg.a}/#${msg.b} ${msg.same ? 'same' : 'different'} by owner`); send({ type: msg.type, ok: true, link }); return identity(), about(); }

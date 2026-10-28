@@ -305,9 +305,17 @@ export function person(idOrName, ctx = {}) {
   const ids = S.flags.v2 ? [card.id, ...(card.also || []), ...(card.maybe || [])].map((n) => (typeof n === 'number' ? n : findEntity(db, { name: n })?.id)).filter(Boolean) : [card.id];
   const fs = F.list(db, { about: ids, cloud, history: true, srcs: S.readable(db, cloud) });
   const pend = S.flags.v2 ? brain.v2.pending(db, 50).filter((p) => ids.includes(p.a.id) || ids.includes(p.b.id)) : [];
-  const from = (id, apps) => (db.prepare(`SELECT 1 FROM alias WHERE entity_id=? AND source='contacts'`).get(id) ? 'Contacts' : apps?.[0] || null); // where this card comes from (the UI says "Alex on Discord")
-  return { ...card, from: from(card.id, card.apps), maybe_from: (card.maybe || []).map((n) => { const id = findEntity(db, { name: n })?.id; return from(id, id && brain.recall(db, n, { cloud, k: 0 }).people.find((p) => p.id === id)?.apps); }),
+  return { ...card, from: cardFrom(card.id, ctx), maybe_from: (card.maybe || []).map((n) => cardFrom(findEntity(db, { name: n })?.id, ctx)),
     relationship: fs.find((f) => f.pred === 'relationship' && f.status === 'active')?.obj, facts: fs.filter((f) => f.status === 'active'), history: fs.filter((f) => f.status !== 'active'), identity: { pending: pend } };
+}
+// cardFrom(id) -> where one card (one entity, not its linked group) comes from: 'Contacts', the app it messages in, or its source.
+export function cardFrom(id, ctx = {}) {
+  const db = dbOf(ctx);
+  if (!id) return null;
+  if (db.prepare(`SELECT 1 FROM alias WHERE entity_id=? AND source='contacts'`).get(id)) return 'Contacts';
+  const k = db.prepare(`SELECT coalesce((SELECT a.name FROM event_entity ae JOIN entity a ON a.id=ae.entity_id WHERE ae.event_id=e.id AND ae.role='app'), e.source) k, count(*) n
+    FROM event e JOIN event_entity x ON x.event_id=e.id WHERE x.entity_id=? GROUP BY k ORDER BY n DESC LIMIT 1`).get(id)?.k || db.prepare('SELECT source FROM alias WHERE entity_id=? LIMIT 1').get(id)?.source;
+  return k ? { calendar: 'Calendar', sms: 'Texts', calllog: 'Calls', notifications: 'Notifications', user: 'your notes' }[k] || k.replace(/^\w/, (c) => c.toUpperCase()) : null;
 }
 // facts({q, about, history}) -> [{id, name, pred, obj, text, since, until, status, event_id, by}]
 export function facts({ q, about, history = false } = {}, ctx = {}) {
