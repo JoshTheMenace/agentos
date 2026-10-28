@@ -10,6 +10,7 @@ import * as plugins from './plugins.js';
 import * as microapps from './apps.js';
 import { tools as appReads } from './app-reads.js';
 import { tools as notificationTools } from './notification-tools.js';
+import { TOOLS as DEEPMOD_TOOLS, redactSummary } from './deepmod-tools.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -153,6 +154,7 @@ export const TOOLS = {
   trackers_unblock: { method: 'trackers.unblock', tier: 'outward', schema: obj({ pkg: { type: 'string' }, domains: { type: 'array', items: { type: 'string' } } }, ['pkg']),
     description: 'Undo trackers_block for an app (default: all its blocked trackers). The user must approve on the phone.' },
   ...MOD_TOOLS,
+  ...DEEPMOD_TOOLS,
 };
 
 // Personal memory tools (agentd/memory): same shape, run locally by memory.call instead of the phone.
@@ -265,13 +267,14 @@ export async function runTool(name, args, ctx) {
   const t = TOOLS[name];
   if (!t) return { success: false, text: `Unknown tool ${name}` };
   const pl = plugins.pluginOf[name];
-  if (pl && (await plugins.disabled(rpc)).has(pl)) { // checked on every call, not just hidden: models call tools they weren't shown. The broker checks again.
+  if (pl && !/^deepmod_(remove|disable|rollback)$/.test(name) && (await plugins.disabled(rpc)).has(pl)) { // Undo remains available with Mods off; the broker checks the switch too.
     ctx.emit({ type: 'tool.result', name: t.method, ok: false, decision: 'refused', reason: `plugin ${pl} is off`, ms: 0 });
     return { success: false, text: JSON.stringify({ ok: false, decision: 'refused', reason: `the user turned off the ${plugins.BY_ID[pl].name} plugin; do it on screen if you can, or tell them it can be turned on in AgentOS` }) };
   }
   if (!t.memory && ctx.provider !== 'local') args = memory.unpseudo(args); // cloud models see [P:3]; the phone gets the real number
   const t0 = Date.now(), turn = ctx.turn;
   ctx.emit({ type: 'tool.request', name: t.method, args, tier: t.tier });
+  if (turn.origin === 'deepmod' && name !== 'screen_read') return { success: false, text: 'Pigeon Summarize is read-only: only screen_read is allowed.' };
   if (t.memory) {
     const r = await guardMemory(await memory.call(name, args, { cloud: ctx.provider !== 'local', confirm: memoryConfirm(ctx) }), ctx);
     ctx.emit({ type: 'tool.result', name, ok: r.ok !== false, reason: r.error, ms: Date.now() - t0 });
@@ -288,7 +291,7 @@ export async function runTool(name, args, ctx) {
     if (name === 'task_start') r = await lease(ctx, (args.apps || []).map(String));
     else {
       if (name === 'notifications_reply') turn.log = [...(turn.log || []).slice(-7), context.about(args.key)].filter(Boolean); // the reviewer sees what it answers
-      if (t.method === 'app.mod.apply' || (t.tier !== 'read' || t.pkg) && !/^(firewall|notifications|trackers|app\.mod)\./.test(t.method)) { // every action runs inside the turn's lease (replies: the card is the gate)
+      if (t.method === 'app.mod.apply' || (t.tier !== 'read' || t.pkg) && !/^(firewall|notifications|trackers|app\.mod)\./.test(t.method) && !/^app\.deepmod\.(remove|disable|rollback)$/.test(t.method)) { // every action runs inside the turn's lease (replies: the card is the gate)
         const l = await lease(ctx, t.method === 'app.mod.apply' ? [String(args.spec?.package)] : name === 'open_app' || name === 'play_music' ? [String(args.pkg)] : t.pkg ? [t.pkg] : turn.lease ? [] : [turn.pkg].filter(Boolean));
         params = { ...args, ...(t.kind && { kind: t.kind }), task_id: l.task_id, ...(turn.alerted?.size && { tainted: true }) };
       }
@@ -298,10 +301,13 @@ export async function runTool(name, args, ctx) {
  type: 'approval.needed', summary: `${t.method} ${JSON.stringify(args)}${args.id != null ? ` "${turn.nodes?.get(args.id)?.text ?? ''}" in ${turn.pkg}` : ''}`, timeout_s: APPROVAL_S,
           rule_of_two: { untrusted: !!turn.sawScreen, private: null, outward: true } });
       }
-      r = await rpc(t.method, params, t.tier === 'read' && name !== 'wait' ? 20_000 : ACT_MS);
+      r = await rpc(turn.origin === 'deepmod' ? 'app.deepmod.read' : t.method, turn.origin === 'deepmod' ? { context: turn.deepmodContext } : params, t.tier === 'read' && name !== 'wait' ? 20_000 : ACT_MS);
       if (t.tier !== 'read') { turn.acted = true; memory.noteApi(t.method, params, r); } // calendar/alarm writes reach memory now, not at the next sync
     }
-    if (t.method === 'screen.read') r = await guardScreen(r, ctx);
+    if (t.method === 'screen.read' && r.ok !== false) {
+      if (turn.origin === 'deepmod') r = redactSummary(r);
+      if (r.ok !== false) r = await guardScreen(r, ctx);
+    }
     else if (t.method === 'notifications.list') r = await context.guardList(r, ctx);
     else if (t.appRead) r = await guardMemory(r, ctx); // retain trusted:false + source on every app preview
     else if (r.items) r = { ...r, items: (await guardMemory(r.items.map((x) => ({ ...x, phone: true })), ctx)).map(({ phone, trusted, source, ...x }) => x) }; // SMS, calls, contacts, events: other people's words

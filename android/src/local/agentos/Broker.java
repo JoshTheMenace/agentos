@@ -102,6 +102,7 @@ final class Broker {
     private final LeaseCard leaseCard;
     /** App mods (Mods.java): buttons drawn on top of other apps. */
     final Mods mods;
+    final DeepMods deepMods;
     /** Saved passwords (Vault.java): filled behind a fingerprint, never shown to the model. */
     final Vault vault;
     /** Open approvals as announced on /events (approval_id -> approval.shown payload): approval.list returns these. */
@@ -125,6 +126,7 @@ final class Broker {
         leaseCard = new LeaseCard(svc);
         audit = new Audit(svc.getFilesDir());
         mods = new Mods(svc, audit);
+        deepMods = new DeepMods(svc, audit);
         vault = new Vault(svc, audit);
         PromptGuard.init(svc);
         Trackers.start(svc);
@@ -137,11 +139,12 @@ final class Broker {
     /** uid: the calling app's uid for task.start and approval.confirm (-1 if unknown or not looked up). */
     JSONObject call(String m, JSONObject p, int uid) throws Exception {
         String plugin = Plugins.off(m, p); // a switched-off plugin's methods: refused for agents; the owner's own screens and adb still work
-        if (plugin != null && uid != 2000 && !callerIn(uid, "owner_callers")) {
+        if (plugin != null && !m.matches("app\\.deepmod\\.(remove|disable|rollback)") && uid != 2000 && !callerIn(uid, "owner_callers")) {
             String why = "plugin " + plugin + " is turned off by the owner";
             audit.log(entry(m, lease).put("caller", who(uid)).put("decision", "refused").put("reason", why));
             return ok(false).put("decision", "refused").put("reason", why);
         }
+        if (m.startsWith("app.deepmod.")) return deepmod(m, p, uid);
         if (AppReads.app(m) != null) synchronized (actLock) {
             String pkg = AppReads.PACKAGES.get(AppReads.app(m));
             JSONObject out = AppReads.read(svc, m, p), log = entry(m, lease).put("pkg", pkg).put("tier", "T0 read");
@@ -506,6 +509,79 @@ final class Broker {
         return mask && caller && l != null && l.asked && l.granted && !l.paused && System.currentTimeMillis() < l.expires
                 && l.id.equals(p.optString("task_id")) && l.apps.contains(pkg) && Arrays.asList("typed", "voice").contains(l.origin)
                 && !l.h.flagged && !l.h.copied && !p.optBoolean("tainted") ? ORDINARY : HUMAN;
+    }
+
+    private JSONObject deepmod(String method, JSONObject p, int uid) throws Exception {
+        String op = method.substring("app.deepmod.".length());
+        if (op.equals("disable")) return deepMods.disable("kill switch");
+        if (op.equals("remove") || op.equals("rollback")) return deepMods.remove(op.equals("rollback"));
+        if (op.equals("inspect") || op.equals("list")) return deepMods.inspect();
+        if (op.equals("ready")) {
+            if (!callerIn(uid, "lease_callers")) return ok(false).put("reason", "summary consent status only from agentd");
+            deepMods.summaryReady = p.optBoolean("enabled"); return ok(true);
+        }
+        if (op.equals("read")) {
+            if (!callerIn(uid, "lease_callers")) return ok(false).put("reason", "summary read only from agentd");
+            JSONObject now = deepMods.inspect();
+            if (!p.optString("context").equals(now.getString("context")) || !now.getString("screen").equals("chat") || !deepMods.consumeSummary(p.getString("context")))
+                return ok(false).put("reason", "summary context expired or no native activation");
+            JSONObject screen = read();
+            if (!local.agentos.deep.Contract.PKG.equals(screen.optString("pkg"))) return ok(false).put("reason", "foreground changed; no context returned");
+            return screen;
+        }
+        if (op.equals("integrate")) {
+            if (uid != 2000) return ok(false).put("reason", "developer integration over adb only");
+            return deepMods.enroll();
+        }
+        if (op.equals("style")) {
+            JSONObject now = deepMods.inspect(), spec = now.isNull("spec") ? new JSONObject().put("schema", local.agentos.deep.Contract.WIRE)
+                    .put("id", "pigeon-theme").put("package", local.agentos.deep.Contract.PKG).put("capabilityVersion", 1) : new JSONObject(now.getJSONObject("spec").toString());
+            spec.put("baseRevision", now.getLong("revision"));
+            JSONObject theme = spec.optJSONObject("theme"); if (theme == null) theme = new JSONObject();
+            if (p.has("palette")) {
+                local.agentos.deep.Contract.need(p.getString("palette").equals("navy-gold"), "only navy-gold preset is advertised");
+                JSONObject colors = new JSONObject(); String[] values = {"#FF081A33", "#FF122A4A", "#FF1C3555", "#FFFFF4D6", "#FFD4C6A5", "#FFD6AD45", "#FF081A33"};
+                for (int i = 0; i < values.length; i++) colors.put(local.agentos.deep.Contract.COLORS.get(i), values[i]);
+                theme.put("colors", colors);
+            }
+            if (p.has("font")) theme.put("font", new JSONObject().put("family", p.getString("font")).put("scale", p.optDouble("scale", 1)));
+            if (theme.length() > 0) spec.put("theme", theme);
+            if (p.has("filter_promoted")) spec.put("lists", p.getBoolean("filter_promoted") ? new JSONArray().put(new JSONObject().put("id", "pigeon_threads")
+                    .put("exclude", new JSONObject().put("field", "promoted").put("equals", true))) : new JSONArray());
+            if (p.has("hide_decorations")) spec.put("views", p.getBoolean("hide_decorations") ? new JSONArray().put(new JSONObject().put("screen", "chat-list")
+                    .put("match", new JSONObject().put("id", "pigeon_overflow")).put("visibility", "gone")).put(new JSONObject().put("screen", "chat-list")
+                    .put("match", new JSONObject().put("id", "pigeon_promotion")).put("visibility", "gone")) : new JSONArray());
+            JSONObject proposal = new JSONObject().put("task_id", p.optString("task_id")).put("tainted", p.optBoolean("tainted")).put("payload", spec.toString());
+            JSONObject preview = deepmod("app.deepmod.preview", proposal, uid);
+            if (!preview.optBoolean("ok")) return preview;
+            return deepmod("app.deepmod.apply", proposal.put("receipt", preview.getString("receipt")), uid);
+        }
+        if (!op.equals("preview") && !op.equals("apply")) throw new IllegalArgumentException("unknown deepmod operation");
+        Lease l = lease;
+        if (l == null || !l.id.equals(p.optString("task_id")) || !l.caller.equals(who(uid)) || !callerIn(uid, "lease_callers")
+                || !l.granted || l.paused || l.expires < System.currentTimeMillis() || !l.apps.contains(local.agentos.deep.Contract.PKG))
+            return ok(false).put("reason", "a live caller-bound Pigeon task lease is required");
+        if (p.optBoolean("tainted")) l.h.flagged = true;
+        String raw; long epoch;
+        synchronized (deepMods.lock) { epoch = deepMods.epoch; raw = op.equals("preview") ? p.getString("payload") : deepMods.receipt(p.getString("receipt")).raw; }
+        JSONObject spec = local.agentos.deep.Contract.validate(raw);
+        boolean passive = !spec.has("buttons") || spec.getJSONArray("buttons").length() == 0;
+        List<String> channels = modChannels(l, p, local.agentos.deep.Contract.PKG, passive || op.equals("preview"), true);
+        if (op.equals("apply") || channels == HUMAN) {
+            JSONObject r2 = new JSONObject().put("untrusted", l.h.untrusted).put("private", false).put("outward", false);
+            Approvals.Pending a = approve(method, local.agentos.deep.Contract.PKG, passive ? "Restyle Pigeon and filter synthetic promoted rows" : "Add a native Summarize button to Pigeon",
+                    "Reversible appearance only. Spec SHA-256: " + local.agentos.deep.Contract.hash(raw), l, "T2 UI change", "cooperative signed spec", r2,
+                    channels, channels == HUMAN ? "remote, tainted or button mods need a person" : null, Math.max(10, Math.min(60, p.optInt("approval_timeout_s", 60))) * 1000L);
+            if (a.channel.isEmpty()) return ok(false).put("decision", "denied").put("reason", a.reason);
+            if (lease != l || !l.granted || l.paused || l.expires < System.currentTimeMillis()
+                    || channels == ORDINARY && modChannels(l, p, local.agentos.deep.Contract.PKG, passive, true) != ORDINARY
+                    || Plugins.off(method, p) != null) return ok(false).put("reason", "policy changed during approval");
+            audit.log(entry(method + ".review", l).put("spec_sha256", local.agentos.deep.Contract.hash(raw)).put("approver", a.channel).put("decision", "approved"));
+        }
+        synchronized (deepMods.lock) {
+            local.agentos.deep.Contract.need(epoch == deepMods.epoch, "deep mods disabled during review; start a fresh preview");
+            return op.equals("preview") ? deepMods.preview(raw, l.id) : deepMods.apply(p.getString("receipt"), l.id);
+        }
     }
 
     private JSONObject mod(JSONObject p, int uid) throws Exception {

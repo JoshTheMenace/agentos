@@ -68,7 +68,7 @@ public class AgentA11y extends AccessibilityService {
     /** Re-bound by the system: free :7777 so the new instance's broker serves, not two brokers side by side. */
     @Override public boolean onUnbind(Intent i) {
         if (server != null) server.stop();
-        if (broker != null) broker.mods.close();
+        if (broker != null) { broker.deepMods.close(); broker.mods.close(); }
         return super.onUnbind(i);
     }
 
@@ -101,7 +101,7 @@ public class AgentA11y extends AccessibilityService {
         if (server != null) server.stop();
         try { unregisterReceiver(demo); } catch (Exception ignored) {}
         if (island != null) island.hide();
-        if (broker != null) broker.mods.close();
+        if (broker != null) { broker.deepMods.close(); broker.mods.close(); }
         if (autoPause != null) autoPause.stop();
         super.onDestroy();
     }

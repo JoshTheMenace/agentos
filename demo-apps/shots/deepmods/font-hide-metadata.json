@@ -1,0 +1,21 @@
+{
+  "payload_sha256": "b8eed29021ab6f7aab4e99e38438a54983a759a47bae02e99a6f7f3913e54b47",
+  "build": "62303310bb60f8c149810d35aa9e770c9a7e31b7aa59a95b03a93f49fb5b2cfd",
+  "baseRevision": 2,
+  "epoch": 33,
+  "generation": 8,
+  "context": "c28c5a76-b8a6-418d-b9bf-14d1b7dcca1f",
+  "source_sha256": "4ed45e55fe7206cd8fea5fc5f5ed32efbbfdabe0056e3dfe43fd4ec3ef85b130",
+  "timestamp": 1793173817518,
+  "bounds": [
+    0,
+    77,
+    720,
+    1516
+  ],
+  "orientation": 1,
+  "fontScale": 1,
+  "changedPixels": 1035569,
+  "declaredRegion": "Pigeon content root; system bars excluded",
+  "structural": true
+}

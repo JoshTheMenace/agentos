@@ -22,6 +22,7 @@
   <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
   <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"/>
   <application android:label="AgentOS" android:icon="@android:drawable/ic_lock_lock" android:allowBackup="false">
+    <service android:name=".DeepModService" android:exported="true"/>
     <!-- The bouncer: reads the screen, acts, and hosts the tool server on 127.0.0.1:7777. -->
     <service android:name=".AgentA11y" android:exported="true" android:label="AgentOS"
         android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

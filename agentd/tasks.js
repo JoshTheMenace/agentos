@@ -47,9 +47,9 @@ function update(t, why) {
 
 // Start a task. Returns its view at once; the worker runs in the background.
 // remote: "Grok"/"Dots" (mcp-remote.js); the goal then reads "From Grok: ..." on the lease card, the island, Activity and the audit.
-export function start(goal, { origin = 'voice', heard = Date.now(), remote } = {}) {
+export function start(goal, { origin = 'voice', heard = Date.now(), remote, deepmodContext } = {}) {
   goal = String(goal || '').trim().slice(0, 500);
-  const t = { id: `k${++n}`, goal: remote ? `From ${remote}: ${goal}` : goal, origin, remote, state: 'queued', step: 'Queued', steps: [], created: Date.now(),
+  const t = { id: `k${++n}`, goal: remote ? `From ${remote}: ${goal}` : goal, origin, remote, deepmodContext, state: 'queued', step: 'Queued', steps: [], created: Date.now(),
     timing: { heard_ms: 0 }, session: {}, abort: new AbortController(), heard };
   all.set(t.id, t);
   for (const [id, old] of all) if (DONE.has(old.state) && all.size > 20) all.delete(id); // keep the list short
@@ -83,13 +83,13 @@ function finish(t, state, { result, error } = {}) {
 
 async function run(t) {
   if (t.abort.signal.aborted) return finish(t, 'stopped', { error: t.stopWhy });
-  t.turn = { goal: t.goal, origin: t.origin, ...(t.remote && { untrusted: true, remote: t.remote }) }; // tools.js keeps the lease on this; the reviewer reads its goal and log
+  t.turn = { goal: t.goal, origin: t.origin, deepmodContext: t.deepmodContext, ...(t.remote && { untrusted: true, remote: t.remote }) }; // tools.js keeps the lease on this; the reviewer reads its goal and log
   Object.assign(t, { state: 'running', step: 'Starting' });
   t.timing.start_ms = Date.now() - t.heard;
   update(t, 'running');
   const ctx = { provider: 'codex', signal: t.abort.signal, turn: t.turn, emit: (m) => onWorker(t, m) };
   let r;
-  const [c, a] = await Promise.all([context(t.goal), appList()]);
+  const [c, a] = t.origin === 'deepmod' ? ['', ''] : await Promise.all([context(t.goal), appList()]);
   try { r = await codex.run(t.session, `${t.remote ? REMOTE(t.remote) : t.origin === 'schedule' ? SCHEDULED : BRIEF}\n${a && `Installed apps (label=package; no need for list_apps): ${a}\n`}${c}\nRequest: ${t.goal}`, ctx); }
   catch (e) { r = { status: 'failed', error: e.message }; }
   t.ending = true; // our own task.stop below is not the user stopping it

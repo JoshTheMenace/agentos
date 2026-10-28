@@ -31,6 +31,7 @@ final class Plugins {
     private static final Map<String, String> MAP = new HashMap<>();
     static {
         for (String id : AppReads.PACKAGES.keySet()) MAP.put(id + ".summary", id);
+        for (String op : new String[]{"inspect", "list", "preview", "apply", "remove", "disable", "rollback", "read", "style"}) MAP.put("app.deepmod." + op, "mods");
         MAP.put("linkedin.unread", "linkedin");
         for (String m : new String[]{"calendar.add", "calendar.find", "calendar.update", "calendar.delete"}) MAP.put(m, "calendar");
         for (String m : new String[]{"contacts.find", "sms.send", "sms.list", "calls.list", "call.place"}) MAP.put(m, "messages");
@@ -75,6 +76,7 @@ final class Plugins {
         Files.write(tmp.toPath(), new JSONObject().put("off", new JSONArray(s)).toString().getBytes(StandardCharsets.UTF_8));
         Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         off = Collections.unmodifiableSet(s);
+        if (id.equals("mods") && !on && DeepMods.instance != null) DeepMods.instance.disable("mods plugin disabled");
         audit.log(new JSONObject().put("task", "").put("tool", "plugins.set").put("plugin", id).put("on", on).put("decision", "auto").put("reason", "by the " + by));
         Events.emit("plugins.changed", new JSONObject().put("id", id).put("on", on));
         return list();

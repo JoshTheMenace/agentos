@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="local.agentos.pigeon" android:versionCode="1" android:versionName="1.0">
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <queries><package android:name="local.agentos"/></queries>
   <application android:label="Pigeon" android:icon="@mipmap/ic_launcher" android:theme="@style/App" android:allowBackup="false">
     <receiver android:name=".TestNotifications" android:exported="true"/>
     <receiver android:name=".TestNotifications$Reply" android:exported="false"/>
+    <service android:name=".DeepModService" android:exported="true"/>
     <!-- singleTask: `am start` with inject extras reaches the running instance via onNewIntent -->
     <activity android:name=".Main" android:exported="true" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize">
       <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>

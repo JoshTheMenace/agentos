@@ -23,6 +23,7 @@ import * as apps from './apps.js';
 import { Voice, eyes, logImage } from './voice.js';
 import * as remote from './mcp-remote.js';
 import * as imagegen from './imagegen.js';
+import './deepmod-actions.js';
 import * as homeSuggest from './home-suggest.js'; // TODO(context): context.js replaces this stand-in
 import * as proactive from './proactive.js';
 import { Codex } from './providers/codex.js';

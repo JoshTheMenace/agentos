@@ -20,7 +20,8 @@ cd "$APP"; rm -rf build; mkdir -p build/gen build/classes build/dex
 "$AAPT2" compile --dir res -o build/res.zip
 "$AAPT2" link -I "$JAR" --manifest AndroidManifest.xml --min-sdk-version 26 --target-sdk-version 33 \
   --java build/gen -o build/unsigned.apk build/res.zip
-"$JDK/javac" --release 8 -Xlint:-options -cp "$JAR" -d build/classes $(find src build/gen -name '*.java')
+[ "$APP" = pigeon ] && SHARED=../../android/src/local/agentos/deep || SHARED=
+"$JDK/javac" --release 8 -Xlint:-options -cp "$JAR" -d build/classes $(find src build/gen ${SHARED:-} -name '*.java')
 $D8 --release --min-api 26 --lib "$JAR" --output build/dex $(find build/classes -name '*.class')
 (cd build/dex && zip -q ../unsigned.apk classes.dex)
 "$ZIPALIGN" -f -p 4 build/unsigned.apk build/aligned.apk

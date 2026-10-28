@@ -141,6 +141,7 @@ final class Mods {
     private void clearPreview() { ModMask.clear(wm, highlights); }
 
     JSONObject disable(String pkg, String reason) throws Exception {
+        if ((pkg.isEmpty() || pkg.equals(local.agentos.deep.Contract.PKG)) && DeepMods.instance != null) DeepMods.instance.disable(reason);
         CompletableFuture<Integer> f = new CompletableFuture<>();
         svc.main.post(() -> {
             previews.clear(); clearPreview();

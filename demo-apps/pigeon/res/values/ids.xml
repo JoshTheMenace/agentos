@@ -1,0 +1,7 @@
+<resources>
+  <item type="id" name="pigeon_overflow"/>
+  <item type="id" name="pigeon_promotion"/>
+  <item type="id" name="pigeon_threads"/>
+  <item type="id" name="pigeon_chat_actions"/>
+  <item type="id" name="pigeon_summarize"/>
+</resources>
