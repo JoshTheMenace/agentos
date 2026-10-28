@@ -190,7 +190,8 @@ check('Test alarms', alarms)
 
 def calendar():
     # Candidates only: even a bench-like title could belong to the founder.
-    where = "deleted=0 AND (lower(title) LIKE '%agentos%' OR lower(title) LIKE '%bench%' OR lower(title) LIKE '%test%' OR title='Lunch with Sam')"
+    # Agent test items are labeled AgentOS; the founder's own "Test ..." events (ids 1382, 1900, 2525) are real.
+    where = "deleted=0 AND (lower(title) LIKE '%agentos%' OR title='Lunch with Sam')"
     rows = shell('content query --uri content://com.android.calendar/events --projection _id --where ' + shlex.quote(where), root=True)
     if rows != 'No result found.' and not rows.startswith('Row:'):
         raise RuntimeError('calendar provider unavailable')
