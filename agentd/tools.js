@@ -12,6 +12,7 @@ import { tools as notificationTools } from './notification-tools.js';
 import { TOOLS as DEEPMOD_TOOLS, redactSummary } from './deepmod-tools.js';
 import * as catchup from './catchup.js';
 import * as grid from './grid.js';
+import * as home from './home.js';
 import * as visual from './visual.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
@@ -138,6 +139,7 @@ for (const m of context.ruleTools()) TOOLS[m.name] = { method: m.name, tier: m.t
 for (const m of schedule.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, sched: true }; // schedule.js
 TOOLS.catch_up = { ...catchup.tool(), method: 'catch_up', run: catchup.call }; // catchup.js: "what did I miss?" in one local read
 TOOLS.grid_outlook = { ...grid.tool, method: 'grid_outlook', run: grid.call }; // grid.js: cheap + clean power windows (Energy plugin)
+for (const t of home.tools) TOOLS[t.name] = { ...t, method: t.name, local: true }; // home.js: Google Home devices via the app's own screen (Smart home plugin)
 TOOLS.show = { ...visual.tool, method: 'show', run: visual.call }; // visual.js: a chart spec attached to the answer (every UI draws it)
 for (const m of microapps.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, apps: true }; // apps.js (micro-apps)
 
