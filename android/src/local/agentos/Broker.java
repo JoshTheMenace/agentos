@@ -961,6 +961,7 @@ final class Broker {
 
     private static boolean copied(Set<String> seen, String text) {
         String t = norm(text);
+        if (t.isEmpty()) return false; // no text, nothing copied (an empty notification message used to taint every text-less API call)
         synchronized (seen) {
             for (String x : seen)
                 if (t.equals(x) || x.length() >= 12 && t.contains(x) || t.length() >= 12 && x.contains(t)) return true;
