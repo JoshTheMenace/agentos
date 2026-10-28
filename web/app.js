@@ -216,7 +216,7 @@ function renderNow() {
   const goal = short(t?.goal || h?.goal || 'Thinking', 40), last = t && S.audit.filter((e) => e.task === t.task_id && !/^task\./.test(e.tool)).pop();
   const step = S.pending ? 'Waiting for you' : t?.paused ? 'Paused' : S.step || (last ? auditLine(last)[0] : 'Starting'), cls = S.pending ? 'approval' : 'working';
   const c = el('button', 'glass now ' + cls, `<div class="hd"><span class="orb ${cls}"></span><div><div class="t">${esc(goal)}</div><div class="s">${esc(step)}${t ? ' · ' + esc(t.apps.map(appName).join(', ')) : ''}</div></div>${t ? `<button class="ib" data-a="${t.paused ? 'resume' : 'pause'}"><svg width="14" height="14"><use href="#i-${t.paused ? 'play' : 'pause'}"/></svg></button>` : ''}<button class="ib red" data-a="stop"><svg width="14" height="14"><use href="#i-stop"/></svg></button></div><div class="bar2"><i></i></div>`);
-  c.onclick = async (e) => { const a = e.target.closest('[data-a]')?.dataset.a; hap(); if (!a) return open('sheet'); if (a === 'stop') { send({ type: 'stop' }); S.turn = false; } if (t) await rpc('task.' + a, { task_id: t.task_id }); refresh(); };
+  c.onclick = async (e) => { const a = e.target.closest('[data-a]')?.dataset.a; hap(); if (!a) return open('sheet'); if (a === 'stop') { S.queue.length = 0; send({ type: 'stop' }); S.turn = false; } if (t) await rpc('task.' + a, { task_id: t.task_id }); refresh(); };
   swap(box, c);
 }
 // Suggestions: agentd's feed (context) plus one from the real next calendar event. One tap starts the task; nothing else to read.
@@ -420,7 +420,7 @@ function taskRow(t) {
   k.onpointerup = k.onpointercancel = k.onpointerleave = () => clearTimeout(t);
   k.onclick = async () => { if (held) { held = false; return; } if (Date.now() - S.armed > 4000) return; S.armed = 0; hap(); const r = await phone('audit.demo_reset'); if (r?.since) S.since = r.since; renderCenter(); }; }
 $('#prov').onclick = (e) => { const p = e.target.dataset.p; if (!p) return; hap('tick'); S.provider = localStorage.provider = p; renderCenter(); renderTry(); };
-$('#kill').onclick = async () => { hap('heavy'); send({ type: 'stop' }); await rpc('task.stop', {}); S.turn = false; S.pending = null; refresh(); };
+$('#kill').onclick = async () => { hap('heavy'); S.queue.length = 0; send({ type: 'stop' }); await rpc('task.stop', {}); S.turn = false; S.pending = null; refresh(); };
 
 // ---------- permissions ----------
 function openPerms() { open('perms'); renderGrants(); renderFirewall(); renderSources($('#psources')); $('#never').replaceChildren(...FORBIDDEN.map((n) => el('span', 'chip', `<i></i>${n}`))); }

@@ -60,8 +60,9 @@ final class Firewall {
      * Connections each name block has refused so far, keyed "uid domain" (the packet counters on the tracker REJECT rules,
      * IPv4 + IPv6; they reset at reboot). One root call, so the Blockers view can poll it every couple of seconds.
      */
-    static Map<String, Long> blockedCounts() throws java.io.IOException {
+    static Map<String, Long> blockedCounts() throws Exception {
         Map<String, Long> m = new HashMap<>();
+        if (nameRules().isEmpty()) return m; // before the first block (or after reboot), the chain may not exist
         for (String line : Root.run("iptables -w -L " + CHAIN + " -v -n -x; ip6tables -w -L " + CHAIN + " -v -n -x").split("\n")) {
             Matcher c = COUNT.matcher(line);
             if (c.find()) m.merge(c.group(2) + " " + c.group(3), Long.parseLong(c.group(1)), Long::sum);

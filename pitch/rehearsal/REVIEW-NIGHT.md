@@ -83,3 +83,77 @@ Final verification before commit: all **856** live-worktree agentd `.js` files p
 The catch-up agent committed `ed01014` during final staging. Its eight-file diff was also inspected (read-only notification/calendar/promise aggregation, model-only phrasing, normal brokered follow-up tasks, escaped UI rows). No additional confirmed high/medium finding in that diff. The review fixes preserve this new HEAD. The fixed initial review inventory remains the 36 commits through `21937cb`; agents continue landing later work. The voice test now stubs catch-up warm-up so it stays isolated from that independent feature. Final publish checks use the new committed baseline, not the earlier staged tree.
 
 Subsequent UI/plan commits continued arriving during publish. Preserve their changes when committing; they are outside the fixed initial review inventory. In `2f7f170`, the committed catch-up UI listener was removed, but its owner already restored the three-line listener in the live worktree. Morning integration should include that owner’s restoration, not overwrite it.
+
+## Review #2
+
+Reviewed 2026-10-28, America/Denver, starting with the 30 commits in `edc95bb..2af4d18`. Read NIGHT-PLAN.md, STATUS.md, ARCHITECTURE.md and review #1. No phone access, deployment, real model requests or approval taps. Findings below were recorded before production fixes.
+
+### Confirmed findings, ranked
+
+1. **Medium: tracker scans fail after reboot before the firewall chain is created.** `android/src/local/agentos/Trackers.java:173` now calls `Firewall.blockedCounts()` on every scan (`11b2cd7`). At `android/src/local/agentos/Firewall.java:65`, the counter read throws when `AGENTOS_FW` does not exist. Broker startup starts the separate `AGENTOS_SNI` radar; it does not initialize `AGENTOS_FW`. The existing `nameRules()` handles this normal empty state, so scans worked before this change. A fresh scan now errors until something calls `firewall.list` or changes firewall rules. Host reproduction compiled the production Firewall class with a Root stub returning no name rules and the missing-chain error for counter reads; it failed at Firewall.java:65. Return empty counters when there are no name rules. This also repairs the older empty-chain failure in `trackers.list`; approval and firewall write paths need no changes.
+
+2. **Medium: two Stop controls restart queued work after cancellation.** `web/app.js:219` (home Stop) and `web/app.js:423` (command-center Stop) do not clear the queue introduced in `4814e76`. `web/app.js:707` drains it on every `turn.done`, including `interrupted`, so stopping the current turn immediately launches the next queued request. Only the ask-sheet Stop clears it. The host regression executes the actual production callbacks with two queued asks, holds the broker stop RPC open, and delivers `turn.done(interrupted)`; both controls start the next ask, while the ask-sheet control passes. Clear the queue synchronously before sending stop, matching the existing ask-sheet behavior. Broker/reviewer approval gates still apply to a restarted request; this is a cancellation failure, not an approval bypass.
+
+### Coverage and limits
+
+- Approvals/reviewer: no policy downgrade or new confirmation route in this range. Review #1's live-flag recheck remains present; 34 reviewer checks cover taint, remote/drafted requests, HUMAN/fingerprint floors, timeout and flags arriving during grading. The added finishing tools still call `runTool` and require a successful result before ending the turn. No shell, root or built-in approval capability was added to model sessions.
+- Untrusted recipients: notification reply resolution and broker confirmation are unchanged. Catch-up remains tool-less while phrasing facts; follow-up cards launch ordinary brokered tasks. Proactive goals still register as drafted and cannot receive reviewer auto-approval. Message text remains untrusted in model context and reviewer transcripts. No confirmed new recipient-selection bypass found.
+- Keyboard: inspected the new calendar snapshot, bounded retrieval, redaction, cache expiry and consent checks. Password and incognito gating remains in the IME; the facts provider rejects those fields, write/rewrite modes, guarded questions and non-cloud calendar grants. Availability exposes gaps rather than appointment titles, and saved Events data cannot claim availability without recurring Instances. Thirteen host tests cover these cases. No tool/approval path was added to calendar suggestions.
+- WebView: new counters escape names/domains and catch-up rows escape titles/details. Waiting approvals remain status text, with no WebView approval-confirm buttons or RPC. The polish capture scripts can synthesize display events for recordings but are Mac-side test tooling, not a runtime approval surface. Home/IME animation and island changes were inspected as source; no visual/device verification claimed. The queued-ask cancellation failure is finding 2.
+- Offline routing: the only router change is the 1 s to 2.5 s reachability timeout. All 12 router tests pass, including no fallback replay after an action request, an acted flag or visible text, and no fallback on cancellation or a connected cloud outage.
+- Voice: the new change only adds elapsed task time to completion speech. All nine voice tests pass, including the actual server dispatch, missed-handoff recovery, late-handoff dedupe, session replacement and repeated user turns.
+- Trackers/broker: count parsing aggregates IPv4 and IPv6 per UID/domain. `Trackers.plan` still canonicalizes domains against the bundled list and rejects empty plans before `who()` is called. Owner/protective block rules and human-only unblock rules are unchanged. Finding 1 covers the new scan dependency on counters.
+- Restart risks: inspected new imports and the catch-up lazy import that breaks its startup cycle. All **857** `.js` files recursively under agentd, including installed dependencies, pass `node --check`. This is host validation, not a live daemon restart. All broker Java sources compile against Android 33 in an isolated temporary output directory.
+- Magisk logging (`BUGHUNT-NIGHT-2.md:25`): the documented `UPDATE policies SET logging=0` suppresses Magisk superuser logging for existing policy rows; it does not alter grant policy or notifications. It reduces root-command forensic visibility, an explicit tradeoff for the founder's test phone. Broker hash-chained audit code is unchanged. The stated phone setting and restart-count measurements cannot be verified without phone access; no policy change was made here.
+- Preflight, benchmark/deployment scripts and recording helpers reviewed as source only; none were run against a device. Preflight fixes remain explicit, locked and scoped; calendar/alarm candidates are reported, not deleted. Pitch/plan/results commits were inspected for executable changes and scope; PDFs/images were not treated as runtime code or independently revalidated measurements.
+- Existing shared broker lease overlap remains documented in bug hunt 2. Stop benchmarks before integration smoke tests. The multi-part finishing heuristic is conservative for its listed conjunctions/punctuation, not a proof that every natural-language compound request is recognized; no additional deterministic failure was established here.
+
+### Fixes and verification
+
+- `android/src/local/agentos/Firewall.java`: reuse the existing cached `nameRules()` lookup and return the empty map when there are no name rules. There are then no name-rule counters to read, and no chain needs to be created by a read. The throws declaration follows the existing helper. Reads with active rules still surface root errors.
+- `web/app.js`: clear queued asks before sending stop from the home card and command center. Clearing before the asynchronous RPC matters: an interrupted `turn.done` can arrive before that RPC returns.
+- `android/tests/FirewallTest.java`: host-only Root stub, compiled with the production Firewall class. Missing-chain reproduction failed before the fix. Three cases now pass: empty fresh-boot state, IPv4/IPv6 aggregation excluding non-name rules, and failure propagation with active rules.
+- `web/queue-test.mjs`: executes production stop/completion callbacks in a VM. The two affected controls failed before the fix; all four cases now pass, including the existing ask-sheet Stop and ordinary completion starting exactly one queued ask.
+- Final host checks: 39 combined Node tests (router, voice, calendar suggestions, deep-mod and queue); 34 reviewer mock checks; 107 deep-mod scope/consent/redaction cases inside its suite; 39 Java contract/signature and 15 broker-policy cases using the freshly compiled production classes. `node --check web/app.js` and `git diff --check` pass. No formatter was run.
+- `git pull --rebase` initially refused other agents' dirty files. `git -c pull.rebase=false pull --ff-only` then completed with “Already up to date” before each production fix; no other work was stashed. Only these two runtime files, their two host tests and this report belong to this review.
+- The requested code-golf skill is absent from the supplied catalog and local Codex/Agents/Claude searches. A manual simplification pass retained one empty-map guard and two queue clears, with no refactor.
+
+Morning integration needs fresh **local.agentos and launcher APKs** for these fixes, in addition to the already planned agentd deploy/restart. No phone action, APK install or deployment was performed. There are no confirmed high findings; both confirmed medium findings are fixed in source.
+
+### Commit inventory
+
+Final reviewed baseline: `edc95bb..8ad4c5d` (31 commits). The later `8ad4c5d` only adds the Wi-Fi incident/keep-alive note and was also inspected. Other agents' uncommitted speed/keyboard work is outside this reviewed range.
+
+```text
+250fc27 codex-bench.sh: env copy made once from adb
+bb73767 catchup: calendar query fix (no location column), hedged model call, no load-time import cycle
+78ddda9 night plan: review done, preflight started
+42dca0f night plan: catch-up done, deck draft started
+3467473 Add read-only stage preflight with scoped safe fixes
+7f968d4 pitch: 5-slide deck draft (A2 Calm Glass, real shots, cited numbers) + refreshed one-pager PDF
+0a514e8 preflight: only flag AgentOS-labeled calendar items (founder's own Test/benchmark events are real)
+00c93c6 night plan: preflight done
+78a3d0b pitch: deck PDF edge to edge, voice numbers, capability-first slide 1, fingerprint wording, commit count from git
+5b4a80c pitch: notes.md sources for voice numbers, commit count method, fingerprint wording, swapped screenshots
+11b2cd7 trackers: live blocked counter with company names (DEMO-WOW #7) + voice says the task time
+34f9624 night plan: tracker + deck done, polish 3 started
+787ac15 Add calendar-aware keyboard replies with bounded local context
+1a0602e night plan: calendar keyboard done, morning deploy scheduled 6:43
+0e8b3b7 UI polish pass 3: feel on stage (screen recordings reviewed frame by frame)
+7e01c9a night plan: polish 3 done, integration deploy #1 started
+1f76e59 night plan: integration deploy #1, agentd restarted once at 03:40:48
+a36a04c catchup: nothing to report answers at once instead of waiting up to 6 s on the model
+fb9abad speed r3: type into fields instead of tapping keypads (Calculator act 5.5-6 s -> 1.4 s on the phone); round-3 model/plugins A/B + network findings in RESULTS.md
+34cb7d3 integration deploy #1: smoke results, open issues (pitch/rehearsal/DEPLOY-NIGHT.md)
+be8761a night plan: bug hunt 2 started
+d356423 speed r3: answer from the screen already shown (Pigeon 3 calls -> 2 in every run)
+4814e76 launcher: a second ask during a running turn waits its turn instead of showing "a turn is already running; send stop first" and being dropped
+1ad2ca5 speed r3: one-shot action tools (phone_settings, media, play_music, navigate, open_url, add_event, schedule_task) finish in the same call (flashlight 2 -> 1 model call)
+e6ce489 RESULTS r3: real run times from the rows
+b83ea89 speed r3 fix: a multi-part request never ends early on a finishing tool's done (cross-app task 2/3 -> 3/3); bench cross task
+3633457 bench: snap.sh REV, before/after variants; RESULTS r3 timing notes
+757636a router: reachability probe waits 2.5 s, not 1 s (back online, 2 of 7 asks went to the local model)
+48c8367 bug hunt round 2: reliability of deploy #1 (pitch/rehearsal/BUGHUNT-NIGHT-2.md)
+2af4d18 night plan: bug hunt 2 done, keyboard batching + review 2 started
+8ad4c5d night plan: Wi-Fi drop #2 and keep-alive loop
+```
