@@ -1,0 +1,37 @@
+/* Visual answers (viz.js): a dark-glass card, calm marks, entrance on transform/opacity only. */
+.viz{padding:12px 14px 11px;border-radius:18px;align-self:stretch;max-width:92%;animation:rise .5s var(--soft) both;overflow:hidden}
+.viz .k{margin-bottom:8px}
+.viz .plot{display:block;width:100%;height:auto;overflow:visible}
+.viz text{font-family:Inter,system-ui,sans-serif;font-weight:600;font-variant-numeric:tabular-nums}
+.viz .t3{font-size:10px;fill:var(--l3);font-weight:600}
+.viz .t1{font-size:11px;fill:var(--l1);font-weight:600}
+.viz .sl{font-size:10.5px;fill:#fff}
+.viz .vb{transform-box:fill-box;transform-origin:50% 100%;animation:vgrow .7s var(--soft) both}
+.viz .sp{transform-origin:0 50%;animation:vwide .6s var(--soft) both}
+.viz .ln{stroke-dasharray:1;stroke-dashoffset:1;animation:vdraw 1.1s var(--ease) .1s both}
+.viz .dot,.viz .lbl,.viz .now{animation:vin .4s var(--soft) both}.viz .lbl{animation-delay:.55s}.viz .now{animation-delay:.4s}
+@keyframes vgrow{from{transform:scaleY(0);opacity:0}}
+@keyframes vwide{from{transform:scaleX(0);opacity:0}}
+@keyframes vdraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes vin{from{opacity:0;transform:translateY(4px)}}
+.viz .leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:11px;font-weight:600;color:var(--l2);text-transform:capitalize}
+.viz .leg i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.viz .cap{margin-top:7px;font-size:12.5px;font-weight:500;color:var(--l2);line-height:1.3}
+.viz .stats{display:grid;gap:6px;margin-bottom:10px}.viz .stats.n2{grid-template-columns:1fr 1fr}.viz .stats.n3{grid-template-columns:repeat(3,1fr)}.viz .stats.n4{grid-template-columns:repeat(4,1fr)}
+.viz .st{min-width:0;animation:rise .5s var(--soft) both}
+.viz .st b{display:block;font-size:26px;font-weight:700;letter-spacing:-.04em;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viz .stats.n3 .st b,.viz .stats.n4 .st b,.viz .st.long b{font-size:20px}.viz .stats.n3 .st.long b,.viz .stats.n4 .st.long b{font-size:16px}
+.viz .st small{font-size:12px;font-weight:600;letter-spacing:0;margin-left:3px;color:var(--l2)}
+.viz .st span{display:block;margin-top:3px;font-size:11px;font-weight:600;color:var(--l3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viz .rows{display:flex;flex-direction:column}
+.viz .rw{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--hair);font-size:14px;font-weight:600;letter-spacing:-.01em;animation:rise .45s var(--soft) both}
+.viz .rw:first-child{border-top:0}.viz .rw span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.viz .rw small{display:block;font-size:12px;font-weight:500;color:var(--l2)}.viz .rw b{font-variant-numeric:tabular-nums;white-space:nowrap}
+/* compact (assistant bar): chart only, tap to open the full card */
+.viz.compact{padding:8px 10px 6px;border-radius:14px;max-width:none;margin:8px 0 2px}
+.viz.compact .k{margin-bottom:4px;font-size:10px}
+.viz.compact .st b{font-size:18px}.viz.compact .stats{margin-bottom:4px}
+.bviz .viz{animation:rise .45s var(--soft) both}
+.bviz:empty{display:none}
+/* voice mode: the card floats under the transcript */
+.vviz{width:100%;margin-top:14px;z-index:1}.vviz:empty{display:none}.vviz .viz{max-width:none;background:linear-gradient(160deg,rgba(255,255,255,.13),rgba(255,255,255,.07))}

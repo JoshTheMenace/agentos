@@ -6,6 +6,7 @@
 <title>AgentOS</title>
 <link rel="stylesheet" href="theme.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="viz.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute">
@@ -174,6 +175,7 @@
   <div class="vstate"><span class="orb approval"></span><span id="vstate">Connecting</span></div>
   <div class="tx"><p class="u" id="vu"></p><p class="a" id="va"></p></div>
   <div class="vhint" id="vhint2"><div class="k">Try saying</div><p>“Reply to Sam that I’m 10 minutes late”</p><p>“At 7 PM, text Mom I’m on my way”</p><p>“What did I miss?”</p><p>“Sign me in to Chrome”</p></div>
+  <div class="vviz" id="vviz"></div>
   <ul class="vsteps" id="vsteps"></ul>
   <div class="vtask" id="vtask"></div>
   <div class="sorb" id="sorbBtn"><i class="halo2"></i><i class="halo"></i><i class="core"></i></div>
@@ -185,6 +187,7 @@
 <!-- ATTACH: Camera / Photos (Home.pick), Live camera in voice -->
 <div class="attmenu glass ink" id="attMenu" hidden><button data-k="camera"><svg width="18" height="18"><use href="#i-eye"/></svg>Camera</button><button data-k="photos"><svg width="18" height="18"><use href="#i-mod"/></svg>Photos</button><button data-k="live" id="attLive"><svg width="18" height="18"><use href="#i-spark"/></svg><span>Live camera</span></button></div>
 
-<script src="voice-audio.js"></script><script src="app.js"></script>
+<script src="voice-audio.js"></script><script src="viz.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

@@ -13,6 +13,7 @@
 | Queued asks | Send a second ask while one runs | It waits, then runs (no error) |
 | Scheduled task | "In 2 minutes, set an alarm for 6:15", lock the phone | Fires on time, unlocks, sets it, re-locks |
 | Grid-aware agent (Energy) | Ask bar or voice: "When should I run the dishwasher?", then "Yes" | ~4 s: window (e.g. 3–6 PM), "4.5× cheaper on the time-of-use rate", estimated g CO₂ from yesterday's mix, "Remind you?"; "Yes" books a reminder (cancel it in Home/`cancel_scheduled`). Weekday 6–10 PM it says "peak until 10 PM" |
+| Visual answers | Ask bar or voice: "Show me my sleep from the past week" · "How many steps did I take this week?" · "When's the cleanest time to use power today?" | 3–8 s: a chart card in the sheet (sleep stages per night + averages, steps per day, today's cheap/clean power timeline) and one or two sentences; voice shows the card under the transcript while GPT Live speaks; the assistant bar shows a compact chart (tap to expand). Shots: launcher/shots/visuals/ |
 | Notifications + replies | "Reply back that I'm 10 min late" | Reply goes through the app's own notification Reply (not re-tested today) |
 | Deep mods (Pigeon only, not on stage) | "Open Pigeon and preview a navy and gold theme" | Native preview, auto-restored (~9 s) |
 

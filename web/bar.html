@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>AgentOS assistant bar</title>
 <link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="viz.css">
 <link rel="stylesheet" href="bar.css">
 </head>
 <body>
@@ -25,6 +26,7 @@
     <div class="tx" id="tx"><div class="txin">
       <div class="hd" id="hd"><span class="orb sm" id="orb"></span><span id="st">Listening</span><button type="button" class="stop" id="stop" hidden aria-label="Stop"><svg width="11" height="11"><use href="#i-stop"/></svg></button></div>
       <p class="u" id="u"></p>
+      <div class="bviz" id="bviz"></div>
       <p class="a" id="a"></p>
     </div></div>
     <form class="row" id="form" autocomplete="off">
@@ -37,6 +39,7 @@
 </div>
 <audio id="spk" autoplay></audio>
 <script src="voice-audio.js"></script>
+<script src="viz.js"></script>
 <script src="bar.js"></script>
 </body>
 </html>

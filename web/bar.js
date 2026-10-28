@@ -49,7 +49,7 @@ function render() {
   const s = cls === 'working' && startAt ? Math.floor((Date.now() - startAt) / 1000) : 0;
   st.textContent = text + (ms ? dur(ms) : s >= 1 ? ` · ${s} s` : '');
   orb.className = 'orb sm ' + cls; hd.dataset.s = cls; $('#stop').hidden = !turn;
-  const want = !!(text || plain(U) || plain(A));
+  const want = !!(text || plain(U) || plain(A) || $('#bviz').childElementCount);
   if (want !== tx.classList.contains('on')) { if (want) grow(96); tx.classList.toggle('on', want); }
   touch();
 }
@@ -67,7 +67,7 @@ bar.app = (a) => { appNow = a; };
 const busy = () => turn || (micTrack && Date.now() - lastAct < 45000) || document.activeElement === inp || inp.value;
 function touch() { lastAct = Date.now(); clearTimeout(idleT); idleT = setTimeout(() => (busy() ? touch() : bar.close()), 30000); }
 bar.open = (listen) => {
-  if (!card.classList.contains('on')) { cur = 0; card.classList.remove('out'); card.classList.add('on'); setText(U, ''); setText(A, ''); turn = false; state('', ''); inp.value = ''; row.classList.remove('typed'); field.classList.remove('typed'); }
+  if (!card.classList.contains('on')) { cur = 0; card.classList.remove('out'); card.classList.add('on'); setText(U, ''); setText(A, ''); $('#bviz').replaceChildren(); turn = false; state('', ''); inp.value = ''; row.classList.remove('typed'); field.classList.remove('typed'); }
   touch(); if (listen) voiceStart();
 };
 bar.close = (fromShell) => {
@@ -91,7 +91,7 @@ inp.onblur = () => { N.focus(false); if (!inp.value) { row.classList.remove('typ
 inp.oninput = () => { row.classList.toggle('typed', !!inp.value); field.classList.toggle('typed', !!inp.value); touch(); };
 row.onsubmit = (e) => { e.preventDefault(); const t = inp.value.trim(); if (!t) return; inp.value = ''; row.classList.remove('typed'); field.classList.remove('typed'); inp.blur(); hap('tick'); ask(t); };
 function ask(t) {
-  setText(U, t); setText(A, '');
+  setText(U, t); setText(A, ''); $('#bviz').replaceChildren();
   if (!send({ type: 'ask', text: t, in_app: true, app: appNow })) return state('Agent offline', 'alert'); // in_app + app {pkg,label}: agentd leases the app on screen first
   turn = true; state('Thinking', 'working');
 }
@@ -104,6 +104,7 @@ on('approval.shown', () => state('Waiting for your approval', 'approval')); on('
 on('approval.resolved', (m) => state(m.decision === 'approved' ? (m.approver === 'reviewer' ? 'Auto-approved ✓' : 'Approved') : m.decision === 'timeout' ? 'Timed out' : 'Denied', m.decision === 'approved' ? 'done' : 'alert'));
 on('turn.done', (m) => { turn = false; state(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done', m.ms); });
 on('error', (m) => { if (m.code === 'unknown_type') return; if (m.retryable && m.code !== 'turn_failed') return state('Reconnecting…', 'working'); turn = false; state('Couldn’t reach the AI', 'alert'); });
+on('visual', (m) => { if (!m.spec) return; grow(120); $('#bviz').replaceChildren(Viz.render(m.spec, { compact: true })); render(); }); // show tool
 on('catchup', (m) => { setText(A, (m.cards || []).slice(0, 2).map((c) => c.title).join(' · ')); render(); });
 // Background tasks (a voice delegation): step while working, the answer when done
 const WORKING = new Set(['queued', 'running', 'paused', 'working']);

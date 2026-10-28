@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../../../web/theme.css"><link rel="stylesheet" href="../../../web/app.css"><link rel="stylesheet" href="../../../web/viz.css">
+<style>body{background:#050506;padding:16px;display:flex;flex-direction:column;gap:12px;width:360px}.ink{background:linear-gradient(170deg,rgba(44,44,46,.96),rgba(28,28,30,.96));padding:10px;border-radius:22px;display:flex;flex-direction:column;gap:8px}</style>
+</head><body>
+<!-- Sample data only (made up), for layout review on the Mac. -->
+<div class="ink" id="a"></div><div class="ink" id="b"></div><div class="ink" id="c"></div><div class="ink" id="d"></div><div class="ink" id="e"></div>
+<script src="../../../web/viz.js"></script>
+<script>
+const SLEEP = { type: 'stacked_bar', title: 'Sleep · past 7 nights', unit: 'min', labels: ['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'],
+  series: [{ name: 'deep', values: [70, 55, 80, 95, 60, 72, 66] }, { name: 'light', values: [250, 230, 210, 270, 240, 220, 235] }, { name: 'rem', values: [90, 70, 110, 120, 80, 95, 85] }, { name: 'awake', values: [20, 35, 15, 10, 40, 25, 18] }],
+  stats: [{ label: 'Avg per night', value: 428, unit: 'min' }, { label: 'Best night', value: 'Sat' }], highlight: 'Sat', caption: 'Saturday was the longest; Thursday the shortest.' };
+const STEPS = { type: 'bar', title: 'Steps · this week', unit: 'steps', labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], series: [{ name: 'steps', values: [8200, 10450, 6100, 12300, 7400, 15200, null] }],
+  stats: [{ label: 'Total', value: 59650, unit: 'steps' }, { label: 'Daily average', value: 9940, unit: 'steps' }, { label: 'Best day', value: 'Sat' }], caption: 'Saturday topped the week; Sunday has no data yet.' };
+const GRID = { type: 'timeline', title: 'Power today', unit: '¢/kWh', spans: [{ from: 900, to: 1080, label: 'Cleanest', kind: 'good' }, { from: 1080, to: 1320, label: 'Peak', kind: 'peak' }, { from: 1320, to: 1800, label: 'Cheapest overnight', kind: 'good' }], now: 755,
+  stats: [{ label: 'Off-peak', value: 6.6, unit: '¢/kWh' }, { label: 'Peak 6–10 PM', value: 29.7, unit: '¢/kWh' }], caption: 'Run the dishwasher between 3 and 6 PM: same price, cleaner grid.' };
+const HR = { type: 'line', title: 'Resting heart rate', unit: 'bpm', labels: ['Oct 22', 'Oct 23', 'Oct 24', 'Oct 25', 'Oct 26', 'Oct 27', 'Oct 28'], series: [{ name: 'resting', values: [58, 60, 57, 61, 59, 56, 58] }], highlight: 'Oct 27' };
+const LIST = { type: 'list', title: 'Tomorrow', rows: [{ label: 'Standup', value: '9:00', detail: '30 min' }, { label: 'Dentist', value: '11:30', detail: 'Main St' }, { label: 'Lunch with Sam', value: '12:30' }], stats: [{ label: 'Meetings', value: 3 }, { label: 'Busy', value: '2h 30m' }] };
+document.getElementById('a').append(Viz.render(SLEEP)); document.getElementById('b').append(Viz.render(STEPS)); document.getElementById('c').append(Viz.render(GRID));
+document.getElementById('d').append(Viz.render(HR)); document.getElementById('e').append(Viz.render(GRID, { compact: true }), Viz.render(SLEEP, { compact: true }), Viz.render(LIST));
+</script></body></html>
