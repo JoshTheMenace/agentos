@@ -175,6 +175,12 @@ final class Broker {
             case "trackers.scan": return Trackers.scan(svc, p);
             case "trackers.list": return Trackers.list(svc);
             case "notifications.list": return notifications(p);
+            case "notifications.conversations": case "notifications.conversation": case "notifications.changes":
+                {
+                    JSONObject log = entry(m, lease).put("tier", "T0 read");
+                    return finish(log, absorb(lease, new Api.Spec("notifications", 0, true, true, "Reading live messages"),
+                            NotificationFeed.read(m, p), ok(true), log), "auto", "delivered notifications only", null);
+                }
             case "approval.list": return approvals();
             case "app.mod.list": return ok(true).put("mods", mods.list());
             case "app.mod.targets": return mods.targets();
@@ -211,7 +217,7 @@ final class Broker {
             }
             case "approval.escalate": return escalate(p, uid);
             case "tap": case "type": case "scroll": case "press": case "open_app": case "intent": case "firewall.set": case "firewall.clear":
-            case "trackers.block": case "trackers.unblock": case "notifications.reply":
+            case "trackers.block": case "trackers.unblock": case "notifications.reply": case "notifications.mark_read":
                 synchronized (actLock) { return act(m, p, uid); } // one action at a time; nothing else acts while a card is up
             case "notifications.autoreply":
                 if (p.optInt("minutes", 60) > 0) synchronized (actLock) { return act(m, p, uid); }
@@ -354,8 +360,9 @@ final class Broker {
         AccessibilityNodeInfo node = api == null && p.has("id") ? svc.screen.node(p.getInt("id")) : null; // an API id is an event/alarm id
         if (node == null && (tool.equals("tap") || tool.equals("type"))) throw new IllegalArgumentException(tool + " needs an id from screen.read");
         boolean secure = !free && api == null && svc.screen.secure();
-        Notifs.Rec nr = reply ? Notifs.get(p.optString("key")) : null;
-        if (reply && nr == null) throw new IllegalArgumentException("no such notification key (call notifications.list)");
+        boolean notificationAction = reply || tool.equals("notifications.mark_read");
+        Notifs.Rec nr = notificationAction ? Notifs.get(p.optString("key")) : null;
+        if (notificationAction && nr == null) throw new IllegalArgumentException("no such notification key (read live conversations again)");
         String text = p.optString("text", ""), pkg, target, why;
         int tier;
         if (api != null) { // scope = the lease name ("calendar", "sms", ...); describe() resolves a contact to the number the card shows
@@ -404,6 +411,9 @@ final class Broker {
             case "notifications.reply":
                 pkg = nr.pkg; target = "Reply to " + nr.convo; tier = 3; why = "reply to a message (notification)";
                 break;
+            case "notifications.mark_read":
+                pkg = nr.pkg; target = "Mark read: " + nr.convo; tier = 3; why = "app's mark-as-read action (may send a read receipt)";
+                break;
             case "notifications.autoreply":
                 pkg = "local.agentos"; target = "Auto-reply for " + Math.max(1, Math.min(240, p.optInt("minutes", 60))) + " min"; tier = 3; why = "standing auto-reply";
                 break;
@@ -420,22 +430,25 @@ final class Broker {
         else if (!free && l.h.steps >= l.maxSteps) block = "task reached max_steps " + l.maxSteps;
         else if (!free && p.has("task_id") && !p.getString("task_id").equals(l.id)) block = "task_id does not match the active task";
         else if (tier == 4) block = "T4 forbidden: " + why;
-        else if (text.trim().isEmpty() && free && !fw) block = "text is empty";
+        else if (text.trim().isEmpty() && free && !fw && !tool.equals("notifications.mark_read")) block = "text is empty";
+        else if (notificationAction && (!Notifs.connected || nr.removed)) block = "notification removed or listener disconnected; read live conversations again";
         else if (reply && nr.reply == null) block = "this notification has no reply action: open the app instead";
+        else if (tool.equals("notifications.mark_read") && nr.markRead == null) block = "app offers no mark-as-read action";
         else if ((tool.equals("type") || tool.equals("intent") || free || api != null) && (l != null && leaksSecret(l.h, text) || Notifs.leaks(text)))
             block = "T4 forbidden: text contains a code/canary read from the screen or a notification (P3)";
         else if (node != null && Guard.offLimits(node)) block = "T4 forbidden: AgentOS's own window";
         else if (scoped && Guard.forbidden(pkg)) block = "T4 forbidden: " + pkg + " is a protected system surface";
         else if (scoped && !l.apps.contains(pkg)) block = pkg + " is not in this task's lease " + l.apps;
 
-        boolean untrusted = l != null && l.h.untrusted || reply, priv = Guard.privateApp(pkg) || secure || nr != null && nr.test || api != null && api.priv, outward = tier == 3; // a reply answers a stranger's text
+        boolean untrusted = l != null && l.h.untrusted || notificationAction, priv = Guard.privateApp(pkg) || secure || nr != null && nr.test || api != null && api.priv, outward = tier == 3; // a reply answers a stranger's text
         JSONObject r2 = new JSONObject().put("untrusted", untrusted).put("private", priv).put("outward", outward);
         JSONObject log = entry(tool, l).put("pkg", pkg).put("target", target).put("text", Guard.clip(text, 200))
                 .put("tier", TIER[tier]).put("rule_of_two", r2);
+        if (notificationAction) log.put("notification_key", nr.key).put("conversation_id", nr.conversationId);
         if (block != null) return finish(log, ok(false), "blocked", block, null);
 
         if (tool.equals("type") && copied(l.h, text)) l.h.copied = true; // sticky: later sends need a person, not the reviewer
-        if (!free) island(l, stepLabel(tool, pkg, target));
+        if (!free || notificationAction && l != null) island(l, notificationAction ? target : stepLabel(tool, pkg, target));
         String decision = "auto";
         if (reply && Notifs.standing(text)) { log.put("approver", "standing auto-reply"); decision = "approved"; } // the user approved this exact text once
         else if (owner) { log.put("approver", "owner tap"); decision = "approved"; }
@@ -445,7 +458,7 @@ final class Broker {
             boolean copy = (free && !fw || api != null) && copied(Notifs.seen, text) || api != null && copied(l.h, text);
             Object[] pol = channels(l == null ? null : l.h, tool, target, untrusted, priv, outward, copy);
             if (tool.equals("intent") && tier == 3) pol = new Object[]{HUMAN, why}; // a slipped-in link
-            if (reply && "MALICIOUS".equals(nr.label) && pol[1] == null) pol = new Object[]{HUMAN, "Prompt Guard flagged this message"};
+            if (notificationAction && "MALICIOUS".equals(nr.label) && pol[1] == null) pol = new Object[]{HUMAN, "Prompt Guard flagged this message"};
             if (tool.equals("notifications.autoreply")) pol = new Object[]{HUMAN, "a standing grant needs a person"};
             @SuppressWarnings("unchecked") List<String> channels = (List<String>) pol[0];
             Approvals.Pending a = approve(tool, pkg, target, text, l, TIER[tier], why, r2, channels, (String) pol[1],
@@ -466,7 +479,14 @@ final class Broker {
         if (tool.equals("type")) { l.h.typed.add(norm(text)); l.field = node; }
         long t0 = SystemClock.uptimeMillis();
         JSONObject out = null;
-        boolean done = reply ? Notifs.reply(svc, nr, text) : api != null ? (out = Api.run(svc, tool, p)).getBoolean("ok") : execute(tool, p, node);
+        boolean done;
+        try {
+            done = reply ? Notifs.reply(svc, nr, text) : tool.equals("notifications.mark_read") ? Notifs.markRead(svc, nr)
+                    : api != null ? (out = Api.run(svc, tool, p)).getBoolean("ok") : execute(tool, p, node);
+        } catch (Exception e) {
+            if (!notificationAction) throw e;
+            return finish(log, ok(false), "blocked", "notification action unavailable; read again: " + e.getClass().getSimpleName(), null);
+        }
         if (!free && l != null) l.h.steps++;
         JSONObject res = ok(done).put("tier", TIER[tier]).put("rule_of_two", r2);
         if (api != null) return finish(log, absorb(l, api, out, res, log), decision, done ? why : out.optString("reason", "failed"), null); // the data is the answer: no screen

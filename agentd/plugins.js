@@ -8,10 +8,11 @@
 //     pick() reads in the user's own words; the other enabled plugins are deferred (one-line summaries, load on demand).
 import { cfg } from './config.js';
 import { plugins as appPlugins } from './app-reads.js';
+import { tools as notificationTools } from './notification-tools.js';
 
 // Always on, never toggled: everything the current bench tasks need, so no core task gets slower.
 export const CORE = ['task_start', 'screen_read', 'tap', 'type', 'scroll', 'press', 'open_app', 'list_apps', 'act', 'wait',
-  'memory_ask', 'notifications_list', 'notifications_reply', 'set_alarm', 'set_timer', 'web_search'];
+  'memory_ask', 'notifications_list', 'notifications_reply', ...notificationTools.map((t) => t.name), 'set_alarm', 'set_timer', 'web_search'];
 
 // route: the pre-selector's words (the user's request only; never screen or notification text, so planted text can't
 // widen the tool set). prompt: the system-prompt lines that only matter when the plugin's tools are visible.

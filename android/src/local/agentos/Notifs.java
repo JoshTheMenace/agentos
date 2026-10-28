@@ -11,7 +11,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
@@ -33,7 +32,7 @@ import org.json.JSONObject;
  * time) and keeps the reply envelope (the notification's RemoteInput "Reply" action), so the agent can answer in a
  * fraction of a second without opening the app. Notification text is written by other people, so it is UNTRUSTED:
  * Prompt Guard scores every one, and a task that reads it counts as untrusted (Broker). Replies are T3 actions in the
- * broker (notifications.reply), never sent from here on their own.
+     * broker (notifications.reply), never sent from here on their own.
  * Turn on: cmd notification allow_listener local.agentos/local.agentos.Notifs
  */
 public class Notifs extends NotificationListenerService {
@@ -49,50 +48,69 @@ public class Notifs extends NotificationListenerService {
     private static final ExecutorService bg = Executors.newSingleThreadExecutor(); // Prompt Guard must not run on the UI thread
 
     static final class Rec {
-        String key, pkg, app = "", convo = "", sender = "", text = "", label = "";
-        long when;
-        boolean group, fromMe, msg, removed, test; // test: our adb test chat, which stands in for a messaging app (private)
-        double score = -1;
-        Notification.Action reply;
+        String key, pkg, conversationId, app = "", convo = "", sender = "", text = "", label = "";
+        long when, observedAt;
+        JSONArray messages = new JSONArray();
+        boolean group, fromMe, msg, test; // test: our adb test chat, which stands in for a messaging app (private)
+        volatile boolean removed;
+        volatile double score = -1;
+        Notification.Action reply, markRead;
 
         JSONObject json() throws Exception {
             return new JSONObject().put("key", key).put("pkg", pkg).put("app", app).put("conversation", convo).put("sender", sender)
                     .put("text", text).put("when", when).put("group", group).put("from_me", fromMe).put("message", msg)
-                    .put("can_reply", reply != null).put("removed", removed).put("guard", new JSONObject().put("score", score).put("label", label));
+                    .put("conversation_id", conversationId).put("observed_at", observedAt).put("trusted", false).put("source_pkg", pkg)
+                    .put("can_reply", connected && !removed && reply != null).put("can_mark_read", connected && !removed && markRead != null)
+                    .put("removed", removed).put("guard", new JSONObject().put("score", score).put("label", label));
         }
     }
 
     @Override public void onListenerConnected() {
         connected = true;
+        NotificationFeed.connected();
+        synchronized (recent) { for (Rec r : recent.values()) r.removed = true; }
         try { for (StatusBarNotification s : getActiveNotifications()) posted(s, false); } catch (Exception e) { Log.w("AgentOS", "notifs seed: " + e); }
     }
 
-    @Override public void onListenerDisconnected() { connected = false; }
+    @Override public void onListenerDisconnected() { connected = false; NotificationFeed.disconnected(); }
 
     @Override public void onNotificationPosted(StatusBarNotification s) { posted(s, true); }
 
-    @Override public void onNotificationRemoved(StatusBarNotification s) {
+    @Override public void onNotificationRemoved(StatusBarNotification s, android.service.notification.NotificationListenerService.RankingMap ranking, int reason) {
         Rec r = recent.get(s.getKey());
-        if (r != null) r.removed = true; // kept: "reply back" still means this thread; the reply action usually still works
+        if (r == null) return;
+        r.removed = true;
+        r.observedAt = System.currentTimeMillis();
+        try {
+            NotificationFeed.capture(r, true, reason);
+            Events.emit("notification.removed", r.json().put("removal_reason", reason));
+        } catch (Exception e) { Log.w("AgentOS", "notif removed: " + e); }
     }
 
     private void posted(StatusBarNotification s, boolean live) {
         Rec r = parse(this, s);
         if (r == null) return;
+        Rec old;
+        try {
+            synchronized (recent) {
+                old = recent.remove(r.key);
+                recent.put(r.key, r);
+                while (recent.size() > HISTORY) recent.remove(recent.keySet().iterator().next());
+            }
+            for (int i = 0; i < r.messages.length(); i++) {
+                JSONObject m = r.messages.getJSONObject(i);
+                java.util.regex.Matcher codes = Broker.SECRET.matcher(m.getString("text"));
+                while (codes.find()) secrets.add(codes.group().replaceAll("[ -]", ""));
+                if (!m.optBoolean("from_me")) seen.add(Broker.norm(m.getString("text")));
+            }
+            synchronized (seen) { while (seen.size() > 2000) seen.remove(seen.iterator().next()); }
+            NotificationFeed.capture(r, false, 0); // visible immediately; Prompt Guard runs off the listener thread
+        } catch (Exception e) { Log.w("AgentOS", "notif capture: " + e); return; }
+        final Rec previous = old;
         bg.execute(() -> {
             try {
-                Rec old = recent.get(r.key);
-                boolean same = old != null && old.text.equals(r.text) && old.sender.equals(r.sender);
-                if (same) { r.score = old.score; r.label = old.label; } else score(r);
-                if (seen.size() > 2000) seen.clear(); // bounded; secrets stay (few, and P3 must not forget them)
-                java.util.regex.Matcher m = Broker.SECRET.matcher(r.text);
-                while (m.find()) secrets.add(m.group().replaceAll("[ -]", ""));
-                if (!r.fromMe) seen.add(Broker.norm(r.text));
-                synchronized (recent) {
-                    recent.remove(r.key);
-                    recent.put(r.key, r); // newest last
-                    while (recent.size() > HISTORY) recent.remove(recent.keySet().iterator().next());
-                }
+                boolean same = previous != null && previous.messages.toString().equals(r.messages.toString());
+                if (same) { r.score = previous.score; r.label = previous.label; } else score(r);
                 if (!live || same) return;
                 Events.emit("notification.posted", r.json());
                 if ("MALICIOUS".equals(r.label)) Broker.flagged(r); // audited + guard.flag event; no pop-up
@@ -103,8 +121,11 @@ public class Notifs extends NotificationListenerService {
     /** Prompt Guard score, if the model is loaded (it takes ~5 s after a restart); else -1 and list() retries in the background. */
     private static void score(Rec r) {
         try {
-            JSONObject g = PromptGuard.classify(r.app + ": " + r.sender + ": " + r.text);
-            if (g.optBoolean("ok")) { r.score = g.optDouble("score"); r.label = g.optString("label"); }
+            for (int i = 0; i < r.messages.length(); i++) {
+                JSONObject m = r.messages.getJSONObject(i);
+                JSONObject g = PromptGuard.classify(r.app + ": " + m.optString("sender") + ": " + m.optString("text"));
+                if (g.optBoolean("ok") && g.optDouble("score") > r.score) { r.score = g.optDouble("score"); r.label = g.optString("label"); }
+            }
         } catch (Throwable e) { Log.w("AgentOS", "notif guard: " + e); }
     }
 
@@ -117,29 +138,26 @@ public class Notifs extends NotificationListenerService {
         Bundle x = n.extras;
         Rec r = new Rec();
         r.key = s.getKey(); r.pkg = pkg; r.test = TEST_TAG.equals(s.getTag()); r.when = n.when > 0 ? n.when : s.getPostTime();
+        r.observedAt = System.currentTimeMillis();
+        r.conversationId = pkg + ":" + s.getUserId() + ":" + (n.getShortcutId() == null ? "key:" + r.key : "shortcut:" + n.getShortcutId());
         r.app = label(c, pkg);
         r.sender = str(x.getCharSequence(Notification.EXTRA_TITLE));
         r.text = str(x.getCharSequence(Notification.EXTRA_BIG_TEXT));
         if (r.text.isEmpty()) r.text = str(x.getCharSequence(Notification.EXTRA_TEXT));
         r.convo = str(x.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE));
         r.group = x.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION);
-        Parcelable[] msgs = x.getParcelableArray(Notification.EXTRA_MESSAGES);
-        String title = r.sender, other = "";
-        Person me = x.getParcelable(Notification.EXTRA_MESSAGING_PERSON);
-        for (int i = msgs == null ? -1 : msgs.length - 1; i >= 0; i--) { // MessagingStyle: newest message first
-            if (!(msgs[i] instanceof Bundle)) continue;
-            Bundle m = (Bundle) msgs[i];
-            Person p = m.getParcelable("sender_person");
-            CharSequence who = p != null ? p.getName() : m.getCharSequence("sender");
-            boolean mine = who == null || me != null && me.getName() != null && me.getName().toString().equals(who.toString());
-            if (!r.msg) { r.text = str(m.getCharSequence("text")); r.fromMe = mine; r.sender = mine ? "me" : str(who); r.msg = true; }
-            if (!mine) { other = str(who); break; } // the thread's other person, even when we spoke last
-        }
-        if (r.convo.isEmpty()) r.convo = !title.isEmpty() ? title : other;
+        if (r.convo.isEmpty()) r.convo = r.sender;
         r.reply = replyAction(n);
-        r.msg |= r.reply != null || Notification.CATEGORY_MESSAGE.equals(n.category);
+        if (n.actions != null) for (Notification.Action a : n.actions)
+            if (a.getSemanticAction() == Notification.Action.SEMANTIC_ACTION_MARK_AS_READ && a.actionIntent != null) { r.markRead = a; break; }
+        r.msg = x.containsKey(Notification.EXTRA_MESSAGES) || r.reply != null || Notification.CATEGORY_MESSAGE.equals(n.category);
         if (r.text.isEmpty() && r.sender.isEmpty()) return null;
         r.text = Guard.clip(r.text, 600);
+        try {
+            r.messages = NotificationFeed.messages(c, n, r);
+            JSONObject last = r.messages.getJSONObject(r.messages.length() - 1);
+            r.text = last.getString("text"); r.sender = last.getString("sender"); r.when = last.getLong("when"); r.fromMe = last.getBoolean("from_me");
+        } catch (Exception e) { Log.w("AgentOS", "notif history: " + e); }
         return r;
     }
 
@@ -183,14 +201,26 @@ public class Notifs extends NotificationListenerService {
 
     /** Fills the app's own Reply box and fires its reply intent: what the shade's inline reply does. Broker-only (after approval). */
     static boolean reply(Context c, Rec r, String text) throws Exception {
+        requireActive(r);
         if (r.reply == null) throw new IllegalArgumentException("this notification has no reply action; open the app instead");
         RemoteInput[] ri = r.reply.getRemoteInputs();
         Bundle b = new Bundle();
-        for (RemoteInput x : ri) b.putCharSequence(x.getResultKey(), text);
+        for (RemoteInput x : ri) if (x.getAllowFreeFormInput()) b.putCharSequence(x.getResultKey(), text);
         Intent i = new Intent();
         RemoteInput.addResultsToIntent(ri, i, b);
         RemoteInput.setResultsSource(i, RemoteInput.SOURCE_FREE_FORM_INPUT);
         r.reply.actionIntent.send(c, 0, i);
+        return true;
+    }
+
+    static void requireActive(Rec r) {
+        if (!connected || r.removed || get(r.key) != r) throw new IllegalArgumentException("notification changed, removed or listener disconnected; read notifications again");
+    }
+
+    static boolean markRead(Context c, Rec r) throws Exception {
+        requireActive(r);
+        if (r.markRead == null) throw new IllegalArgumentException("app offers no mark-as-read action");
+        r.markRead.actionIntent.send(c, 0, new Intent());
         return true;
     }
 
@@ -206,7 +236,7 @@ public class Notifs extends NotificationListenerService {
         return until != null && until > System.currentTimeMillis();
     }
 
-    private static String str(CharSequence s) { return s == null ? "" : s.toString().replaceAll("[\u200e\u200f\u202a-\u202e\u2066-\u2069]", "").trim(); }
+    static String str(CharSequence s) { return s == null ? "" : s.toString().replaceAll("[\u200e\u200f\u202a-\u202e\u2066-\u2069]", "").trim(); }
 
     private static String label(Context c, String pkg) {
         try { return c.getPackageManager().getApplicationLabel(c.getPackageManager().getApplicationInfo(pkg, 0)).toString(); }

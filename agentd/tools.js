@@ -9,6 +9,7 @@ import * as schedule from './schedule.js';
 import * as plugins from './plugins.js';
 import * as microapps from './apps.js';
 import { tools as appReads } from './app-reads.js';
+import { tools as notificationTools } from './notification-tools.js';
 
 const obj = (props = {}, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const id = { type: 'integer', description: 'node id from the latest screen_read (ids go stale when the screen changes)' };
@@ -155,6 +156,7 @@ export const TOOLS = {
 };
 
 // Personal memory tools (agentd/memory): same shape, run locally by memory.call instead of the phone.
+for (const m of notificationTools) TOOLS[m.name] = m;
 for (const m of memory.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, memory: true };
 for (const m of context.ruleTools()) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true }; // reply rules
 for (const m of schedule.tools) TOOLS[m.name] = { method: m.name, tier: m.tier, description: m.description, schema: m.schema, local: true, sched: true }; // schedule.js
