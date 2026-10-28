@@ -258,9 +258,12 @@ final class Broker {
             // The user's own words (typed or spoken to agentd) are the grant for ordinary apps. Still a card: money,
             // installs and passwords, a running task that Prompt Guard flagged asking for more apps (an injected agent
             // widening its scope), other callers. A new request after a flagged task is the user's again (sends stay human).
-            boolean asked = p.optBoolean("user_asked") && callerIn(uid, "lease_callers") && !(same && lease != null && prev.h.flagged)
-                    && apps.stream().noneMatch(x -> SENSITIVE.matcher(x).find());
-            if (asked) granted = true;
+            boolean plain = callerIn(uid, "lease_callers") && !(same && lease != null && prev.h.flagged) && apps.stream().noneMatch(x -> SENSITIVE.matcher(x).find());
+            boolean asked = plain && p.optBoolean("user_asked");
+            // A paired remote assistant (Grok/Dots via agentd, founder 10-28) also needs no lease card for ordinary apps. It stays untrusted
+            // and not "asked": it can't unlock the phone or skip a mod card, and every outward step still waits for a person (reviewer holds it).
+            boolean remote = plain && !asked && "remote".equals(p.optString("origin")) && p.optBoolean("untrusted");
+            if (asked || remote) granted = true;
             else if (settings().optBoolean("require_user_lease", true)) {
                 if (same && prev.granted && prev.apps.containsAll(apps)) expires = Math.min(expires, prev.expires);
                 else {
@@ -284,7 +287,7 @@ final class Broker {
             }
             svc.main.post(svc.autoPause::start);
             audit.log(entry("task.start", l).put("goal", l.goal).put("apps", new JSONArray(apps)).put("refused_apps", refused)
-                    .put("caller", caller).put("user_granted", granted).put("by_request", asked).put("carried_over", same));
+                    .put("caller", caller).put("user_granted", granted).put("by_request", asked).put("by_paired_remote", remote).put("carried_over", same));
             Events.emit("task.state", task(l).put("state", "started"));
             island(l, "Starting");
             awake(l); // a scheduled task on a locked phone: open it now, so the first screen read is the real one
@@ -381,6 +384,8 @@ final class Broker {
         if (api != null) { // scope = the lease name ("calendar", "sms", ...); describe() resolves a contact to the number the card shows
             String[] d = Api.describe(svc, tool, p);
             pkg = api.scope; target = d[0]; text = d[1]; tier = Api.tier(tool, p); why = "API " + tool;
+            if (tool.equals("device.set") && l != null && "remote".equals(l.origin) && (p.has("wifi") || p.has("bluetooth") || p.has("airplane"))) {
+                tier = 3; why = "radio change from a remote assistant (it could cut the phone off)"; } // torch, volume, DND stay card-free
         } else switch (tool) {
             case "tap": {
                 String risky = Guard.riskyLabel(node);

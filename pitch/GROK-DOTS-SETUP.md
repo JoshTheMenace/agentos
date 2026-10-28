@@ -12,7 +12,7 @@ lease card on the phone. Nobody tapped, so it timed out ("approval timed out"). 
 1. grok.com → Connectors → New connector → **Custom**.
 2. URL `https://173-249-38-183.sslip.io/mcp`, then Connect.
 3. Our pairing page opens: type the code, pick "Grok", Connect.
-4. Ask Grok: "Use AgentOS: what's my next alarm?" Tap Allow on the phone.
+4. Ask Grok: "Use AgentOS: open LinkedIn." It just opens (no card). Sends, deletes and payments still show a card on the phone.
 
 ## 3. ChatGPT
 1. Settings → Apps/Plugins → turn on **Developer mode** → Add MCP server.

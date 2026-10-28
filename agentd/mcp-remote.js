@@ -201,7 +201,7 @@ const obj = (properties, required = []) => ({ type: 'object', properties, requir
 const RO = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const TOOLS = [
   { name: 'run_task', title: 'Run a task on the phone', annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-    description: "Ask the owner's phone agent to do something on their Android phone: open and use apps, read what's on screen or in an app, reply to a message, set an alarm, look something up. Returns {task_id} at once; then call task_result. The phone asks the owner before it uses an app and before anything outward (send, call, delete, pay).",
+    description: "Ask the owner's phone agent to do something on their Android phone: open and use apps, read what's on screen or in an app, reply to a message, set an alarm, look something up. Returns {task_id} at once; then call task_result. Opening apps, navigating, alarms/timers and flashlight/volume just run; anything outward (send, post, call, delete, pay, install) waits for the owner on the phone.",
     inputSchema: obj({ request: { type: 'string', maxLength: 500, description: 'what to do, in plain words, e.g. "reply to Sam that I\'m 10 minutes late"' } }, ['request']) },
   { name: 'task_result', title: 'Wait for a task', annotations: RO,
     description: 'Wait for a task to finish (up to wait_s seconds) and get its answer. done:false means call again; state "waiting" means the owner must approve on the phone.',
@@ -221,7 +221,9 @@ const READS = [
 const mine = new Map(); // task id -> grant that started it (each assistant sees only its own tasks)
 const DONE = new Set(['done', 'failed', 'stopped']);
 const hooks = {}; // set by start(): taskman, context, memory, guard, changed
-const out = (task) => task && { task_id: task.id, state: task.state, done: DONE.has(task.state), step: task.step, result: task.result, error: task.error,
+// Phone data leaving for the assistant (founder 10-28): the owner's reads switch covers task answers too, not just phone_brief/memory_lookup.
+const out = (task) => task && { task_id: task.id, state: task.state, done: DONE.has(task.state), step: task.step,
+  result: st.reads || !task.result ? task.result : 'Finished. The owner turned off reads for remote assistants, so the answer stays on the phone.', error: task.error,
   ...(task.state === 'waiting' && { owner_action_needed: `The owner must approve on the phone${task.waiting?.fingerprint ? ' with their fingerprint' : ''}. Tell the user to check their phone.` }) };
 
 async function call(name, a, g) {

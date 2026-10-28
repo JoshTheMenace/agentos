@@ -3,8 +3,8 @@
 **Short version.** Outside assistants (xAI's Grok connectors and OpenAI Dots / ChatGPT plugins) talk to the phone through one MCP
 server, `agentd/mcp-remote.js` (`REMOTE_MCP=1`, off by default). The phone dials **out** to a tiny relay on an always-on server
 (`agentd/deploy/relay.js`), and the relay is the public HTTPS address. Remote assistants are **untrusted**. Every task is
-labelled "From Grok: …", the phone asks the owner before the agent uses any app, and sends, calls, payments and passwords still
-need the owner's tap, voice or fingerprint. A remote assistant can never approve anything.
+labelled "From Grok: …". Low-risk steps (open apps, navigate, alarms, flashlight/volume) just run; sends, posts, calls, deletes,
+payments, installs and passwords still need the owner's tap, voice or fingerprint. A remote assistant can never approve anything.
 
 Think of a mail slot in the front door. A paired assistant can push a request in and read the reply. It never gets a key.
 The owner can tape the slot shut (kill switch) or change the lock (revoke).
@@ -74,13 +74,16 @@ There's no direct calendar read, because the broker needs a lease for calendar A
 ## 4. Security model
 
 - **Remote assistants are untrusted principals.** A remote task goes to the broker with `user_asked:false, untrusted:true`, so:
-  - the lease card always shows ("Allow agent in Clock — From Grok: …");
+  - no lease card for ordinary apps (founder 10-28: the owner paired it, and opening an app isn't sensitive); bank/pay/install/password
+    apps, a flagged task asking for more apps, Wi-Fi/Bluetooth/airplane toggles, mods and every outward step still show a card;
   - the Rule of Two `untrusted` lamp is lit;
   - the reviewer may not auto-approve;
   - the broker won't unlock a locked phone for it;
   - `schedule_task` refuses it (a schedule could later unlock the phone).
 
   Outward actions, money and passwords work exactly as today: the owner's tap, voice or fingerprint.
+- **Phone data leaving for the assistant is an outward flow under the owner's reads switch** (`reads on|off`): on, `phone_brief`,
+  `memory_lookup` and `run_task` answers go back without a card; off, the read tools disappear and task answers stay on the phone.
 - **Nothing remote can approve.** The MCP server has no approval tool, and the broker only takes approvals from the card, the
   owner's voice and the reviewer. A remote caller can't reach any of them.
 - **Pairing is owner-only and on the phone.** The phone makes an 8-character code from a 31-character alphabet (about 40 bits). It
@@ -110,6 +113,7 @@ There's no direct calendar read, because the broker needs a lease for calendar A
 | **Official MCP TypeScript SDK 1.32.2** client with its own OAuth (401 → discovery → DCR → PKCE → token) through the relay | Connected (protocol 2025-11-25), 5 tools, task done in 7.4 s |
 | **Real phone, public HTTPS** (Cloudflare quick tunnel → relay on the Mac → the phone dialing out over its own Wi-Fi; separate test agentd on :8796, live one untouched) | SDK OAuth with a code made **on the phone**: OK. `phone_brief`: OK. "Which app is open?": "AgentOS Home is open." in **7.1 s** |
 | Real phone, task needing an app | "Open the Clock app…": `waiting · Waiting for your OK to use the app · owner must approve`. Nobody tapped, so it was **denied after 60 s**, and the reply was "The phone's approval timed out, so I couldn't check the next alarm." |
+| Paired-remote policy (10-28, live relay, scripted client as "Grok") | "open LinkedIn": **no card**, LinkedIn open in 20 s. "text Sam Whitlock hi": Send card (tap/voice/fingerprint, reviewer held it), nobody tapped, **denied after 60 s**, nothing sent. Test grants unpaired |
 | Network change (phone has no cell service: Wi-Fi off → on) | Relay saw it offline in 23 s, and callers got `503`. The phone reconnected **7 s after Wi-Fi came back** (28 s before the backoff cap was lowered to 8 s) |
 
 Not tested: Grok and ChatGPT themselves (they need the founder's accounts), and a switch from Wi-Fi to cell data (no SIM service).
@@ -189,8 +193,8 @@ The same actions are on the launcher WebSocket as `{type:"remote", action}` (own
 1. (Before going on stage: paired, phone unlocked, on the home screen, Grok open on the laptop.)
 2. Say: "My phone isn't just reachable from its own assistant. Here's Grok, a different company's AI."
 3. Type into Grok: **"Use AgentOS: what's my next alarm?"**
-4. Grok calls `run_task`. The phone shows the island and the card **"Allow agent in Clock — From Grok: …"**.
-5. Say: "Grok can ask, but it can't approve. Only I can." Tap Allow.
+4. Grok calls `run_task`. The phone shows the island ("From Grok: …") and opens Clock: no card for low-risk steps.
+5. Say: "Grok can ask, but anything outward needs me. It can never approve."
 6. About 10 s later, Grok answers with the alarm time. Show the **Activity** line, "Started · From Grok: what's my next alarm?".
 7. Optional closer: "Text Sam I'm on my way." → the Send card on the phone → tap. Or don't tap, and Grok says it wasn't approved.
 
