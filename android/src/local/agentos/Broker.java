@@ -642,7 +642,9 @@ final class Broker {
             case "open_app": return Actions.openApp(svc, p.getString("pkg"));
             case "intent": return Actions.startIntent(svc, p);
             case "firewall.set": Firewall.set(svc, p.getString("pkg"), p.getString("mode"), p.optJSONArray("domains")); return true;
-            case "trackers.block": case "trackers.unblock": Trackers.block(svc, tool, p); return true;
+            case "trackers.block": case "trackers.unblock": Trackers.block(svc, tool, p); // the island names who just got shut out (green moment, 3 s)
+                if (tool.equals("trackers.block")) { String who = "Blocked · " + Trackers.who(p.getJSONArray("domains")); svc.main.post(() -> svc.island.set("done", who, -1)); }
+                return true;
             case "notifications.autoreply": Notifs.standing.put(p.getString("text"), System.currentTimeMillis() + Math.max(1, Math.min(240, p.optInt("minutes", 60))) * 60_000L); return true;
             default: Firewall.clear(); return true;
         }

@@ -187,7 +187,7 @@ body{position:fixed;inset:0}
 .legend span{margin-left:auto}
 .bk .hd{display:flex;align-items:center;gap:11px}
 .bk .hd>div{min-width:0;flex:1;font-size:14px;font-weight:600;letter-spacing:-.01em}
-.bk .hd .s{display:block;color:var(--l2);font-size:12px;font-weight:500;margin-top:1px}
+.bk .hd .s{display:block;color:var(--l2);font-size:12px;font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bk .pillbtn{padding:6px 12px;font-size:12px}
 .bk ul{list-style:none;margin-top:8px;display:flex;flex-direction:column}
 .bk li{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12.5px;font-weight:500;color:var(--l2)}
@@ -196,6 +196,11 @@ body{position:fixed;inset:0}
 .bk li b{color:var(--l1);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bk li em{font-style:normal;color:var(--l3);flex:none;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bk li span{margin-left:auto;flex:none;font-variant-numeric:tabular-nums;color:var(--l3)}
+.bk li.off span{color:var(--green)}
+.n{display:inline-block;font-variant-numeric:tabular-nums}
+.bk .hd .s .n{color:var(--green);font-weight:700}
+.n.up{animation:tick .6s var(--soft)}
+@keyframes tick{0%{transform:translateY(-5px);opacity:.25}100%{transform:none;opacity:1}}
 .bempty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:48px 20px;color:var(--l2);text-align:center;font-size:14px;font-weight:500}
 .bempty .ring{width:64px;height:64px;border-radius:50%;background:rgba(48,209,88,.14);display:grid;place-items:center;color:var(--green);box-shadow:0 0 30px rgba(48,209,88,.18)}
 .bempty .ring.blue{background:rgba(10,132,255,.16);color:var(--blue);box-shadow:0 0 30px rgba(10,132,255,.2)}

@@ -170,7 +170,7 @@ final class Trackers {
     static JSONObject scan(AccessibilityService svc, JSONObject p) throws Exception {
         String pkg = pkg(svc, p);
         Thread.sleep(Math.max(0, Math.min(15, p.optInt("seconds", 3))) * 1000L);
-        JSONObject app = app(svc, pkg, blocked(svc).get(uid(svc, pkg)));
+        JSONObject app = app(svc, pkg, blocked(svc).get(uid(svc, pkg)), Firewall.blockedCounts());
         JSONArray t = app.getJSONArray("trackers");
         int n = t.length(), b = t.toString().split("\"blocked\":true", -1).length - 1;
         return app.put("ok", true).put("summary", n == 0 ? "No trackers seen from " + app.getString("label") + " yet. Use the app a bit and scan again."
@@ -180,17 +180,18 @@ final class Trackers {
     /** trackers.list: every app the radar has seen talk to a tracker, or with blocked trackers. The Blockers view. */
     static JSONObject list(Context c) throws Exception {
         Map<Integer, Set<String>> blocked = blocked(c);
+        Map<String, Long> counts = Firewall.blockedCounts();
         Set<Integer> uids = new LinkedHashSet<>(SEEN.keySet());
         uids.addAll(blocked.keySet());
         List<JSONObject> apps = new ArrayList<>();
         for (int uid : uids) {
             String[] pk = c.getPackageManager().getPackagesForUid(uid);
-            JSONObject a = pk == null ? null : app(c, pk[0], blocked.get(uid));
+            JSONObject a = pk == null ? null : app(c, pk[0], blocked.get(uid), counts);
             if (a != null && a.getJSONArray("trackers").length() > 0) apps.add(a);
         }
         apps.sort((a, b) -> b.optJSONArray("trackers").length() - a.optJSONArray("trackers").length());
         return new JSONObject().put("ok", true).put("apps", new JSONArray(apps)).put("list_size", LIST.size())
-                .put("blocked_requests", Firewall.blockedRequests());
+                .put("blocked_requests", Firewall.blockedRequests(counts));
     }
 
     /**
@@ -225,7 +226,7 @@ final class Trackers {
         for (int i = 0; i < d.length(); i++) names.add(d.getString(i));
         boolean on = tool.equals("trackers.block");
         Firewall.names(uid(c, pkg), names, on);
-        JSONObject app = app(c, pkg, blocked(c).get(uid(c, pkg)));
+        JSONObject app = app(c, pkg, blocked(c).get(uid(c, pkg)), Firewall.blockedCounts());
         Events.emit("tracker.blocked", new JSONObject().put("pkg", pkg).put("label", app.getString("label")).put("blocked", on)
                 .put("domains", d).put("app", app));
     }
@@ -238,16 +239,24 @@ final class Trackers {
         return String.join(", ", s);
     }
 
-    /** {pkg, label, trackers:[{domain, company, blocked, hits}]}: one app's row in the Blockers view. */
-    private static JSONObject app(Context c, String pkg, Set<String> blocked) throws Exception {
+    /** "Facebook +5": the first company behind the blocked domains and how many more, for the island pill. */
+    static String who(JSONArray domains) throws JSONException {
+        Set<String> s = new LinkedHashSet<>();
+        for (int i = 0; i < domains.length(); i++) s.add(LIST.getOrDefault(domains.getString(i), domains.getString(i)));
+        return s.iterator().next() + (s.size() > 1 ? " +" + (s.size() - 1) : "");
+    }
+
+    /** {pkg, label, trackers:[{domain, company, blocked, hits, blocked_hits}]}: one app's row in the Blockers view (blocked_hits = requests the firewall refused). */
+    private static JSONObject app(Context c, String pkg, Set<String> blocked, Map<String, Long> counts) throws Exception {
         PackageManager pm = c.getPackageManager();
-        Map<String, Integer> seen = SEEN.getOrDefault(uid(c, pkg), new HashMap<>());
+        int uid = uid(c, pkg);
+        Map<String, Integer> seen = SEEN.getOrDefault(uid, new HashMap<>());
         Set<String> all = new LinkedHashSet<>(seen.keySet());
         if (blocked != null) all.addAll(blocked);
         JSONArray t = new JSONArray();
         for (String d : all)
             t.put(new JSONObject().put("domain", d).put("company", LIST.getOrDefault(d, d)).put("blocked", blocked != null && blocked.contains(d))
-                    .put("hits", seen.getOrDefault(d, 0)));
+                    .put("hits", seen.getOrDefault(d, 0)).put("blocked_hits", counts.getOrDefault(uid + " " + d, 0L)));
         String label;
         try { label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString(); } catch (Exception e) { label = pkg; }
         return new JSONObject().put("pkg", pkg).put("label", label).put("trackers", t);

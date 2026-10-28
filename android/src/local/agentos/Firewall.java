@@ -5,8 +5,10 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,7 +27,8 @@ final class Firewall {
     private static final String[] IPT = {"iptables", "ip6tables"};
     private static final Pattern RULE = Pattern.compile("-A " + CHAIN + "(?: -d (\\S+))? -m owner --uid-owner (\\d+) -j (\\w+)"),
             NAME = Pattern.compile("-A " + CHAIN + " -p tcp -m owner --uid-owner (\\d+) -m string --string \"?([a-z0-9.-]+)\"?"),
-            HOST = Pattern.compile("[a-z0-9-]+(\\.[a-z0-9-]+)+");
+            HOST = Pattern.compile("[a-z0-9-]+(\\.[a-z0-9-]+)+"),
+            COUNT = Pattern.compile("^\\s*(\\d+)\\s+\\d+\\s+REJECT\\s.*owner UID match (\\d+) STRING match\\s+\"([a-z0-9.-]+)\"");
     /** nameRules() as last read; every change below clears it, so reads skip the slow su round trip. */
     private static volatile List<String[]> cache;
 
@@ -53,14 +56,20 @@ final class Firewall {
         return new JSONObject().put("ok", true).put("chain", CHAIN).put("rules", rules);
     }
 
-    /** Connections our name blocks have refused so far (iptables packet counters on the tracker REJECT rules; reset at reboot). */
-    static long blockedRequests() throws java.io.IOException {
-        long n = 0;
-        for (String t : IPT)
-            for (String line : Root.run(t + " -w -L " + CHAIN + " -v -n -x").split("\n"))
-                if (line.contains("STRING match") && line.contains("REJECT")) try { n += Long.parseLong(line.trim().split("\\s+")[0]); } catch (NumberFormatException ignored) {}
-        return n;
+    /**
+     * Connections each name block has refused so far, keyed "uid domain" (the packet counters on the tracker REJECT rules,
+     * IPv4 + IPv6; they reset at reboot). One root call, so the Blockers view can poll it every couple of seconds.
+     */
+    static Map<String, Long> blockedCounts() throws java.io.IOException {
+        Map<String, Long> m = new HashMap<>();
+        for (String line : Root.run("iptables -w -L " + CHAIN + " -v -n -x; ip6tables -w -L " + CHAIN + " -v -n -x").split("\n")) {
+            Matcher c = COUNT.matcher(line);
+            if (c.find()) m.merge(c.group(2) + " " + c.group(3), Long.parseLong(c.group(1)), Long::sum);
+        }
+        return m;
     }
+
+    static long blockedRequests(Map<String, Long> counts) { long n = 0; for (long v : counts.values()) n += v; return n; }
 
     /**
      * block, no domains: block all traffic. block + domains: block only those. allow, no domains: remove our rules

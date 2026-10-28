@@ -106,6 +106,7 @@ final class Island extends FrameLayout {
         removeCallbacks(autoHide);
         if (st != null && !st.equals(state)) { state = st; tint(color(st)); }
         active = "working".equals(state); // only a running task keeps the pill; other states are moments that fade
+        label.setMaxWidth(dp(p >= 0 ? 150 : 190)); // a moment without the ring ("Blocked · Google Analytics") can use the ring's room
         if (p >= 0 != (ring.getVisibility() == VISIBLE)) { ring.setVisibility(p >= 0 ? VISIBLE : GONE); fit(); }
         if (p >= 0) ring.to(p / 100f);
         pct = p;

@@ -444,21 +444,35 @@ async function renderFirewall() {
   if (!pkgs.length) $('#fw').replaceChildren(el('div', 'empty', 'No apps'));
 }
 
-// ---------- blockers: trackers seen and blocked per app ({apps:[{pkg,label,trackers:[{domain,company,blocked,hits}]}]}) ----------
-async function openBlockers() { open('blockers'); renderBlockers(); await loadTrackers(); renderBlockers(); }
+// ---------- blockers: trackers seen and blocked per app ({apps:[{pkg,label,trackers:[{domain,company,blocked,hits,blocked_hits}]}]}) ----------
+// Live while the view is open: trackers.list every 2 s (the broker reads the iptables REJECT counters), numbers ticked in place.
+let bPoll = null;
+async function openBlockers() {
+  open('blockers'); renderBlockers(); await loadTrackers(); renderBlockers();
+  clearInterval(bPoll); bPoll = setInterval(async () => { if (!$('#blockers').classList.contains('on')) return clearInterval(bPoll); if (document.hidden) return; await loadTrackers(); patchBlockers() || renderBlockers(); }, 2000);
+}
+const fmt = (n) => (n || 0).toLocaleString('en-US');
+// "Facebook, Branch +4": the companies behind the domains, busiest first, as many as fit on the line.
+const who = (ts) => { const c = [...new Set([...ts].sort((a, b) => (b.blocked ? b.blocked_hits : b.hits) - (a.blocked ? a.blocked_hits : a.hits)).map((t) => t.company || t.domain))], out = []; for (const n of c) { if (out.length && out.join(', ').length + n.length > 12) break; out.push(n); } return out.join(', ') + (c.length > out.length ? ` +${c.length - out.length}` : ''); };
+const refused = (a) => a.trackers.reduce((n, t) => n + (t.blocked ? t.blocked_hits || 0 : 0), 0);
+// Counter keys -> values; a structural change (new app, block/unblock) makes patchBlockers() fall back to a full render.
+function bNums() { const m = { all: S.adsBlocked || 0 }; for (const a of S.trackers || []) { m[a.pkg] = refused(a); for (const t of a.trackers) m[`${a.pkg}|${t.domain}|${t.blocked ? 1 : 0}`] = t.blocked ? t.blocked_hits || 0 : t.hits || 0; } return m; }
+function tick(e, to) { const from = +e.dataset.v || 0; if (from === to) return; e.dataset.v = to; e.classList.remove('up'); void e.offsetWidth; e.classList.add('up'); const t0 = performance.now(), step = (now) => { const k = Math.min(1, (now - t0) / 600), v = Math.round(from + (to - from) * (1 - (1 - k) ** 3)); e.textContent = fmt(v); if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
+function patchBlockers() { const m = bNums(), els = [...$$('#blockers .n')]; if (els.length !== Object.keys(m).length || els.some((e) => !(e.dataset.k in m))) return false; for (const e of els) tick(e, m[e.dataset.k]); return true; }
 // Block / Unblock go over the owner line: the tap IS the approval (no card, no fingerprint). Names must be on the tracker list (the broker checks).
 async function blockApp(a, b, on) { hap('heavy'); if (b) b.textContent = on ? 'Blocking…' : 'Unblocking…'; const r = await phone(on ? 'trackers.block' : 'trackers.unblock', { pkg: a.pkg }); if (r?.decision !== 'approved') hap('heavy'); openBlockers(); }
 function renderBlockers() {
-  const box = $('#blist'), apps = (S.trackers || []).filter((a) => a.trackers?.length);
+  const box = $('#blist'), apps = (S.trackers || []).filter((a) => a.trackers?.length), N = (k, v) => `<span class="n" data-k="${esc(k)}" data-v="${v || 0}">${fmt(v)}</span>`;
   const nb = apps.reduce((n, a) => n + a.trackers.filter((t) => t.blocked).length, 0), ns = apps.reduce((n, a) => n + a.trackers.length, 0);
-  $('#blockersNote').textContent = ns ? `${nb} of ${ns} blocked` : '';
+  $('#blockersNote').innerHTML = nb ? `${N('all', S.adsBlocked)} blocked` : ns ? `${ns} open` : '';
   $('#blegend').hidden = !apps.length;
   const all = $('#blockAll'); all.hidden = nb >= ns; all.onclick = async () => { hap('heavy'); all.textContent = 'Blocking…'; for (const a of apps) if (a.trackers.some((t) => !t.blocked)) await phone('trackers.block', { pkg: a.pkg }); all.textContent = 'Block all'; openBlockers(); };
   if (!apps.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring"><svg width="30" height="30"><use href="#i-shield"/></svg></span>No trackers seen<small>Ask “any trackers?” in any app</small>`));
   box.replaceChildren(...apps.map((a) => {
-    const open_ = a.trackers.filter((t) => !t.blocked), m = el('div', 'mod bk');
-    m.innerHTML = `<div class="hd"><span class="appic">${ICOHTML(a.pkg)}</span><div>${esc(a.label || appName(a.pkg))}<span class="s">${a.trackers.length - open_.length} blocked${open_.length ? ` · ${open_.length} open` : ''}</span></div>${open_.length ? '<button class="pillbtn blue">Block</button>' : '<span class="tag g">Protected</span><button class="tag unb">Unblock</button>'}</div>
-      <ul>${a.trackers.map((t) => `<li class="${t.blocked ? 'off' : ''}"><i></i><b>${esc(t.domain)}</b>${t.company ? `<em>${esc(t.company)}</em>` : ''}<span>${t.hits || 0}</span></li>`).join('')}</ul>`;
+    const open_ = a.trackers.filter((t) => !t.blocked), bk = a.trackers.filter((t) => t.blocked), m = el('div', 'mod bk');
+    const sub = bk.length ? `${N(a.pkg, refused(a))} blocked · ${esc(who(bk))}${open_.length ? ` · ${open_.length} open` : ''}` : `${open_.length} open · ${esc(who(open_))}`; // the companies behind the domains
+    m.innerHTML = `<div class="hd"><span class="appic">${ICOHTML(a.pkg)}</span><div>${esc(a.label || appName(a.pkg))}<span class="s">${sub}</span></div>${open_.length ? '<button class="pillbtn blue">Block</button>' : '<button class="tag unb">Unblock</button>'}</div>
+      <ul>${a.trackers.map((t) => `<li class="${t.blocked ? 'off' : ''}"><i></i><b>${esc(t.domain)}</b>${t.company ? `<em>${esc(t.company)}</em>` : ''}${N(`${a.pkg}|${t.domain}|${t.blocked ? 1 : 0}`, t.blocked ? t.blocked_hits : t.hits)}</li>`).join('')}</ul>`;
     const b = $('.pillbtn', m); if (b) b.onclick = () => blockApp(a, b, true);
     const u = $('.unb', m); if (u) u.onclick = () => blockApp(a, u, false);
     return m;
