@@ -1,5 +1,34 @@
 # AgentOS status / handoff (2026-10-27)
 
+## What's new overnight + how to demo it (all live, smoke-tested 10-28 07:00–08:35; details in pitch/rehearsal/DEPLOY-FINAL.md)
+| Feature | Say / tap | Expect |
+|---|---|---|
+| Faster tasks + stopwatch | Ask bar: "Turn on the flashlight" | One step, "Done · 2–5 s" in the sheet and island |
+| Cross-app task | "Turn on the flashlight, then open <app> and read me <name>'s last message" (say **open**) | Done in ~10 s with the right message |
+| What did I miss? | Ask bar or voice: "What did I miss?" | Cards (unanswered messages, next events) + one-line answer in ~2 s |
+| Voice | Tap the mic, **wait for "Listening"**, then "What's my battery?" | "On it", then "Done, in N seconds…" (~6 s task; first start can take ~7 s) |
+| Calendar-aware keyboard | In a chat that asks "Are you free Thursday at 3?", tap the text field | Chips in ~1 s, e.g. "Thursday 3 PM to 5 PM looks free." Typing a word: new chips in ~2–3 s |
+| Tracker counter | Open a real app with trackers (Weather), then Home › "N apps sent data to trackers" | Blockers lists each domain with its company; counts tick live |
+| Offline fallback | Airplane mode (keep the local model warm), ask something simple | Answers with "On device" in ~2–5 s |
+| Queued asks | Send a second ask while one runs | It waits, then runs (no error) |
+| Scheduled task | "In 2 minutes, set an alarm for 6:15", lock the phone | Fires on time, unlocks, sets it, re-locks |
+| Notifications + replies | "Reply back that I'm 10 min late" | Reply goes through the app's own notification Reply (not re-tested today) |
+| Deep mods (Pigeon only, not on stage) | "Open Pigeon and preview a navy and gold theme" | Native preview, auto-restored (~9 s) |
+
+## Before stage
+1. Join the venue Wi-Fi, then `scripts/preflight.sh --fix wifi,warm,ime,home` (low-latency Wi-Fi, warm local model, AgentOS keyboard + home). **Never run `cmd wifi set-connected-score`**: it crashed Android at 07:03 (DEPLOY-FINAL issue 1).
+2. Just before going on: `scripts/preflight.sh --fix dnd,reset` (Do Not Disturb + demo reset; Home now says "12 actions blocked today").
+3. Close apps the bench opened (YouTube, Facebook, Instagram) from Recents.
+4. Open voice once and wait for "Listening" right before the voice beat.
+5. Re-run `scripts/preflight.sh`. Expected reds only: Wake word (off), Test alarms (needs a lease; Clock is clean), Chrome tabs (check by hand).
+
+## Remaining reds
+- Wi-Fi is the #1 risk (dropped 3× overnight; one reboot-level crash from the score pin). Workaround: toggle Wi-Fi once, then `--fix wifi`.
+- "Last message" questions can come from stale memory if you don't say "open <app>".
+- The reviewer may leave a delete to you (a tap card). Keep deletes out of the demo.
+- Voice: cold start ~7 s; the spoken "Done" can lag the task by ~6 s. The Mac WAV test rig is broken (test-only).
+- Fingerprint e2e still not pressed at the phone; Picovoice key undecided (offline "Hey Agent" works, off by default).
+
 Judging: Wed 2026-10-28, 5 PM. Read ARCHITECTURE.md first. Research is in research/. Pitch drafts are in pitch/.
 
 ## Decisions (rewritten 10-27 9:30 AM from founder direction; supersedes the older ones)
