@@ -15,7 +15,8 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 4 | Wake word: Porcupine ready (needs key; Picovoice free tier ended, 7-day trial) + offline Vosk "Hey Agent" fallback | Claude | done (4df084d; switch off) |
 | 5 | Voice/GPT Live latency hill-climb | GPT-6.1 Sol | done (a16552e…5e00624: warm session ready ~9 ms, task start ~1.7 s, no duplicate/missed handoffs). NOT deployed; goes in #11 |
 | 6 | Reviewer light polish | GPT-6.1 Sol | done (a333832; 2.27 → 1.86 s, 27/28; NOT yet deployed to phone) |
-| 7 | Bug hunt across demo flows (incl. Duolingo on Home, tap spots +77 px) | Claude Opus | running |
+| 7 | Bug hunt across demo flows | Claude Opus | done (91b0fa8; 8 fixes, BUGHUNT-NIGHT.md; Wi-Fi pinned, undo `cmd wifi reset-connected-score`) |
+| 13 | "What did I miss?" by voice/ask: one fast cross-app catch-up that can then act (DEMO-WOW #6) | Claude Opus | running |
 | 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | running |
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
 | 10 | Auto on-device fallback when offline for ask/voice (DEMO-WOW #5) | GPT-6.1 Sol | running |
@@ -28,5 +29,6 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 - All children have hard limits: real apps are read-only, outward actions only in Pigeon/Beacon, test calendar items only, deleted by exact id.
 
 ## Incidents
+- 02:50 the speed bench's 6:17 AM test alarm (Clock id 3, unlabeled, created by "Set an alarm for 6:17 AM, then delete it") was still on, because its delete timed out at the approval card. The orchestrator turned it OFF (not deleted; reversible) via alarms.delete off:true. The 10:15 "Before standup" alarm (id 4) was left alone.
 - 02:15 phone offline: Android kept dropping home Wi-Fi "BathroomCamera4" for a low connection score (blocklisted 01:29, 02:05), so Codex DNS failed and the voice tests stalled. Fix: `settings put global captive_portal_mode 0` (undo: `settings delete global captive_portal_mode`) plus a Wi-Fi off/on, after which it reconnected and chatgpt.com was reachable. The watchdog now also checks connectivity.
 - 01:16 near miss (no harm): the speed benchmark's "bench check" task t1f31e7a8 tried `alarms.delete` on "10:15 · Before standup" (looks like a real alarm). The approval card timed out, so it was denied and nothing was deleted. Steered the speed agent: test alarms only, labeled, deleted by exact match, and no approval-gated tasks in the benchmark. The 06:17 deletes were its own test alarm (also denied by timeout). Pigeon notification replies at 01:25–01:28 were the notifications agent's own test feed (OK).
