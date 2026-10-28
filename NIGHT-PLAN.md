@@ -17,9 +17,10 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 6 | Reviewer light polish | GPT-6.1 Sol | done (a333832; 2.27 → 1.86 s, 27/28; NOT yet deployed to phone) |
 | 7 | Bug hunt across demo flows | Claude Opus | done (91b0fa8; 8 fixes, BUGHUNT-NIGHT.md; Wi-Fi pinned, undo `cmd wifi reset-connected-score`) |
 | 13 | "What did I miss?" catch-up (DEMO-WOW #6) | Claude Opus | done (ed01014, bb73767; ~1.7 s median; NOT deployed, goes in #11) |
-| 17 | Draft 5-slide deck + one-pager PDF (real numbers, A2 look) | Claude Fable | running |
+| 17 | Draft 5-slide deck + one-pager PDF (real numbers, A2 look) | Claude Fable | done (7f968d4, 78a3d0b, 5b4a80c; pitch/deck/, pitch/one-pager.pdf) |
+| 18 | UI polish pass 3: on-stage feel (motion, legibility, recordings) | Claude Fable | running |
 | 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | done (2f7f170, 69ed541) |
-| 15 | Live tracker counter with company names (DEMO-WOW #7) + spoken "Done, in 7 seconds" | Claude Fable | running |
+| 15 | Live tracker counter with company names (DEMO-WOW #7) + spoken "Done, in 7 seconds" | Claude Fable | done (11b2cd7; voice line NOT deployed, goes in #11) |
 | 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
 | 10 | Auto on-device fallback when offline (DEMO-WOW #5) | GPT-6.1 Sol | done (b516bb5, deployed; warm offline ask 2.3 s, cold 24 s, so keep llama warm before stage; label handoff in POLISH-TODO) |
 | 14 | Review all overnight commits (security + crash) | GPT-6 Astra | done (edc95bb: reviewer rechecks live flags after grading [high]; voice.heard routing [medium]; REVIEW-NIGHT.md) |
