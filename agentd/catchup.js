@@ -121,10 +121,10 @@ export const cards = (f) => [
 // codex = null (offline / local provider) -> the plain text. The model gets ~6 s, then the plain text wins.
 export let last = null; // {at, text}: the next turn sees what was said, so "yes, tell her I'm on my way" has a referent
 export async function run({ codex, emit = () => {}, signal, voice = false } = {}) {
-  const t0 = Date.now(), f = await facts(emit), timing = { facts: Date.now() - t0 };
-  emit({ type: 'catchup', cards: cards(f) }); // the sheet shows the rows at once; the words stream in after
+  const t0 = Date.now(), f = await facts(emit), timing = { facts: Date.now() - t0 }, rows = cards(f);
+  emit({ type: 'catchup', cards: rows }); // the sheet shows the rows at once; the words stream in after
   let text = '', got = '';
-  if (codex && !signal?.aborted) {
+  if (codex && rows.length && !signal?.aborted) { // nothing to report: the plain "Nothing new" at once, not a model call
     const ab = AbortSignal.any([AbortSignal.timeout(6000), ...(signal ? [signal] : [])]);
     text = await hedged(codex, `${brief(f)}\n\n${voice ? 'It will be spoken aloud.' : 'It will be shown on screen.'}`, ab, (d) => { got += d; emit({ type: 'text.delta', text: d }); }, timing)
       .catch((e) => { log(`catchup: model ${e.errors?.[0]?.message || e.message}, ${got ? 'partial' : 'plain'} text`); return got; });
