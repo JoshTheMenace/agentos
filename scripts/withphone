@@ -1,0 +1,13 @@
+#!/bin/sh
+# Run one command while holding the shared phone lock, then release it. Use this instead of hand-written mkdir/rmdir loops.
+#   scripts/withphone adb shell input keyevent HOME
+#   WAIT=600 scripts/withphone sh -c 'android/build.sh && adb install -r android/build/agentos.apk'
+# The lock dir holds the owner's pid, so a stray `rmdir` from someone else fails (dir not empty); a dead owner's lock is reclaimed.
+L=/tmp/agentos-device.lock; end=$(( $(date +%s) + ${WAIT:-300} ))
+until mkdir "$L" 2>/dev/null; do
+  p=$(cat "$L/pid" 2>/dev/null); [ -n "$p" ] && ! kill -0 "$p" 2>/dev/null && { rm -f "$L/pid"; rmdir "$L" 2>/dev/null; continue; }
+  [ "$(date +%s)" -ge "$end" ] && { echo "withphone: phone busy for ${WAIT:-300} s" >&2; exit 75; }
+  sleep 2
+done
+echo $$ > "$L/pid"; trap 'rm -f "$L/pid"; rmdir "$L" 2>/dev/null' EXIT INT TERM
+"$@"
