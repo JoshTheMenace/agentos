@@ -1,0 +1,11 @@
+{"inventory":{"active":0,"apps":[{"id":"linkedin","on":true},{"id":"x","on":true},{"id":"slack","on":true},{"id":"instagram","on":true},{"id":"discord","on":true},{"id":"whatsapp","on":true},{"id":"gmail","on":true},{"id":"spotify","on":true},{"id":"youtube","on":true}]}}
+{"tool":"linkedin_notifications","installed":true,"items":0,"available":0,"ms":348,"untrusted":false}
+{"tool":"x_mentions","installed":false,"items":0,"available":0,"ms":27,"untrusted":false}
+{"tool":"slack_unread","installed":true,"items":0,"available":0,"ms":18,"untrusted":false}
+{"tool":"instagram_dms_summary","installed":true,"items":0,"available":0,"ms":14,"untrusted":false}
+{"tool":"discord_mentions","installed":true,"items":0,"available":0,"ms":21,"untrusted":false}
+{"tool":"whatsapp_unread","installed":false,"items":0,"available":0,"ms":27,"untrusted":false}
+{"tool":"gmail_important","installed":true,"items":0,"available":0,"ms":21,"untrusted":false}
+{"tool":"spotify_status","installed":true,"items":0,"available":0,"ms":35,"untrusted":false}
+{"tool":"youtube_updates","installed":true,"items":0,"available":0,"ms":46,"untrusted":false}
+{"tool":"linkedin_unread","installed":true,"cache":"read","items":8,"available":9,"ms":463,"untrusted":true}

@@ -40,7 +40,7 @@ Use `Notifs` before touching app storage or the network. It retains the latest n
 | Gmail | `bigTopDataDB.*`: 181 items / 205 messages, protobuf blobs; legacy `EmailProvider.Message` empty | Copied database schema/count inspection only | Data exists, **decoder not built**. Notification-room tables empty. Use notifications now; official API next | No for cache; OAuth for API |
 | Spotify | Event sender, measurement, CES, messages and offline DBs | File inventory; previous memory-source investigation found no useful local listening history | History reader not built; use MediaSession | No |
 | YouTube | Entity stores/offline DB; notification `threads` table empty | Notification schema/count inspection | No decoded history reader; use notifications/MediaSession | No |
-| X / WhatsApp | No package installed | Package inventory | Not available | Owner login first |
+| X / WhatsApp | 11.0 / 8.8 ms | Package inventory | Not available | Owner login first |
 
 The LinkedIn reader copies the fixed main DB and its WAL into the broker's private cache, opens **only the copy** with `OPEN_READONLY`, and deletes it in `finally`. WAL contains committed data that may not yet be in the main file. Source files are never opened with SQLite, checkpointed, edited, stopped or unlocked. An unavailable/changed schema falls back to notifications with `cache:unavailable`; partial cache rows are discarded. This best-effort copy can fail during an app write, so results explicitly remain cached/incomplete. [SQLite WAL behavior and read-only access](https://www.sqlite.org/wal.html).
 
@@ -56,7 +56,7 @@ Inventory only. `dumpsys jobscheduler` showed these candidates; IDs are a point-
 | Gmail | Account sync / background work | `gmail-ls` owned by SyncManager (`android`, jobs `100020`, `100038`); Gmail also has WorkManager jobs | Jobs exist; no forced sync | Existing Google login |
 | YouTube | Background work | Multiple WorkManager jobs, e.g. `1195`, `1362` | Jobs exist; refresh not executed/proven | Existing Google login |
 | Spotify / Discord | Background work | No package-attributed job observed in this snapshot | No verified candidate | Existing app login |
-| X / WhatsApp | Background refresh | Not installed | Unavailable | Install/login |
+| X / WhatsApp | 11.0 / 8.8 ms | Not installed | Unavailable | Install/login |
 
 Investigation command: `scripts/withphone adb -s ZY22J3TK8S shell "su -c 'dumpsys jobscheduler'"`. For a later **verified read-only worker**, the shell form is `cmd jobscheduler run -f -u 0 PACKAGE JOB_ID`; run it under `scripts/withphone`, wait for the worker, then re-read (a)/(b). A generic WorkManager job can drain sends/reactions/read-state uploads, so merely finding a job is insufficient evidence that forcing it is read-only. This task deliberately did not run jobs, refresh broadcasts, or brief off-screen activities. No generic refresh tool ships. WorkManager's diagnostics broadcast is documented for debug builds, not a universal production refresh broadcast. [Android WorkManager diagnostics](https://developer.android.com/develop/background-work/background-tasks/testing/persistent/debug), [Android 13 shell-command implementation](https://cs.android.com/android/platform/superproject/+/android-13.0.0_r1:frameworks/base/apex/jobscheduler/service/java/com/android/server/job/JobSchedulerShellCommand.java).
 
@@ -106,7 +106,7 @@ Verification:
 - `android/tests/AppReadsTest.java`, separate on-phone `app_process`: synthetic in-process notifications test package filtering before limit, timestamp cutoff, missing app isolation, unchanged core limit, message-over-ad ranking, fixed method allowlist, broker switch mappings, Gmail draft gate and continued `open_app` availability. No notification is posted; the running broker's settings/data are untouched.
 - Android javac/D8 build passed after another agent finished its in-progress ModMask fix. No unrelated edit was reverted.
 - `scripts/withphone python3 agentd/bench/app-reads-phone.py`: installed-app checks, real LinkedIn cache reads, since/limit handling and inclusion of older unread by default, foreground stability and before/after source-file hashes. Raw **metadata only**: `agentd/bench/results/app-reads-phone.json`.
-- `node bench/app-reads-live.js` on the phone: all ten tools through the real `runTool` path as Termux uid 10401; live agentd advertises all nine app plugins enabled. An adb-created nested `su` shell could not reopen the broker token, so the harness's `--token-stdin` option receives it on an already-open phone-local descriptor; no token is copied to a file, command argument, model or log. The supervised agentd keeps its existing startup token path.
+- `node bench/app-reads-live.js` on the phone: all ten tools through the real `runTool` path as Termux uid 10401 (metadata in `agentd/bench/results/app-reads-live.jsonl`); live agentd advertises all nine app plugins enabled. An adb-created nested `su` shell could not reopen the broker token, so the harness's `--token-stdin` option receives it on an already-open phone-local descriptor; no token is copied to a file, command argument, model or log. The supervised agentd keeps its existing startup token path.
 - Audit verification: chain OK, 3424 lines, eight previously marked breaks and no new break. No owner toggle was changed; native mapping/refusal tests ran in a separate process.
 
 The code-golf pass kept absent-app and empty-history results, package/time filtering, limits, cache-failure fallback, sponsored ranking, both toggle checks and guard taint. A shared app table/reader replaces nine separate implementations; only LinkedIn cache decoding and the two media-session readers need special handling.
@@ -117,18 +117,18 @@ Three calls per method, HTTP JSON-RPC via adb forward, including broker Prompt G
 
 | Method | Median | Result |
 |---|---:|---|
-| LinkedIn notifications | 15.5 ms | 0 retained |
-| Slack unread previews | 11.1 ms | 0 retained |
-| Instagram DM previews | 9.4 ms | 0 retained |
-| Discord mentions | 12.8 ms | 0 retained |
-| Gmail important previews | 9.1 ms | 0 retained |
-| Spotify status | 9.1 ms | No active session / retained notifications |
-| YouTube updates | 11.5 ms | No active session / retained notifications |
-| X / WhatsApp | 15.9 / 9.1 ms | Correctly reports app absent |
-| LinkedIn cached unread, `since:0,n:20` | **377.6 ms** | 9 conversations; 8 worth-looking-at, 1 sponsored rank zero |
-| Existing `screen.read` baseline | 28.0 ms | Current foreground only |
+| LinkedIn notifications | 11.5 ms | 0 retained |
+| Slack unread previews | 9.5 ms | 0 retained |
+| Instagram DM previews | 12.3 ms | 0 retained |
+| Discord mentions | 10.3 ms | 0 retained |
+| Gmail important previews | 9.4 ms | 0 retained |
+| Spotify status | 10.5 ms | No active session / retained notifications |
+| YouTube updates | 13.2 ms | No active session / retained notifications |
+| X / WhatsApp | 11.0 / 8.8 ms | Correctly reports app absent |
+| LinkedIn cached unread, `since:0,n:20` | **385.7 ms** | 9 conversations; 8 worth-looking-at, 1 sponsored rank zero |
+| Existing `screen.read` baseline | 24.4 ms | Current foreground only |
 
-LinkedIn cold call was 1434.2 ms; subsequent calls 371.0 / 377.6 ms. The earlier build measured 2354.8 / 510.6 / 486.2 ms; results vary with broker/model warmup. No source DB or WAL hash changed and foreground package stayed the same during the locked benchmark. No messages were sent, marked read, reacted to or refreshed. Temporary copies were deleted.
+LinkedIn cold call was 1402.5 ms; subsequent calls 356.3 / 385.7 ms. The earlier build measured 2354.8 / 510.6 / 486.2 ms; results vary with broker/model warmup. No source DB or WAL hash changed and foreground package stayed the same during the locked benchmark. No messages were sent, marked read, reacted to or refreshed. Temporary copies were deleted.
 
 There is deliberately **no newly measured app-inbox UI comparison**: opening these real inboxes may mark messages read. Existing `agentd/bench/RESULTS.md` measured roughly 2 s per `open_app`, 0.7–1 s per tap, and ~2.5 s per model call. Those earlier measurements suggest the expected savings from one read versus several UI steps; they are not a paired per-app experiment. A safe future comparison needs disposable conversations/accounts.
 

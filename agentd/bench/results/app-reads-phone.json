@@ -8,11 +8,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 15.5,
+      "median_ms": 11.5,
       "samples_ms": [
-        19.6,
-        12.4,
-        15.5
+        11.6,
+        10.3,
+        11.5
       ]
     },
     {
@@ -21,11 +21,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 15.9,
+      "median_ms": 11.0,
       "samples_ms": [
-        16.3,
-        14.4,
-        15.9
+        11.1,
+        9.8,
+        11.0
       ]
     },
     {
@@ -34,11 +34,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 11.1,
+      "median_ms": 9.5,
       "samples_ms": [
-        11.1,
-        11.0,
-        13.8
+        7.9,
+        10.9,
+        9.5
       ]
     },
     {
@@ -47,11 +47,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 9.4,
+      "median_ms": 12.3,
       "samples_ms": [
-        10.3,
-        9.3,
-        9.4
+        10.9,
+        12.3,
+        12.4
       ]
     },
     {
@@ -60,11 +60,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 12.8,
+      "median_ms": 10.3,
       "samples_ms": [
-        12.8,
-        16.0,
-        9.1
+        10.3,
+        8.4,
+        10.4
       ]
     },
     {
@@ -73,11 +73,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 9.1,
+      "median_ms": 8.8,
       "samples_ms": [
-        10.5,
-        8.6,
-        9.1
+        15.6,
+        8.8,
+        7.8
       ]
     },
     {
@@ -86,11 +86,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 9.1,
+      "median_ms": 9.4,
       "samples_ms": [
-        9.8,
-        9.1,
-        8.4
+        13.0,
+        7.2,
+        9.4
       ]
     },
     {
@@ -99,11 +99,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 9.1,
+      "median_ms": 10.5,
       "samples_ms": [
-        17.8,
-        9.1,
-        9.1
+        18.1,
+        10.0,
+        10.5
       ]
     },
     {
@@ -112,11 +112,11 @@
       "listener": true,
       "available": 0,
       "returned": 0,
-      "median_ms": 11.5,
+      "median_ms": 13.2,
       "samples_ms": [
-        10.3,
-        11.5,
-        11.7
+        12.7,
+        13.2,
+        16.7
       ]
     },
     {
@@ -126,15 +126,15 @@
       "returned": 9,
       "worth_looking_at": 8,
       "cache_rows": 9,
-      "median_ms": 377.6,
+      "median_ms": 385.7,
       "samples_ms": [
-        1434.2,
-        371.0,
-        377.6
+        1402.5,
+        356.3,
+        385.7
       ]
     }
   ],
-  "screen_read_median_ms": 28.0,
+  "screen_read_median_ms": 24.4,
   "foreground_unchanged": true,
   "linkedin_source_unchanged": true,
   "source_digest": "3012e3b54c6021613bcc1b2ded765e1753b3ecf87cbf4754ad7c39cfc9e44fef",

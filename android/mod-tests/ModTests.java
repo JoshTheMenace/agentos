@@ -25,8 +25,8 @@ public class ModTests extends Instrumentation {
         throw new NoSuchMethodException(name);
     }
     private static void check(boolean ok, Object why) { if (!ok) throw new AssertionError(String.valueOf(why)); }
-    private void shot(android.app.Service svc, String name) throws Exception {
-        java.util.concurrent.CompletableFuture<Boolean> done = new java.util.concurrent.CompletableFuture<>();
+    private int shot(android.app.Service svc, String name, int x, int y) throws Exception {
+        java.util.concurrent.CompletableFuture<Integer> done = new java.util.concurrent.CompletableFuture<>();
         ((android.accessibilityservice.AccessibilityService) svc).takeScreenshot(0, svc.getMainExecutor(), new android.accessibilityservice.AccessibilityService.TakeScreenshotCallback() {
             public void onSuccess(android.accessibilityservice.AccessibilityService.ScreenshotResult r) {
                 try {
@@ -34,12 +34,12 @@ public class ModTests extends Instrumentation {
                     android.graphics.Bitmap bm = hw.copy(android.graphics.Bitmap.Config.ARGB_8888, false);
                     hw.recycle(); r.getHardwareBuffer().close();
                     try (java.io.FileOutputStream out = svc.openFileOutput(name, 0)) { bm.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out); }
-                    bm.recycle(); done.complete(true);
+                    int pixel = bm.getPixel(x, y); bm.recycle(); done.complete(pixel);
                 } catch (Exception e) { done.completeExceptionally(e); }
             }
             public void onFailure(int code) { done.completeExceptionally(new IllegalStateException("screenshot " + code)); }
         });
-        done.get(3, java.util.concurrent.TimeUnit.SECONDS);
+        return done.get(3, java.util.concurrent.TimeUnit.SECONDS);
     }
     private JSONObject spec(String id) throws Exception {
         return new JSONObject("{\"id\":\"" + id + "\",\"package\":\"com.agentos.modfixture\",\"label\":\"Mask test\",\"action\":{\"type\":\"mask\",\"match\":{\"text\":\"Promoted\"},\"scope\":\"item\"}}");
@@ -61,11 +61,18 @@ public class ModTests extends Instrumentation {
             JSONArray times = new JSONArray();
             for (int i = 0; i < 10; i++) {
                 JSONObject s = spec("mod-test");
-                check(((JSONObject) call(mods, "preview", s)).getBoolean("ok"), "no preview match");
+                JSONObject preview = (JSONObject) call(mods, "preview", s);
+                check(preview.getBoolean("ok"), "no preview match");
                 long t = SystemClock.uptimeMillis();
                 JSONObject r = ((JSONObject) call(mods, "apply", s, "isolated renderer test", 2500L));
                 check(r.getBoolean("shown"), r); times.put(SystemClock.uptimeMillis() - t);
-                if (i == 0) shot(svc, "mods-fixture-mask.png");
+                if (i == 0) {
+                    SystemClock.sleep(350);
+                    JSONArray rct = preview.getJSONArray("matches").getJSONArray(0);
+                    int pixel = shot(svc, "mods-fixture-mask.png", (rct.getInt(0) + rct.getInt(2)) / 2, (rct.getInt(1) + rct.getInt(3)) / 2);
+                    check((pixel & 0xFFFFFF) == 0x101820, "mask not visible: " + Integer.toHexString(pixel));
+                    report.put("first_mask_screenshot_verified_ms", SystemClock.uptimeMillis() - t);
+                }
                 check(((JSONObject) call(mods, "remove", "mod-test", "isolated renderer test")).getBoolean("ok"), "remove failed");
             }
             report.put("mask_apply_remove_ms", times);
@@ -121,7 +128,7 @@ public class ModTests extends Instrumentation {
             check(((JSONObject) call(mods, "preview", button)).getBoolean("ok"), "button preview");
             report.put("button", call(mods, "apply", button, "isolated renderer test", 2500L));
             check(report.getJSONObject("button").getBoolean("shown"), "button missing");
-            SystemClock.sleep(400); shot(svc, "mods-calculator-button.png");
+            SystemClock.sleep(400); shot(svc, "mods-calculator-button.png", 0, 0);
             call(mods, "remove", "mod-button-test", "test cleanup");
             result.putString("report", report.toString()); finish(0, result);
         } catch (Throwable e) {

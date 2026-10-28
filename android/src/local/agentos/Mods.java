@@ -45,9 +45,9 @@ import org.json.JSONObject;
  * the accessibility tree. Think of a sticky note on the app, not a change to it: a mod reads the app's on-screen text and
  * presses the app's own buttons (ACTION_CLICK). It shows only while its app is the active window and its anchor is on screen.
  *
- * A mod can do exactly two things (validate() enforces the schema): "press" a list of the app's buttons, or "compute":
+ * A button mod can "press" a list of the app's buttons, or "compute":
  * read a number from the display, show chips (number × factor), and on a chip tap press buttons that type the result.
- * No code, no expressions. At press time every target is re-checked: outward buttons (Send, Pay...) and FLAG_SECURE
+ * Passive mask specs cover matched nodes/items without modifying the app. No code, no expressions. At press time every target is re-checked: outward buttons (Send, Pay...) and FLAG_SECURE
  * screens are refused. Mods are TYPE_ACCESSIBILITY_OVERLAY windows of local.agentos, so screen.read and Prompt Guard never
  * see them and the agent can't tap them (Screen skips overlays; Guard.offLimits).
  * Main thread for everything that touches windows; apply/remove/list may be called from any thread.
@@ -207,6 +207,7 @@ final class Mods {
         need(watching && !closed, "crash watchdog unavailable");
         CompletableFuture<Long> f = new CompletableFuture<>();
         svc.main.post(() -> {
+            clearPreview();
             Mod m = put(spec, by, System.currentTimeMillis());
             m.t0 = SystemClock.uptimeMillis(); m.onScreen = f;
             fgSince = Math.max(fgSince, m.t0); // our approval card is still closing: don't sample its pixels
@@ -306,7 +307,7 @@ final class Mods {
         return s.substring(s.lastIndexOf('/') + 1);
     }
 
-    // ---------------------------------------------------------------- validation (strict: only the spike's two behaviours)
+    // ---------------------------------------------------------------- validation (strict declarative behaviours)
 
     private static final Pattern MOD_ID = Pattern.compile("[a-z0-9_-]{1,32}"), VID = Pattern.compile("[A-Za-z0-9_.]{1,64}"),
             COLOR = Pattern.compile("#[0-9A-Fa-f]{6}");

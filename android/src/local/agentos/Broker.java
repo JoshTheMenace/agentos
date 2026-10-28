@@ -478,7 +478,7 @@ final class Broker {
     }
 
     /**
-     * app.mod.apply {spec}: strict schema (Mods.validate: only "press" the app's buttons or "compute" chips), then a person
+     * app.mod.apply {spec}: strict schema (Mods.validate: press/compute buttons or passive masks), then a person
      * approves on the card (tap or voice; never the reviewer: they should see what is added to their app), audited with the
      * full spec. The app is brought to the front so the mod shows up at once.
      */
