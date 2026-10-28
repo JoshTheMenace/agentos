@@ -44,6 +44,15 @@ Live editing from the Mac (no rebuild): `launcher/install.sh dev` then `python3 
 Token: `install.sh` copies `~/.agentos/agentd.token` (Termux) into `/data/data/local.agentos.home/files/` as root; agentd does the
 same at start (`local.agentos.home` is in the default `AGENTD_CLIENT_PKGS`). There is no `:7777` token in this app.
 
+## Home polish (climb-a, 10-27 PM)
+- Portrait-locked (manifest); auto-rotate was turned off on the demo phone. `--l3` lifted .3 → .38 for projector contrast (brighter only; backward compatible).
+- **Try chips** above the ask bar and inside the empty ask sheet: prompts that prefill the sheet (scheduled task, trackers, reply, sign-in) and an on-device model toggle. Prompts, not data.
+- **Task card**: optimistic card the instant a suggestion/ask starts, pretty tool names (`TOOLN` in app.js; new agentd tools fall back to "Snake case → Words"), elapsed time + step count, orange glow while acting, check/x + bar fill on finish, heavy haptic, 45 s linger (survives a trip through another app via `task.list`). Tapping it opens the sheet, which is the task's transcript.
+- **Scheduled cards**: blue calendar tile, "Tomorrow 11:00 AM · scheduled" (from `at`).
+- **Moments**: approved `notifications.reply/autoreply`, `vault.fill`, `trackers.block`, `schedule.created`, `app.mod.add` audit lines show a 45 s "done" card on Home.
+- **Ask sheet**: typing dots while thinking, 17 px answers, "Done · 6s". **Voice**: "Try saying" examples until the first transcript; the live task card sits above the orb.
+- Shots: `shots/climb-a/` (before/after pairs; `.tools/task.mjs` starts a task from the Mac over `adb forward tcp:18787 tcp:8787`).
+
 ## Notes
 - 3-button navigation. Edge to edge; the shell passes status/nav/IME insets to CSS variables.
 - Only `transform`/`opacity` animate; no blur, no libraries. Inter is bundled (`web/fonts`, 350 KB).

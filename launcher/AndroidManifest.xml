@@ -11,7 +11,7 @@
   <queries><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent></queries>
   <application android:label="AgentOS Home" android:usesCleartextTraffic="true" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
     <activity android:name=".Home" android:exported="true" android:launchMode="singleTask" android:stateNotNeeded="true"
-        android:excludeFromRecents="true" android:windowSoftInputMode="adjustResize" android:configChanges="orientation|screenSize|keyboardHidden">
+        android:excludeFromRecents="true" android:screenOrientation="portrait" android:windowSoftInputMode="adjustResize" android:configChanges="orientation|screenSize|keyboardHidden">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.HOME"/>

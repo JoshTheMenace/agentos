@@ -2,7 +2,7 @@
 @font-face{font-family:Inter;src:url(fonts/InterVariable.woff2) format("woff2");font-weight:100 900;font-display:swap}
 :root{
   --bg:#000; --grp:#1C1C1E; --grp2:#2C2C2E; --grp3:#3A3A3C;
-  --l1:#FFFFFF; --l2:rgba(235,235,245,.6); --l3:rgba(235,235,245,.3); --l4:rgba(235,235,245,.18);
+  --l1:#FFFFFF; --l2:rgba(235,235,245,.6); --l3:rgba(235,235,245,.38); --l4:rgba(235,235,245,.18);
   --blue:#0A84FF; --green:#30D158; --orange:#FF9F0A; --red:#FF453A; --pink:#FF375F; --purple:#BF5AF2; --teal:#64D2FF; --idle:#8E8E93;
   --acc:var(--idle);
   --spring:cubic-bezier(.34,1.5,.64,1); --soft:cubic-bezier(.25,1.2,.4,1); --ease:cubic-bezier(.2,.8,.2,1);
