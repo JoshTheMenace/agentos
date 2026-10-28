@@ -93,7 +93,7 @@ There's no direct calendar read, because the broker needs a lease for calendar A
   list evicts only unpaired clients.
 - **Audit.** The broker's chain logs every remote task with its "From Grok: …" goal (seen on the phone:
   `task.start · From Grok: Open the Clock app… · denied · timed out`), so Activity shows it. Direct reads (`phone_brief`,
-  `memory_lookup`) go only to agentd's log and a `remote.read` event for now (follow-up: a broker audit line).
+  `memory_lookup`) are one `remote.read` line in the broker's chain ("Grok read your latest messages" in Activity) plus a `remote.read` event.
 - **The relay** sees requests in plain text (TLS ends at Caddy). A hacked VPS gets what a paired assistant gets: untrusted
   tasks that the owner must approve. It can't approve, and it can't read the pairing code's hash. Pin `REMOTE_PUBLIC_URL` so a
   forged `Host` header can't change the issuer.
@@ -176,8 +176,8 @@ show `remote: relay connected <host>`, and `/relay-health` should say "phone con
 | `unpair <grant>` | Drop one assistant |
 | `revoke` | Drop all of them |
 
-The same actions are on the launcher WebSocket as `{type:"remote", action}` (owner only). The Command center tile still needs to
-be built (UI work goes to Fable).
+The same actions are on the launcher WebSocket as `{type:"remote", action}` (owner only), behind Command center › Remote: status
+(off / relay connected / phone offline), kill switch, reads switch, paired assistants with last use and Unpair, Pair (code + address), Revoke all.
 
 **Plan B, no VPS.**
 - Cloudflare named tunnel on the phone: install `cloudflared` (arm64) in Termux, then run `cloudflared tunnel run --url http://127.0.0.1:8790 <name>`, from the boot script too.
@@ -196,8 +196,6 @@ be built (UI work goes to Fable).
 
 ## 8. Follow-ups
 
-- **Command center › Remote tile (Fable).** Pair button (shows the code big, once), paired assistants with Unpair, on/off switch,
-  reads switch, relay status. Use the `remote` WebSocket messages above.
 - **A broker audit line for direct reads.** Today only agentd logs `phone_brief` and `memory_lookup`.
 - **MCP Events for Dots** (push "task done" instead of polling). This needs webhook delivery, HMAC and persistent subscriptions [7].
 - Test against real Grok and ChatGPT once the founder has paired them, and a Wi-Fi → cellular switch with a SIM.

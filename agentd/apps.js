@@ -97,6 +97,8 @@ export async function call(name, args, ctx) {
   } catch (e) { return { ok: false, error: `build failed: ${e.message}` }; }
   const page = strip(out);
   if (!/<html[\s>]/i.test(page) || !/<\/html>\s*$/i.test(page) || !/<script/i.test(page)) return { ok: false, error: 'the generator did not return a complete HTML file; call build_app once more' };
+  const bad = [...page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => { try { new Function(m[1]); } catch (e) { return e.message; } }).find(Boolean); // a typo must not replace a working app
+  if (bad) return { ok: false, error: `the generated script has a syntax error (${bad}); call build_app once more` };
   const title = (page.match(/<title>([^<]*)<\/title>/i)?.[1] || '').trim();
   const label = (prev?.name || title || 'App').slice(0, 32);
   let id = prev?.id || slug(label);

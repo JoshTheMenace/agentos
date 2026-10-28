@@ -510,7 +510,7 @@ function renderRemote() {
   const pair = el('div', 'mod', '<div class="k">Pair an assistant</div>');
   if (S.pairCode && S.pairCode.exp > Date.now()) { const left = Math.round((S.pairCode.exp - Date.now()) / 1000);
     pair.append(el('div', 'code', esc(S.pairCode.code)), el('div', 'provnote', `One-time code · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left`), el('span', 'url', esc(r.url || 'Set REMOTE_PUBLIC_URL on the phone for the address')), el('div', 'provnote', 'In Grok: Connectors › New › Custom, paste the address, then type the code on the sign-in page'));
-  } else { const b = el('button', 'pairbtn' + (r.on ? '' : ' dim'), '<svg width="16" height="16"><use href="#i-plus"/></svg>Pair an assistant'); b.onclick = () => remoteAct('pair'); pair.append(b, el('div', 'provnote', r.url ? `Address: ${r.url}` : 'Shows a one-time code (10 minutes) and the address to paste in Grok or ChatGPT')); }
+  } else { const b = el('button', 'pairbtn' + (r.on ? '' : ' off'), '<svg width="16" height="16"><use href="#i-plus"/></svg>Pair an assistant'); b.onclick = () => remoteAct('pair'); pair.append(b, el('div', 'provnote', r.url ? `Address: ${r.url}` : 'Shows a one-time code (10 minutes) and the address to paste in Grok or ChatGPT')); }
   box.replaceChildren(st, paired, pair);
   if (n) { const rv = el('button', 'revoke', 'Revoke all · everyone must pair again'); rv.onclick = () => { if (rv.textContent !== 'Sure? Tap again') { hap(); rv.textContent = 'Sure? Tap again'; setTimeout(() => (rv.textContent = 'Revoke all · everyone must pair again'), 3000); return; } remoteAct('revoke'); }; box.append(rv); }
 }
