@@ -190,7 +190,7 @@ export async function lease(ctx, apps) { // also server.js: the assistant bar le
   if (l && apps.every((a) => l.apps.includes(a) || l.refused_apps?.includes(a))) return l;
   const r = await rpc('task.start', { goal: turn.goal.slice(0, 200), apps: [...new Set([...(l?.apps || []), ...apps])], approval_timeout_s: APPROVAL_S,
     untrusted: !!turn.untrusted || context.state.untrusted, // notification text in the prompt counts like screen text
-    user_asked: !turn.untrusted, origin: turn.origin || 'typed', tainted: !!turn.alerted?.size }, ACT_MS); // origin/tainted: may the broker unlock the phone for it // the user's own request is the grant (the broker still cards money/installs/passwords); a reply rule's turn isn't
+    user_asked: !turn.untrusted, origin: turn.origin || 'typed', tainted: !!turn.alerted?.size, ...(turn.remoteUnlock && { remote_unlock: true, remote: turn.remote }) }, ACT_MS); // origin/tainted: may the broker unlock the phone for it // the user's own request is the grant (the broker still cards money/installs/passwords); a reply rule's turn isn't
   if (!r.task_id) throw new Error(`task.start failed: ${r.reason || r.error || 'no task_id'}`);
   if (l) tasks.delete(l.task_id);
   turn.lease = r;

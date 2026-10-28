@@ -101,6 +101,7 @@ Stage rule: any trap or flag beat goes **last** (a flag holds every send for a p
 |---|---|---|---|---|
 | Lockbox unlock | The PIN leaking or misuse | PIN in a root-only file, typed only into the lock screen; never in code, logs, audit or model; 2 failures stop it; re-locks after | Scheduled task on a locked phone → unlocks, acts, re-locks | Ready |
 | Clean tasks only | A scam opening your phone | Only your own clean request may unlock or schedule; a flagged, remote or rule task stays locked | After the trap, a scheduled task stays locked ("it saw a scam") | Ready |
+| Remote can unlock (owner switch, off by default) | A remote assistant opening your phone uninvited | Command center › Remote › "Remote can unlock": a paired Grok/Dots task may unlock → run → re-lock, audited "Unlocked for Grok: …", island says so. Refused when off, unpaired, kill switch off, flagged/copied text, or money/install/vault goals or steps; sends/posts/calls/deletes still need you | Lock the phone, Grok: "turn on the flashlight" → unlocks, torch on, re-locks | Ready |
 | Unlock ≠ fingerprint | PIN unlock approving payments | Approval and vault keys need a real fingerprint every use | Not demoable | Ready |
 
 ## 11. App changes

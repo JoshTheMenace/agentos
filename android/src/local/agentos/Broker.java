@@ -59,6 +59,8 @@ final class Broker {
         /** asked: the founder's own request via agentd (voice, typed, or a schedule they made). relock: we unlocked the phone for it. */
         volatile boolean asked, relock;
         volatile String origin = "";
+        /** remote: a paired assistant ("Grok") the owner let unlock the phone ("Remote can unlock"). unlockedFor: set once we opened it for that assistant. */
+        volatile String remote, unlockedFor;
         /** The field this task last typed into: its live text is the message a later "Send" tap sends. */
         volatile AccessibilityNodeInfo field;
 
@@ -198,7 +200,9 @@ final class Broker {
             case "app.mod.apply": synchronized (actLock) { return mod(p, uid); }
             case "approval.confirm": return confirm(p, uid);
             case "vault.list": return vault.list();
-            case "vault.fill": synchronized (actLock) { return vault.fill(p, lease); }
+            case "vault.fill":
+                if (lease != null && lease.unlockedFor != null) return ok(false).put("decision", "blocked").put("reason", "no saved passwords while the phone is unlocked for " + lease.unlockedFor);
+                synchronized (actLock) { return vault.fill(p, lease); }
             case "vault.add": // adb only (shell uid 2000) or the owner's native screen (VaultAddActivity, in-process); never agentd or a model tool
                 if (uid != 2000) return ok(false).put("reason", "vault.add only over adb or the Passwords screen, not from " + who(uid));
                 return vault.add(p, "operator over adb");
@@ -283,11 +287,14 @@ final class Broker {
             }
             Lease l = new Lease(goal, apps, expires, Math.min(p.optInt("max_steps", 40), 200), caller, same ? prev.h : new History());
             l.granted = granted; l.asked = asked; l.origin = p.optString("origin");
+            // "Remote can unlock" (founder 10-28, owner switch in agentd's remote.json, default off): a paired assistant's clean task may open
+            // a locked phone like the owner's schedule. Never for a goal about money or installs (those need the fingerprint anyway).
+            if (remote && p.optBoolean("remote_unlock") && !MONEY.matcher(goal).find()) l.remote = Guard.clip(p.optString("remote", "Remote"), 20);
             if (p.optBoolean("tainted")) l.h.flagged = true; // agentd's own guard flagged text in this turn: it can only add taint
             if (same && lease == null) l.h.steps = 0; // a new task after the old one stopped: keep the taint, reset the count
             if (p.optBoolean("untrusted")) l.h.untrusted = true;
             synchronized (this) {
-                if (lease != null) { l.relock = lease.relock; stop(lease.id, "replaced by a new task.start"); }
+                if (lease != null) { l.relock = lease.relock; if (!l.asked) l.unlockedFor = lease.unlockedFor; stop(lease.id, "replaced by a new task.start"); }
                 lease = last = l;
             }
             svc.main.post(svc.autoPause::start);
@@ -483,6 +490,8 @@ final class Broker {
             if (tool.equals("intent") && tier == 3) pol = new Object[]{HUMAN, why}; // a slipped-in link
             if (notificationAction && "MALICIOUS".equals(nr.label) && pol[1] == null) pol = new Object[]{HUMAN, "Prompt Guard flagged this message"};
             if (tool.equals("notifications.autoreply")) pol = new Object[]{HUMAN, "a standing grant needs a person"};
+            if (l != null && l.unlockedFor != null && pol[0] == FINGERPRINT_ONLY) // nobody may be holding the phone: money, installs, vault
+                return finish(log, ok(false), "blocked", "needs the owner's fingerprint, which a remote assistant can't ask for on a phone it unlocked", null);
             @SuppressWarnings("unchecked") List<String> channels = (List<String>) pol[0];
             Approvals.Pending a = approve(tool, pkg, target, text, l, TIER[tier], why, r2, channels, (String) pol[1],
                     Math.max(10, Math.min(120, p.optInt("approval_timeout_s", 60))) * 1000L);
@@ -824,15 +833,17 @@ final class Broker {
     private String awake(Lease l) throws JSONException {
         boolean locked = Wake.locked(svc);
         if (!locked && !Wake.asleep(svc)) return null;
-        String no = l == null || !l.asked ? "phone is locked (only the user's own requests may unlock it)"
+        String no = l == null || !l.asked && l.remote == null ? "phone is locked (only the user's own requests, or a paired assistant you let unlock, may unlock it)"
                 : l.h.flagged ? "phone is locked (a guard flagged text in this task, so it may not unlock)"
                 : l.h.copied ? "phone is locked (this task copied untrusted text, so it may not unlock)" : null;
         if (no != null) return locked ? no : null; // asleep but not locked: act as before
         no = Wake.unlock(svc);
         if (locked) {
             if (no == null) l.relock = true;
-            audit.log(entry("phone.unlock", l).put("goal", l.goal).put("origin", l.origin).put("decision", no == null ? "auto" : "blocked")
-                    .put("reason", no == null ? "unlocked for " + ("schedule".equals(l.origin) ? "the user's scheduled task" : "the user's own " + l.origin + " request") : no));
+            if (no == null && !l.asked) { l.unlockedFor = l.remote; island(l, null); }
+            audit.log(entry("phone.unlock", l).put("goal", l.goal).put("origin", l.origin).put("decision", no == null ? "auto" : "blocked").put("remote", l.asked ? null : l.remote)
+                    .put("reason", no != null ? no : !l.asked ? "Unlocked for " + l.remote + ": " + l.goal.replaceFirst("^From [^:]+: ", "")
+                            : "unlocked for " + ("schedule".equals(l.origin) ? "the user's scheduled task" : "the user's own " + l.origin + " request")));
         }
         return no;
     }
@@ -899,7 +910,7 @@ final class Broker {
     /** The island follows the task: "working", the current step, and the share of max_steps used. */
     private void island(Lease l, String label) {
         if (label != null) step = label;
-        String st = step;
+        String st = l.unlockedFor != null ? "Unlocked for " + l.unlockedFor : step; // the whole run, so anyone looking at the phone knows who opened it
         int pct = Math.min(100, l.h.steps * 100 / Math.max(1, l.maxSteps));
         svc.main.post(() -> { svc.island.goal = l.goal; svc.island.set("working", st, pct); });
     }

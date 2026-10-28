@@ -47,9 +47,10 @@ function update(t, why) {
 
 // Start a task. Returns its view at once; the worker runs in the background.
 // remote: "Grok"/"Dots" (mcp-remote.js); the goal then reads "From Grok: ..." on the lease card, the island, Activity and the audit.
-export function start(goal, { origin = 'voice', heard = Date.now(), remote, deepmodContext } = {}) {
+// unlock: the owner's "Remote can unlock" switch was on, so the broker may open a locked phone for it (it re-checks taint and money).
+export function start(goal, { origin = 'voice', heard = Date.now(), remote, unlock, deepmodContext } = {}) {
   goal = String(goal || '').trim().slice(0, 500);
-  const t = { id: `k${++n}`, goal: remote ? `From ${remote}: ${goal}` : goal, origin, remote, deepmodContext, state: 'queued', step: 'Queued', steps: [], created: Date.now(),
+  const t = { id: `k${++n}`, goal: remote ? `From ${remote}: ${goal}` : goal, origin, remote, unlock: !!(remote && unlock), deepmodContext, state: 'queued', step: 'Queued', steps: [], created: Date.now(),
     timing: { heard_ms: 0 }, session: {}, abort: new AbortController(), heard };
   all.set(t.id, t);
   for (const [id, old] of all) if (DONE.has(old.state) && all.size > 20) all.delete(id); // keep the list short
@@ -83,7 +84,7 @@ function finish(t, state, { result, error } = {}) {
 
 async function run(t) {
   if (t.abort.signal.aborted) return finish(t, 'stopped', { error: t.stopWhy });
-  t.turn = { goal: t.goal, origin: t.origin, deepmodContext: t.deepmodContext, ...(t.remote && { untrusted: true, remote: t.remote }) }; // tools.js keeps the lease on this; the reviewer reads its goal and log
+  t.turn = { goal: t.goal, origin: t.origin, deepmodContext: t.deepmodContext, ...(t.remote && { untrusted: true, remote: t.remote, remoteUnlock: t.unlock }) }; // tools.js keeps the lease on this; the reviewer reads its goal and log
   Object.assign(t, { state: 'running', step: 'Starting' });
   t.timing.start_ms = Date.now() - t.heard;
   update(t, 'running');

@@ -5,7 +5,7 @@
 // the phone), the owner can seal the slot (kill switch) or change the lock (revoke), and every request is labelled "From Grok".
 // REMOTE_MCP=1 (server.js) turns it on. Two doors lead to the same handle(): a local port (127.0.0.1:8790, for cloudflared and
 // tests) and an outbound WebSocket to a public relay (deploy/relay.js), so the phone needs no inbound port.
-// Owner CLI on the phone: node mcp-remote.js status | pair | key <grok|dots> | on | off | reads on|off | unpair <grant> | revoke
+// Owner CLI on the phone: node mcp-remote.js status | pair | key <grok|dots> | on | off | reads on|off | unlock on|off | unpair <grant> | revoke
 // Research, security model and setup: research/REMOTE-MCP.md.
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { chmodSync, mkdirSync, readFileSync, statSync, watchFile, writeFileSync } from 'node:fs';
@@ -25,7 +25,7 @@ const log = (...a) => console.error(new Date().toISOString().slice(11, 23), 'rem
 let st, mtime = -1;
 function load() {
   try { const m = statSync(FILE).mtimeMs; if (m !== mtime) { st = JSON.parse(readFileSync(FILE, 'utf8')); mtime = m; } } catch { st ??= {}; }
-  return Object.assign(st, { enabled: st.enabled ?? true, reads: st.reads ?? true, keys: st.keys || {}, clients: st.clients || {}, tokens: st.tokens || {} });
+  return Object.assign(st, { enabled: st.enabled ?? true, reads: st.reads ?? true, unlock: st.unlock ?? false, keys: st.keys || {}, clients: st.clients || {}, tokens: st.tokens || {} });
 }
 function save() {
   const now = Date.now();
@@ -43,7 +43,7 @@ const grants = () => {
   return Object.values(g);
 };
 // on: REMOTE_MCP=1 in agentd.env; url: what the owner pastes into Grok/ChatGPT; relay: off | connected | reconnecting
-export function status() { load(); return { enabled: st.enabled, reads: st.reads, pairing: !!(st.pair?.exp > Date.now()), paired: grants(), relay: link.state, on: env.REMOTE_MCP === '1', url: env.REMOTE_PUBLIC_URL ? `${env.REMOTE_PUBLIC_URL.replace(/\/$/, '')}/mcp` : null }; }
+export function status() { load(); return { enabled: st.enabled, reads: st.reads, unlock: st.unlock, pairing: !!(st.pair?.exp > Date.now()), paired: grants(), relay: link.state, on: env.REMOTE_MCP === '1', url: env.REMOTE_PUBLIC_URL ? `${env.REMOTE_PUBLIC_URL.replace(/\/$/, '')}/mcp` : null }; }
 
 // Owner actions: only from the phone (this CLI over adb/Termux, or the launcher's owner-checked WebSocket in server.js).
 export function owner(action, arg = {}) {
@@ -58,7 +58,8 @@ export function owner(action, arg = {}) {
     st.keys[sha(key)] = { grant: `g${randomBytes(4).toString('hex')}`, from: label(arg.from), created: Date.now() }; save();
     return { ok: true, key, from: label(arg.from) };
   }
-  if (action === 'enable' || action === 'reads') st[action === 'enable' ? 'enabled' : 'reads'] = arg.on !== false && arg.on !== 'off';
+  // unlock (founder 10-28, default off): a paired assistant's task may open a locked phone like the owner's own schedule (the broker re-checks it)
+  if (['enable', 'reads', 'unlock'].includes(action)) st[action === 'enable' ? 'enabled' : action] = arg.on !== false && arg.on !== 'off';
   else if (action === 'unpair') for (const m of [st.tokens, st.keys]) for (const [h, t] of Object.entries(m)) { if (t.grant === arg.grant) delete m[h]; }
   else if (action === 'revoke') Object.assign(st, { pair: null, keys: {}, clients: {}, tokens: {} }); // change the lock: every assistant must pair again
   else if (action !== 'status') return { ok: false, error: `unknown action ${action}` };
@@ -234,7 +235,7 @@ async function call(name, a, g) {
     if (limited(`run:${g.grant}`, 10, 3600_000)) throw new Error('rate limit: at most 10 tasks an hour');
     const open = [...mine.keys()].filter((id) => { const t = view(id); return t && !DONE.has(t.state); });
     if (open.length >= 2) throw new Error(`2 of your tasks are still running (${open.join(', ')}); wait for them with task_result`);
-    const t = tm.start(request, { origin: 'remote', remote: g.from });
+    const t = tm.start(request, { origin: 'remote', remote: g.from, unlock: st.unlock });
     mine.set(t.id, g.grant);
     log(`${g.from} run_task ${t.id}: ${request.slice(0, 80)}`);
     return { ...out(t), next: `call task_result {"task_id":"${t.id}"}` };
@@ -337,7 +338,7 @@ export async function start(h) {
 // ---------------------------------------------------------------- owner CLI (on the phone)
 if (import.meta.url === `file://${process.argv[1]}`) {
   const [action = 'status', arg] = process.argv.slice(2);
-  const map = { on: ['enable', { on: true }], off: ['enable', { on: false }], reads: ['reads', { on: arg }], key: ['key', { from: arg }], unpair: ['unpair', { grant: arg }] };
+  const map = { on: ['enable', { on: true }], off: ['enable', { on: false }], reads: ['reads', { on: arg }], unlock: ['unlock', { on: arg }], key: ['key', { from: arg }], unpair: ['unpair', { grant: arg }] };
   const [a, p] = map[action] || [action, {}];
   const r = owner(a, p);
   delete r.relay; // the CLI is a separate process: it can't see agentd's relay line

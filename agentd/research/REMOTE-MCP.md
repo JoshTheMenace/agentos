@@ -78,7 +78,9 @@ There's no direct calendar read, because the broker needs a lease for calendar A
     apps, a flagged task asking for more apps, Wi-Fi/Bluetooth/airplane toggles, mods and every outward step still show a card;
   - the Rule of Two `untrusted` lamp is lit;
   - the reviewer may not auto-approve;
-  - the broker won't unlock a locked phone for it;
+  - the broker won't unlock a locked phone for it, unless the owner turned on **Remote can unlock** (off by default; founder 10-28):
+    then a clean paired task unlocks → runs → re-locks ("Unlocked for Grok: …" in the audit and on the island), never for money,
+    installs, vault fills or fingerprint steps;
   - `schedule_task` refuses it (a schedule could later unlock the phone).
 
   Outward actions, money and passwords work exactly as today: the owner's tap, voice or fingerprint.

@@ -117,7 +117,7 @@ const auditLine = (e) => { // one human line per audit entry: what happened, in 
     case 'vault.remove': return ['Removed a saved password', ''];
     case 'notifications.reply': return [code ? 'Stopped a reply with a code from the screen' : bad ? `${tgt} not approved` : `${short(e.target, 20)} · "${short(e.text, 30)}"`, c];
     case 'notifications.autoreply': return [e.text === '(all)' ? 'Auto-reply off' : bad ? `Auto-reply not approved` : `Auto-reply on · "${short(e.text, 30)}"`, c];
-    case 'phone.unlock': return ['Unlocked for your scheduled task · relocks after', 'b'];
+    case 'phone.unlock': return [e.remote ? `${short(e.reason, 44)} · relocks after` : 'Unlocked for your scheduled task · relocks after', 'b'];
     case 'schedule.created': return [`Scheduled · ${short(e.goal, 30)} · ${short(e.target, 22)}`, 'b'];
     case 'schedule.done': return [`Scheduled task done · ${short(e.goal, 36)}`, 'g'];
     case 'schedule.cancelled': return [`Scheduled task cancelled · ${short(e.goal, 30)}`, ''];
@@ -605,7 +605,8 @@ function renderRemote() {
   const orb = state === 'Relay connected' ? 'done' : state === 'Phone offline' ? 'approval' : 'alert';
   const st = el('div', 'mod', `<div class="k">Status</div><div class="rst"><span class="orb ${orb}"></span><div>${state}<span class="s">${esc(!r.on ? 'One step: put REMOTE_MCP=1 in ~/.agentos/agentd.env on the phone and restart agentd' : !r.enabled ? 'Every remote request is refused until you turn it back on' : state === 'Phone offline' ? 'Reconnecting to the relay · assistants get "try again"' : 'Assistants can ask; only you can approve, here on the phone')}</span></div></div>`);
   const sw = (label, sub, on, action) => { const row = el('div', 'rowi', `<div>${label}<span class="s">${sub}</span></div><div class="r"><button class="toggle${on ? ' on' : ''}" aria-label="${on ? 'On' : 'Off'}"></button></div>`); $('button', row).onclick = () => { $('button', row).classList.toggle('on'); remoteAct(action, { on: !on }); }; return row; };
-  st.append(sw('Allow remote assistants', 'Kill switch · off stops their running tasks too', r.enabled, 'enable'), sw('Let them read', 'Latest messages and memory search, codes masked', r.reads, 'reads'));
+  st.append(sw('Allow remote assistants', 'Kill switch · off stops their running tasks too', r.enabled, 'enable'), sw('Let them read', 'Latest messages and memory search, codes masked', r.reads, 'reads'),
+    sw('Remote can unlock', 'Opens a locked phone for their task · re-locks after', r.unlock, 'unlock'));
   const paired = el('div', 'mod', `<div class="k">Paired assistants<span>${n || 'none yet'}</span></div>`);
   paired.append(...r.paired.map((p) => { const row = el('div', 'rowi', `<span class="appic" style="background:var(--${p.from === 'Grok' ? 'purple' : p.from === 'Dots' ? 'green' : 'blue'})">${esc(p.from[0])}</span><div>${esc(p.from)}<span class="s">${esc(p.client || '')} · ${p.used ? 'used ' + ago(p.used).replace(/ \d+s$/, '') + ' ago' : 'never used'}</span></div><div class="r"><button class="tag">Unpair</button></div>`);
     const b = $('button', row); b.onclick = () => { if (b.textContent !== 'Sure?') { hap(); b.textContent = 'Sure?'; b.classList.add('c'); setTimeout(() => { b.textContent = 'Unpair'; b.classList.remove('c'); }, 3000); return; } row.style.opacity = .4; remoteAct('unpair', { grant: p.grant }); }; return row; }));
