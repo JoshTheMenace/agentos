@@ -16,8 +16,9 @@ Boundaries: code-level injection (Frida/LSPosed) only into apps we own (ARCHITEC
 | 5 | Voice/GPT Live latency hill-climb | GPT-6.1 Sol | running |
 | 6 | Reviewer light polish | GPT-6.1 Sol | running |
 | 7 | Bug hunt across demo flows (incl. Duolingo on Home, tap spots +77 px) | Claude Opus | running |
-| 8 | UI polish pass 2 | Claude Fable | queued |
-| 9 | Research: impressive additions that fit existing demo beats | Claude Opus | running |
+| 8 | UI polish pass 2 + "Done · 6.8 s" stopwatch (DEMO-WOW #4) | Claude Fable | running |
+| 9 | Research: impressive additions that fit existing demo beats | Claude Opus | done (agentd/research/DEMO-WOW.md) |
+| 10 | Auto on-device fallback when offline for ask/voice (DEMO-WOW #5) | Claude | queued |
 | S3 | Deep-mod Pigeon proof (cooperative spec, no injection or reboot) | GPT-6 Astra | done (3430c2e; navy/gold + promoted rows removed, vanilla pixel-identical) |
 
 ## Oversight
