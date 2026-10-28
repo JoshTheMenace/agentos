@@ -250,8 +250,8 @@ export async function runTool(name, args, ctx) {
   if (turn.origin === 'deepmod' && name !== 'screen_read') return { success: false, text: 'Pigeon Summarize is read-only: only screen_read is allowed.' };
   if (t.memory) {
     const r = await guardMemory(await memory.call(name, args, { cloud: ctx.provider !== 'local', confirm: memoryConfirm(ctx) }), ctx);
-    ctx.emit({ type: 'tool.result', name, ok: r.ok !== false, reason: r.error, ms: Date.now() - t0 });
-    return { success: true, text: JSON.stringify(r) };
+    ctx.emit({ type: 'tool.result', name, ok: r.ok !== false, reason: r.error, rule_of_two: r.rule_of_two, ms: Date.now() - t0 });
+    return { success: r.ok !== false, text: JSON.stringify(r) };
   }
   if (t.local) {
     const r = await (t.run ? t.run(args, ctx) : t.apps ? microapps.call(name, args, ctx) : t.sched ? schedule.call(name, args, turn) : context.call(name, args));

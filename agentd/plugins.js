@@ -17,6 +17,9 @@ export const CORE = ['task_start', 'screen_read', 'tap', 'type', 'scroll', 'pres
 // route: the pre-selector's words (the user's request only; never screen or notification text, so planted text can't
 // widen the tool set). prompt: the system-prompt lines that only matter when the plugin's tools are visible.
 export const PLUGINS = [
+  { id: 'health', name: 'Samsung Health', on: true, summary: 'Imported watch sleep, heart rate, HRV, stress, steps and exercise; private, read-only.',
+    tools: ['health_summary', 'health_query'], route: /\b(sleep|slept|heart rate|hrv|stress|resting|steps|exercise|workouts?|samsung health|watch|fitness)\b/,
+    prompt: '- Health questions: use health_query for "this week" (Monday through today) and "last week" (previous Monday through Sunday); never replace a calendar week with a rolling 7 days. Use health_summary for a rolling period or an unspecified trend. Missing readings are unknown; never call minimum HR resting HR. These tools read the consented export on this phone.' },
   { id: 'calendar', name: 'Calendar', on: true, summary: 'Find, add, move and delete calendar events directly (no Calendar screen).',
     tools: ['add_event', 'find_events', 'update_event', 'delete_event'],
     route: /\b(calendars?|meetings?|events?|appointments?|agenda|invites?|free|busy|lunch|dinner|breakfast|dentist|doctor)\b/,
