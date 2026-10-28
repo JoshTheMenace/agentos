@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AgentOS · one-page plan</title>
+<style>
+@page { size: Letter; margin: 0; }
+:root{--bg:#050506;--l1:#fff;--l2:rgba(235,235,245,.6);--l3:rgba(235,235,245,.3);--hair:rgba(255,255,255,.09);--blue:#0A84FF;--green:#30D158;--orange:#FF9F0A;--purple:#BF5AF2;--teal:#64D2FF}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--l1);font-family:Inter,-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:8.5in;height:11in;position:relative;overflow:hidden;padding:.42in .45in .38in;background:var(--bg)}
+.blob{position:absolute;border-radius:50%;pointer-events:none}
+.b1{width:420px;height:420px;left:-120px;top:-160px;background:radial-gradient(circle,rgba(70,60,220,.36),rgba(70,60,220,0) 70%)}
+.b2{width:420px;height:420px;right:-160px;top:200px;background:radial-gradient(circle,rgba(40,170,190,.22),rgba(40,170,190,0) 70%)}
+.b3{width:380px;height:380px;left:300px;bottom:-220px;background:radial-gradient(circle,rgba(230,90,150,.2),rgba(230,90,150,0) 70%)}
+.k{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--l3)}
+h1{font-size:24px;font-weight:700;letter-spacing:-.035em;margin:3px 0 0;line-height:1.1}
+h1 em{font-style:normal;color:var(--l2)}
+h2{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--l2);margin:0 0 5px}
+p{font-size:10.4px;line-height:1.45;margin:0 0 7px;color:var(--l1)}
+p b{font-weight:700}
+.muted{color:var(--l2)}
+.glass{background:linear-gradient(160deg,rgba(255,255,255,.11),rgba(255,255,255,.05));border-radius:12px;position:relative;padding:9px 11px}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(160deg,rgba(255,255,255,.26),rgba(255,255,255,.07) 40%,rgba(255,255,255,.03) 70%,rgba(255,255,255,.14));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+table{width:100%;border-collapse:collapse;font-size:9.4px;line-height:1.35}
+th{text-align:left;font-weight:700;color:var(--l2);font-size:7.5px;letter-spacing:.05em;text-transform:uppercase;padding:0 6px 4px 0;border-bottom:1px solid var(--hair)}
+td{vertical-align:top;padding:4px 6px 4px 0;border-bottom:1px solid var(--hair)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;white-space:nowrap}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;align-items:start}
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:9px}
+.num{padding:8px 10px}
+.num .n{font-size:19px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.num .n small{font-size:8.5px;font-weight:600;color:var(--l2);margin-left:2px}
+.num .t{font-size:8.6px;color:var(--l2);margin-top:3px;line-height:1.3}
+.bar{display:flex;height:22px;border-radius:7px;overflow:hidden;gap:2px;margin:6px 0 4px;font-size:8.5px;font-weight:700}
+.bar div{display:flex;align-items:center;justify-content:center}
+.legend{display:flex;gap:2px;font-size:8.2px;color:var(--l2);line-height:1.25}
+.legend b{color:var(--l1);display:block;font-weight:700}
+.foot{position:absolute;left:.45in;right:.45in;bottom:.22in;font-size:8px;color:var(--l3);display:flex;justify-content:space-between}
+.foot b{color:var(--l2)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="k">AgentOS · one-page plan · Nucleus Institute × Startup State open call · Oct 28, 2026 · draft</div>
+  <h1>The Siri we should have. <em>An AI-native phone OS, built security-first.</em></h1>
+  <p style="margin-top:6px"><b>What it is.</b> You say it, agents do it in your real apps. The model proposes; a gate in the OS decides; risky steps wait for a tap or your fingerprint; payments and passwords always need a fingerprint; everything is logged in a hash chain.</p>
+  <p><b>Where it stands.</b> Working on a rooted Moto G 5G (2023), Android 13, our lab phone. <span class="muted">Before this week:</span> an island overlay prototype, SystemUI experiments, Codex running on the phone. <span class="muted">Built Oct 26 to 28, 118 commits:</span> the gate (leases, Rule of Two, on-device Prompt Guard 2, fingerprint-signed approvals, audit chain, per-app kernel firewall); agentd with Codex, Claude or an on-device model; cross-app memory; proactive cards; scheduled tasks on a locked phone; automatic offline fallback; live voice; an AI keyboard; app mods and micro-apps; the launcher.</p>
+  <p><b>Company.</b> Utah-based founder, Utah LLC already formed: eligible now for UTIF microgrants, SBIR/STTR with Nucleus Grow, and the Nucleus Fund. <b>90-day goal.</b> From one rooted lab phone to a shippable build, a 10-person Utah pilot, and an SBIR Phase I proposal ready to submit.</p>
+
+  <div class="nums">
+    <div class="glass num"><div class="n">~30 → ~11 <small>s</small></div><div class="t">median task time this week, real apps · agentd/bench/RESULTS.md</div></div>
+    <div class="glass num"><div class="n">26/30</div><div class="t">real tasks driven by the on-device 0.8B model, was 0/30 · runs/2026-10-27-local-model.md</div></div>
+    <div class="glass num"><div class="n">38/38 · 12/12</div><div class="t">cross-app memory, tuning and held-out · memory/eval/RESULTS.md</div></div>
+    <div class="glass num"><div class="n">7.3 → 3.5 <small>s</small></div><div class="t">keyboard suggestions, typing pause · keyboard/LATENCY.md</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="glass">
+      <h2>Milestones</h2>
+      <table>
+        <tr><th>When</th><th>Milestone</th><th>Done when</th></tr>
+        <tr><td>Days 1–30</td><td>Off root: managed-device (device-owner) gate, plus Android AppFunctions where apps support them. Open threat model and test suite (7 attack types from arXiv 2607.00333, plus our guard and memory evals). SBIR topic with Nucleus Grow; SAM.gov and SBA registrations; UTIF microgrant application.</td><td>Gate, audit and firewall on an unrooted phone. Public repo with results. Topic chosen, filings sent.</td></tr>
+        <tr><td>Days 31–60</td><td>10 Utah pilot users through a target channel such as the Utah Assistive Technology Program (USU) or an independent living center, plain-language consent. Independent red-team review of the gate.</td><td>10 signed consents, phones set up. Written report, fixes merged.</td></tr>
+        <tr><td>Days 61–90</td><td>Run the pilot: task success, approvals per task, attacks blocked, time saved. SBIR Phase I proposal (NSF, NIH/NIA or DoD). Apply to the Utah Office of AI Policy Learning Lab. Results to the Nucleus Fund.</td><td>Pilot report published. Proposal ready for the first open solicitation.</td></tr>
+      </table>
+      <p class="muted" style="font-size:7.8px;margin:6px 0 0">SBIR timing depends on agencies reopening solicitations after the April 2026 reauthorization, so "ready to submit" is the honest day-90 target.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div class="glass">
+        <h2>Use of the $10K</h2>
+        <div class="bar">
+          <div style="flex:25;background:var(--blue)">$2,500</div><div style="flex:30;background:var(--green);color:#052">$3,000</div><div style="flex:25;background:var(--purple)">$2,500</div><div style="flex:10;background:var(--orange);color:#321">$1k</div><div style="flex:10;background:#3A3A3C">$1k</div>
+        </div>
+        <div class="legend">
+          <div style="flex:25;padding-right:5px"><b>Devices</b>6 low-cost Android phones (~$150–250) + 2 Pixels: off root, onto the shippable path</div>
+          <div style="flex:30;padding-right:5px"><b>Utah pilot</b>$150 stipends × 10, assistive-tech specialist time, travel to Logan / Uintah Basin</div>
+          <div style="flex:25;padding-right:5px"><b>Red team</b>independent review against published mobile-agent attacks</div>
+          <div style="flex:10;padding-right:5px"><b>Credits</b>cloud + local models</div>
+          <div style="flex:10"><b>Legal</b>SBIR filings, consent forms</div>
+        </div>
+        <p class="muted" style="font-size:7.8px;margin:6px 0 0">Beyond money: introductions to UATP (USU), DSPD, a university co-PI, and Nucleus Grow.</p>
+      </div>
+      <div class="glass">
+        <h2>People</h2>
+        <table>
+          <tr><td>Founder (Josh)</td><td>Product, security design, reviews every security decision.</td><td class="muted">In place</td></tr>
+          <tr><td>AI coding agents</td><td>Claude Code, Codex, Fable design agents: build, test, research under the founder's review.</td><td class="muted">In place</td></tr>
+          <tr><td>University co-PI</td><td>U of U Kahlert School of Computing or USU IDRPP; required for STTR.</td><td class="muted">Needed, intro</td></tr>
+          <tr><td>AT specialist</td><td>Runs the pilot safely with disabled and older users.</td><td class="muted">Pilot budget</td></tr>
+          <tr><td>Android engineer</td><td>Part-time: managed-device and custom-build paths.</td><td class="muted">After this bounty</td></tr>
+          <tr><td>Security reviewer</td><td>Independent proof of the safety claim.</td><td class="muted">Red-team budget</td></tr>
+        </table>
+      </div>
+      <div class="glass">
+        <h2>Top risks</h2>
+        <table>
+          <tr><td>Root isn't shippable</td><td>Root is the lab. Ship as a managed-device app, a privileged app on a re-locked build, or via AppFunctions.</td></tr>
+          <tr><td>Google or Apple ships it</td><td>Ours is model-agnostic, runs on cheap phones, keeps working offline, and the user or agency owns the rules and the log.</td></tr>
+          <tr><td>Pilot safety</td><td>No send, pay or delete without a person's approval on that exact action. Attack demos use only our own test apps.</td></tr>
+          <tr><td>Provider terms</td><td>Product uses API keys or local models, not personal subscriptions.</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span><b>Sources:</b> every number is from a results file in the repo; per-claim sources in pitch/claims-check.md and pitch/deck/notes.md. Voice latency on the current build is not yet measured. "Target channel" means no agreement signed yet.</span><span>pitch/one-pager.md</span></div>
+</div>
+</body>
+</html>
