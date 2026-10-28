@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // agentd: WebSocket front door (127.0.0.1:8787, bearer token) -> provider router -> phone tools.
+import { execFileSync } from 'node:child_process';
 import { timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -50,6 +51,22 @@ function authorized(req) {
   return b.length === TOKEN.length && timingSafeEqual(b, TOKEN);
 }
 
+// Owner line for memory consent (the launcher's Memory toggles), like the broker's (android/README.md): the kernel's socket
+// table says which uid is on the other end, and only the launcher's may grant or revoke. The token alone isn't enough (the
+// keyboard and the tool server hold it too), and models get no WebSocket; as model tools consent_grant/revoke still need a card.
+const OWNER = 'local.agentos.home', hex = (n) => `:${n.toString(16).toUpperCase().padStart(4, '0')}`;
+let ownerUid;
+function fromOwner(sock) {
+  if (process.platform !== 'android') return false;
+  try {
+    const su = (c) => execFileSync('su', ['-c', c], { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] });
+    ownerUid ??= su(`stat -c %u /data/data/${OWNER}`).trim();
+    const row = su('cat /proc/net/tcp /proc/net/tcp6').split('\n').map((l) => l.trim().split(/\s+/))
+      .find((f) => f[1]?.endsWith(hex(sock.remotePort)) && f[2]?.endsWith(hex(cfg.port))); // the caller's side: its port local, ours remote
+    return !!ownerUid && row?.[7] === ownerUid;
+  } catch { return false; }
+}
+
 const http = createServer((req, res) => {
   if (req.url === '/mcp') return handleMcp(req, res); // phone tools for the Claude Code CLI (per-session secret)
   if (req.url.split('?')[0] === '/memory/graph.json') { // same bearer token as the WebSocket
@@ -65,7 +82,8 @@ const wss = new WebSocketServer({
   handleProtocols: (protos) => [...protos].find((p) => p.startsWith(PROTO)) ?? false,
 });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  let owner; // is this the launcher? (fromOwner, asked once per connection)
   const session = {}; // per-connection conversation state (codex thread, claude history, ...)
   let active = null;  // {provider, abort}
   const send = (m) => ws.readyState === 1 && ws.send(JSON.stringify(m));
@@ -139,6 +157,16 @@ wss.on('connection', (ws) => {
       case 'task.cancel': return taskman.stop(String(msg.id || ''));
       case 'schedule.list': return send({ type: 'schedule.list', items: schedule.list() });
       case 'schedule.cancel': return schedule.cancel(String(msg.id || '')); // the owner's x on the home screen
+      case 'memory.consent': { // {source, action:"grant"|"revoke", scope?}: the launcher's toggle. Revoke deletes the source's data; its connector stops.
+        const reply = (r) => send({ type: 'memory.consent', source: msg.source, action: msg.action, ...r });
+        if (!(owner ??= fromOwner(req.socket))) return reply({ ok: false, error: 'only the owner (launcher) can change memory consent' });
+        if (!['grant', 'revoke'].includes(msg.action)) return reply({ ok: false, error: 'action must be grant or revoke' });
+        const r = await memory.call(`consent_${msg.action}`, { source: String(msg.source), ...(msg.action === 'grant' && msg.scope && { scope: msg.scope }) }, { actor: 'user:owner' });
+        log(`memory consent ${msg.action} ${msg.source} by owner: ${r.ok ? 'ok' : r.error}`);
+        reply(r);
+        if (r.ok && msg.action === 'grant' && connectors.CONNECTORS[msg.source]) setTimeout(() => { try { memsync.now(String(msg.source)); } catch {} }, 50); // re-read it now
+        return;
+      }
       case 'memory.sync': return send({ type: 'memory.sync', results: memsync.now(msg.source && String(msg.source)) }); // on-demand connector run (UI "Sync now")
       default:
         return send({ type: 'error', code: 'unknown_type', message: String(msg.type) });

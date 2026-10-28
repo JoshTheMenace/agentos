@@ -266,7 +266,7 @@ export async function runTool(name, args, ctx) {
           rule_of_two: { untrusted: !!turn.sawScreen, private: null, outward: true } });
       }
       r = await rpc(t.method, params, t.tier === 'read' && name !== 'wait' ? 20_000 : ACT_MS);
-      if (t.tier !== 'read') turn.acted = true;
+      if (t.tier !== 'read') { turn.acted = true; memory.noteApi(t.method, params, r); } // calendar/alarm writes reach memory now, not at the next sync
     }
     if (t.method === 'screen.read') r = await guardScreen(r, ctx);
     else if (t.method === 'notifications.list') r = await context.guardList(r, ctx);
