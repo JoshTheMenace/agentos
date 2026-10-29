@@ -25,25 +25,30 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.json.JSONObject;
 
 /**
  * A micro-app the agent built (agentd apps.js): one HTML file, run full screen in its own WebView. Think of a sealed room with
  * one light switch: the page gets its own origin (https://<id>.agentos.app), a strict CSP, no network (the WebView blocks loads
  * and every request is answered from here: the app's file, /ui.css, /ui.js, the font), no Native bridge, no file or content
- * access. The only way out is AgentOSApp: summary(text) for the home widget, haptic(kind), close(). Storage is the origin's own
- * localStorage, so apps can't read each other's data. The file comes from agentd (GET /apps/<id>/index.html, bearer token) and
- * is cached in files/apps/, so an app still opens when agentd is down. Generated code is untrusted.
+ * access. The only way out is AgentOSApp: summary(text) for the home widget, haptic(kind), close(), and call(id, cap, args) for
+ * the capabilities the owner granted at install (agentd sends the granted list in the x-agentos-uses header with the file; the
+ * bridge refuses anything else before it reaches agentd, and agentd checks again). Each call is a POST to agentd, answered as
+ * data through AOS._r(id, json). Storage is the origin's own localStorage, so apps can't read each other's data. The file comes
+ * from agentd (GET /apps/<id>/index.html, bearer token) and is cached in files/apps/ with its grants, so an app still opens when
+ * agentd is down. Generated code is untrusted.
  */
 public class MicroApp extends Activity {
   static final String TAG = "AgentOSApp", PREFS = "microapps", AGENTD = "http://127.0.0.1:8787";
   static final String CSP = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:; "
       + "connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
-  WebView web; String id, origin; byte[] page;
+  WebView web; String id, origin, granted = ""; byte[] page;
 
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
@@ -76,17 +81,20 @@ public class MicroApp extends Activity {
   /** Fetch the app's file from agentd (fresh after an edit), fall back to the cached copy, then load its origin. */
   void load() {
     new Thread(() -> {
-      File cache = new File(getFilesDir(), "apps/" + id + ".html");
-      byte[] p = null;
+      File cache = new File(getFilesDir(), "apps/" + id + ".html"), uses = new File(getFilesDir(), "apps/" + id + ".uses");
+      byte[] p = null; String g = null;
       try {
         String tok = Home.readFile(this, "agentd.token");
         HttpURLConnection h = (HttpURLConnection) new URL(AGENTD + "/apps/" + id + "/index.html").openConnection();
         h.setConnectTimeout(2000); h.setReadTimeout(5000); h.setRequestProperty("Authorization", "Bearer " + tok);
         if (h.getResponseCode() == 200) {
           try (InputStream in = h.getInputStream()) { ByteArrayOutputStream o = new ByteArrayOutputStream(); byte[] buf = new byte[8192]; int n; while ((n = in.read(buf)) > 0) o.write(buf, 0, n); p = o.toByteArray(); }
-          cache.getParentFile().mkdirs(); Files.write(cache.toPath(), p);
+          g = h.getHeaderField("x-agentos-uses"); if (g == null) g = "";
+          cache.getParentFile().mkdirs(); Files.write(cache.toPath(), p); Files.write(uses.toPath(), g.getBytes(StandardCharsets.UTF_8));
         }
       } catch (Exception e) { Log.w(TAG, "fetch " + id + ": " + e); }
+      if (g == null) try { g = new String(Files.readAllBytes(uses.toPath()), StandardCharsets.UTF_8); } catch (Exception e) { g = ""; }
+      granted = g.trim();
       if (p == null) try { p = Files.readAllBytes(cache.toPath()); } catch (Exception e) { p = "<!doctype html><body style=\"background:#000;color:#aaa;font-family:sans-serif;padding:40px;text-align:center\">This app isn't available right now.</body>".getBytes(StandardCharsets.UTF_8); }
       page = p;
       Matcher m = Pattern.compile("<title>([^<]*)</title>").matcher(new String(p, StandardCharsets.UTF_8));
@@ -111,8 +119,26 @@ public class MicroApp extends Activity {
     }
   }
 
-  /** The whole bridge. Nothing here reads anything; the app id is fixed by this activity, not by the page. */
+  /** The whole bridge. The app id is fixed by this activity, not by the page; call() only forwards granted capabilities. */
   class Bridge {
+    @JavascriptInterface public String uses() { return granted; }
+    @JavascriptInterface public void call(String cid, String cap, String args) {
+      if (cid == null || !cid.matches("[a-z0-9]{1,24}") || cap == null) return;
+      if (!Arrays.asList(granted.split("\\s*,\\s*")).contains(cap)) { reply(cid, "{\"ok\":false,\"error\":" + JSONObject.quote(cap + " was not granted by the owner") + "}"); return; }
+      new Thread(() -> {
+        String out;
+        try {
+          JSONObject body = new JSONObject().put("cap", cap).put("args", new JSONObject(args == null || args.isEmpty() ? "{}" : args));
+          HttpURLConnection h = (HttpURLConnection) new URL(AGENTD + "/apps/" + id + "/cap").openConnection();
+          h.setConnectTimeout(3000); h.setReadTimeout(60000); h.setDoOutput(true); h.setRequestMethod("POST");
+          h.setRequestProperty("Authorization", "Bearer " + Home.readFile(MicroApp.this, "agentd.token")); h.setRequestProperty("Content-Type", "application/json");
+          h.getOutputStream().write(body.toString().getBytes(StandardCharsets.UTF_8));
+          try (InputStream in = h.getResponseCode() == 200 ? h.getInputStream() : h.getErrorStream()) { ByteArrayOutputStream o = new ByteArrayOutputStream(); byte[] buf = new byte[8192]; int n; while (in != null && (n = in.read(buf)) > 0) o.write(buf, 0, n); out = o.size() > 0 ? o.toString("UTF-8") : "{\"ok\":false,\"error\":\"agentd " + h.getResponseCode() + "\"}"; }
+        } catch (Exception e) { out = "{\"ok\":false,\"error\":" + JSONObject.quote(String.valueOf(e.getMessage())) + "}"; }
+        reply(cid, out);
+      }, "cap-" + id).start();
+    }
+    void reply(String cid, String json) { runOnUiThread(() -> web.evaluateJavascript("window.AOS&&AOS._r(" + JSONObject.quote(cid) + "," + JSONObject.quote(json) + ")", null)); }
     @JavascriptInterface public void summary(String t) { getSharedPreferences(PREFS, 0).edit().putString(id, t == null ? "" : t.substring(0, Math.min(80, t.length()))).apply(); }
     @JavascriptInterface public void haptic(String kind) {
       Vibrator v = (Vibrator) getSystemService(VIBRATOR_SERVICE);

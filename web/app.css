@@ -241,6 +241,14 @@ body{position:fixed;inset:0}
 
 /* my apps: micro-apps the agent built (agentd apps.js), each a small widget card: emoji, name, the live one-line summary the app leaves. Tap opens it full screen (MicroApp); hold shows Remove. */
 #myapps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.consent{grid-column:1/-1;padding:12px 14px;text-align:left}
+.consent .hd{display:flex;align-items:center;gap:10px}
+.consent .emo{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:21px;flex:none}
+.consent .t{font-size:14px;font-weight:600}.consent .s{color:var(--l2);font-size:11.5px;margin-top:1px}
+.consent ul{list-style:none;margin:10px 0 12px;display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--l1)}
+.consent li::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);margin:0 10px 2px 2px}
+.consent .acts{display:flex;gap:8px;justify-content:flex-end}
+.consent .pillbtn.on{background:var(--blue);color:#fff}
 #myapps:empty{display:none}
 .ma{display:flex;align-items:center;gap:10px;padding:11px 12px;text-align:left;min-width:0;width:100%;animation:rise .6s var(--soft) both;transition:transform .25s var(--spring)}
 .ma:active{transform:scale(.97)}

@@ -294,10 +294,19 @@ function appCard(a) {
   const live = S.summ[a.id], b = el('button', 'glass ma' + (a.id === S.fresh ? ' new' : ''), `<span class="emo">${esc(a.icon || '✨')}</span><div><div class="t">${esc(a.name)}</div><div class="s${live ? ' live' : ''}">${esc(live || a.description || '')}</div></div><span class="rm" hidden>Remove</span>`);
   b.dataset.id = a.id; return b;
 }
+// An app that declared capabilities (<meta name="agentos-uses">) asks once, here, before it may use them: Allow = apps.grant with
+// the list, Not now = apps.grant with []. The MicroApp bridge only forwards what was granted; agentd checks the manifest again.
+const CAPS = { 'calendar.read': ['cal', 'Read your calendar'], 'health.read': ['spark', 'Read your watch health data'], 'energy.read': ['spark', 'See energy prices'], ai: ['spark', 'Ask AI for text (no tools)'], notify: ['bell', 'Send you reminders'] };
+function askCard(a) {
+  const c = el('div', 'glass consent rise', `<div class="hd"><span class="emo">${esc(a.icon || '✨')}</span><div><div class="t">${esc(a.name)} would like to</div><div class="s">Read only · nothing leaves the phone</div></div></div>
+    <ul>${a.uses.map((u) => `<li>${esc(CAPS[u]?.[1] || u)}</li>`).join('')}</ul><div class="acts"><button class="pillbtn" data-a="skip">Not now</button><button class="pillbtn on" data-a="allow">Allow</button></div>`);
+  c.onclick = (e) => { const b = e.target.closest('[data-a]'); if (!b) return; hap(b.dataset.a === 'allow' ? 'heavy' : 'tick'); c.style.opacity = .4; send({ type: 'apps.grant', id: a.id, uses: b.dataset.a === 'allow' ? a.uses : [] }); };
+  return c;
+}
 function renderMyApps() {
   const n = S.myapps.length; // Home shows the 4 most recent (two rows fit above the ask bar; a swipe up here opens the drawer, which has them all)
   $('#myK').innerHTML = n ? `My apps${n > 4 ? `<span class="more">${n - 4} more in the drawer</span>` : ''}` : '';
-  swap($('#myapps'), ...S.myapps.slice(0, 4).map(appCard));
+  swap($('#myapps'), ...S.myapps.filter((a) => a.uses?.length && !a.asked).map(askCard), ...S.myapps.slice(0, 4).map(appCard));
   $('#mygrid').replaceChildren(...S.myapps.map((a) => { const b = el('button', 'app'); b.innerHTML = `<i class="ico"><span class="emo">${esc(a.icon || '✨')}</span></i><span>${esc(a.name)}</span>`; b.onclick = () => { hap(); N.openApp(a.id); setTimeout(() => close('drawer'), 250); }; return b; }));
 }
 { const box = $('#myapps'); let hold = null; // tap opens; hold 600 ms arms Remove (3 s), a tap on it removes (owner only, agentd apps.remove)
@@ -334,7 +343,8 @@ addEventListener('resize', () => { W = innerWidth; go(page); });
 // ---------- overlays ----------
 const stack = [];
 function open(id) { const o = $('#' + id); if (o.classList.contains('on')) return; o.classList.add('on'); stack.push(id); if (id === 'sheet') { $('#scrim').classList.add('on'); sheetEmpty(); } hap('tick'); }
-function close(id) { const o = $('#' + id); o.classList.remove('on'); const i = stack.indexOf(id); if (i >= 0) stack.splice(i, 1); if (id === 'sheet') { $('#scrim').classList.remove('on'); $('#askIn').blur(); } if (id === 'voice') voiceStop(); }
+function close(id) { const o = $('#' + id); o.classList.remove('on'); const i = stack.indexOf(id); if (i >= 0) stack.splice(i, 1); if (id === 'sheet') { $('#scrim').classList.remove('on'); $('#askIn').blur(); if (!S.turn && !S.home) setTimeout(sheetReset, 600); } if (id === 'voice') voiceStop(); }
+function sheetReset() { if (S.turn || $('#sheet').classList.contains('on')) return; body.replaceChildren(); aiMsg = null; dots = null; steps = {}; setSheet('Ask', ''); } // a new conversation gets a clean sheet; agentd keeps the context
 app.back = () => { if (stack.length) close(stack[stack.length - 1]); else if (page) go(0); };
 app.home = () => { [...stack].forEach(close); go(0); };
 app.resume = () => { W = innerWidth; if (wsOk) { refresh(); send({ type: 'task.list' }); loadMyApps(); } if (page === 2) loadMemory(); if ($('#vault').classList.contains('on')) loadVault(); };
@@ -714,7 +724,7 @@ on('guard.alert', (m) => { body.append(el('div', 'step alert', `<svg width="14" 
 on('error', (m) => { if (m.code === 'unknown_type') { if (m.message === 'task.start' && S.goal) { open('sheet'); sendUser(S.goal); } return; }
   if (m.retryable && m.code !== 'turn_failed') return setSheet('Reconnecting…', 'working'); // codex/agentd retries: one calm state, not a line per attempt
   body.append(el('div', 'msg err', esc(/proxy|websocket|network|connect|dns|stream|exited|timed? ?out/i.test(m.message) ? 'Couldn’t reach the AI. Check the connection and try again.' : short(m.message, 160)))); scrollDown(); }); // older agentd: run the suggestion as a plain ask
-on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done', m.ms); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); } }, 20000); } live(); const q = S.queue.shift(); if (q) sendUser(...q); });
+on('turn.done', (m) => { S.turn = false; S.pending = null; S.step = null; steps = {}; setSheet(m.status === 'completed' || m.status === 'done' ? 'Done' : { failed: 'Didn’t finish', interrupted: 'Stopped' }[m.status] || 'Done', 'done', m.ms); if (S.home) { S.home.done = true; setTimeout(() => { if (S.home?.done) { S.home = null; renderNow(); sheetReset(); } }, 20000); } live(); const q = S.queue.shift(); if (q) sendUser(...q); });
 on('ws.open', () => { refresh(); loadAccess(); loadTrackers(); loadMemory(); loadMyApps(); send({ type: 'suggestions.watch' }); send({ type: 'task.list' }); send({ type: 'schedule.list' }); send({ type: 'plugins.list' }); send({ type: 'remote', action: 'status' }); }); on('ws.close', () => { S.turn = false; S.queue.length = 0; S.active = null; S.sugg = []; renderSugg(); for (const id in pend) app.rpcDone(id, { ok: false, error: 'offline' }); live(); });
 
 // ---------- wake word (launcher Wake.java): a toggle in the command center, a small mic on the home status line ----------

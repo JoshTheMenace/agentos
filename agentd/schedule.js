@@ -75,6 +75,7 @@ export function check(now = Date.now()) {
   if (!due.length) return;
   for (const x of due) {
     if (now - x.next > LATE_MS) { log(`schedule ${x.id} missed (${when(x.next)})`); audit('missed', x); }
+    else if (x.notify) { log(`schedule ${x.id} reminder: ${x.prompt}`); audit('done', x, { text: x.text }); } // an app's reminder: a notification, no model, no task
     else if (x.plan && planner) { log(`schedule ${x.id} re-plan: ${x.plan}`); planner(x).catch((e) => log('re-plan failed', e.message)); } // home.js: code, no model
     else { log(`schedule ${x.id} due: ${x.prompt}`); const t = io.start(x.prompt, { origin: 'schedule' }); fired.set(t.id, x); }
     if (x.repeat === 'none') items = items.filter((y) => y !== x);
@@ -109,6 +110,14 @@ export async function call(name, args, turn = {}) {
 }
 
 export const cancel = (id) => call('cancel_scheduled', { which: id });
+// A micro-app's reminder (apps.js AOS.notify): notification only at `at`, never a task. by = "app:<id>"; at most `max` pending per app.
+export function remind({ title, text, at, by, max = 5 }) {
+  if (items.filter((i) => i.by === by).length >= max) return { ok: false, error: `at most ${max} pending reminders per app` };
+  const x = { id: `s${Date.now().toString(36)}n`, prompt: String(title).slice(0, 60), text: String(text).slice(0, 200), repeat: 'none', next: at, created: Date.now(), by, notify: true };
+  items.push(x); items.sort((a, b) => a.next - b.next); audit('created', x); save(); arm();
+  return { ok: true, id: x.id, at };
+}
+export function cancelBy(by) { const n = items.length; items = items.filter((i) => i.by !== by); if (items.length !== n) { save(); arm(); } return n - items.length; }
 
 // Daily checks (home.js home_daily): a daily item with `plan` is re-planned by code when due (planner), and owns at most one
 // one-shot reminder (parent = its id) that rebook() replaces. Only the user's own home_daily call creates one.

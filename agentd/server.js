@@ -21,6 +21,7 @@ import * as catchup from './catchup.js';
 import * as taskman from './tasks.js';
 import * as schedule from './schedule.js';
 import * as apps from './apps.js';
+import * as grid from './grid.js';
 import { Voice, eyes, logImage } from './voice.js';
 import * as remote from './mcp-remote.js';
 import * as imagegen from './imagegen.js';
@@ -48,7 +49,7 @@ events.watch(); // broker approvals/guard/task events -> every connected UI
 events.onEvent((e) => e.type === 'plugins.changed' && plugins.invalidate()); // the owner flipped a plugin: re-read it now
 schedule.init({ start: taskman.start, onUpdate: taskman.onUpdate, rpc, onEvent: events.onEvent, publish: events.publish, flagged: events.flagged }); // scheduled tasks
 if (process.env.PROACTIVE === '1') proactive.init({ codex, rpc, publish: events.publish, onEvent: events.onEvent, schedule }); // nudges + Promises (proactive.js)
-apps.init(codex, { publish: events.publish }); // micro-apps (apps.js): build_app writes ~/.agentos/apps, served below at GET /apps
+apps.init(codex, { publish: events.publish, rpc, lease, endTurn, memory, grid, schedule }); // micro-apps (apps.js): build_app writes ~/.agentos/apps, served below at GET /apps; granted capabilities run here
 context.start(providers[cfg.provider], codex); // notification feed -> context block, memory, reply rules
 const memsync = connectors.start({ log }); // memory connectors: default grants, then whatever is due once a minute (see memory/SOURCES.md)
 const suggestFacts = createSuggestFacts({ db: memsync.db, rpc, calendar: calendarSnapshot(memsync.db) });
@@ -104,9 +105,14 @@ const http = createServer((req, res) => {
   }
   if (req.url.startsWith('/apps')) { // the launcher's micro-apps: the list, and each app's file (loaded into its own sandboxed WebView)
     if (!authorized(req)) return res.writeHead(401).end();
-    const m = req.url.match(/^\/apps\/([a-z0-9-]{1,32})\/index\.html$/);
-    if (m) { try { return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(apps.html(m[1])); } catch { return res.writeHead(404).end(); } }
-    if (req.url === '/apps') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ apps: apps.list().map(({ id, name, icon, description, updated }) => ({ id, name, icon, description, updated })) }));
+    const m = req.url.match(/^\/apps\/([a-z0-9-]{1,32})\/(index\.html|cap)$/);
+    if (m && m[2] === 'cap' && req.method === 'POST') { // a granted capability call from the app's bridge: {cap, args} -> JSON (apps.js checks the grant again)
+      let body = ''; req.on('data', (d) => { body += d; if (body.length > 64 << 10) req.destroy(); });
+      return req.on('end', async () => { let r; try { const b = JSON.parse(body || '{}'); r = await apps.cap(m[1], String(b.cap || ''), b.args || {}); } catch (e) { r = { ok: false, error: e.message }; }
+        res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(r)); });
+    }
+    if (m) { try { return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'x-agentos-uses': (apps.manifest(m[1])?.granted || []).join(',') }).end(apps.html(m[1])); } catch { return res.writeHead(404).end(); } }
+    if (req.url === '/apps') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ apps: apps.list().map(apps.view) }));
     return res.writeHead(404).end();
   }
   if (req.url.split(/[?#]/)[0] === '/voice') return res.writeHead(200, { 'content-type': 'text/html' }).end(readFileSync(VOICE_PAGE)); // no secrets in it
@@ -264,6 +270,10 @@ wss.on('connection', (ws, req) => {
       case 'apps.remove': { // the owner's long-press on a home-screen app (launcher only); a model removes apps through remove_app
         if (!(owner ??= fromOwner(req.socket))) return send({ type: 'error', code: 'owner', message: 'only the launcher can remove apps' });
         return apps.call('remove_app', { app: String(msg.id || '') }, { emit() {} });
+      }
+      case 'apps.grant': { // the owner's answer to an app's install card: {id, uses:[...]} (an empty list = skip; the app runs without them)
+        if (!(owner ??= fromOwner(req.socket))) return send({ type: 'error', code: 'owner', message: 'only the launcher can grant app capabilities' });
+        return apps.grant(String(msg.id || ''), Array.isArray(msg.uses) ? msg.uses.map(String) : []);
       }
       case 'memory.about': case 'memory.identity': case 'memory.identity.confirm': case 'memory.correct': { // the launcher's "What I know" screen
         // (web/app.js): facts with their source, one-tap fix/forget, linked cards per person, "same person?" cards. Owner only, reads

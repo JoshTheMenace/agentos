@@ -1,7 +1,11 @@
 // Micro-apps: "I want to track my workouts" -> one self-contained HTML file written by a model, kept in ~/.agentos/apps/<id>/,
-// shown on the home screen and run full screen by the launcher's MicroApp WebView (own origin per app, no network, a
-// 3-method bridge). Analogy: a 3D printer for little tools. The model only designs the file; the launcher's sandbox decides
-// what the file may touch (nothing but its own storage). agentd serves the files over GET /apps (bearer token).
+// shown on the home screen and run full screen by the launcher's MicroApp WebView (own origin per app, no network, a small
+// bridge). Analogy: a 3D printer for little tools. The model only designs the file; the launcher's sandbox decides what the
+// file may touch: its own storage, plus the capabilities the owner granted at install (<meta name="agentos-uses">: read-only
+// calendar / watch health / energy prices, a small tool-less model call, reminders). agentd serves the files over GET /apps
+// (bearer token) and runs the granted capability calls (POST /apps/<id>/cap) with its own read tools.
+// Built in two steps: a short private spec (who, features, screens, data), then the code from that spec; a syntax error gets
+// one repair turn, and a broken file never replaces a working app.
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -10,75 +14,119 @@ import { cfg, log } from './config.js';
 const DIR = join(process.env.AGENTOS_HOME || join(homedir(), '.agentos'), 'apps');
 const S = { type: 'string' }, obj = (props, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 export const tools = [
-  { name: 'build_app', tier: 'act', description: 'Build a small custom app for the user and put it on their home screen: trackers (workouts, water, habits, plants, '
-    + 'mood), counters, logs, checklists, timers, dice rollers, calculators, scoreboards... Pass the request in the user\'s words plus what they implied; the app is '
-    + 'designed and written for them (about half a minute, no questions: pick sensible defaults). To change an app that exists ("add a rest timer to my workout app"), '
-    + 'pass update = its name; its current code is updated in place. Returns {id, name}. Then tell the user it is on their home screen.',
-    schema: obj({ request: { ...S, description: 'what the app should do, in the user\'s words' }, update: { ...S, description: 'name or id of an existing app to change' } }, ['request']) },
-  { name: 'list_my_apps', tier: 'read', description: 'The custom apps built for the user: {apps:[{id, name, description}]}.', schema: obj({}) },
+  { name: 'build_app', tier: 'act', description: 'Build a real custom app for the user and put it on their home screen: multi-screen, with its own data, stats, charts, '
+    + 'streaks, timers, search, reminders. Examples: a sleep coach from their watch data, a Spanish flashcard app that writes its own cards (AI), a coffee tracker with a '
+    + 'daily limit, a workout log with a rest timer, a budget with a donut chart, a meal planner, a reading log, a study timer, a plant-care calendar, a mood journal with '
+    + 'a heatmap, a chores board, a bedtime reminder from their calendar. Apps may read the calendar, Galaxy Watch health data (sleep, heart, steps) and energy prices, '
+    + 'ask a small AI for text, and schedule phone notifications; the owner approves that list once at install. Nothing else (no network, messaging, purchases). Pass the '
+    + 'request in the user\'s words plus what they implied and suggest richer features (about a minute, no questions: pick sensible defaults). To change an app that exists '
+    + '("add a rest timer to my workout app"), pass update = its name; its current code is updated in place. Returns {id, name}. Then tell the user it is on their home screen.',
+    schema: obj({ request: { ...S, description: 'what the app should do, in the user\'s words, plus implied features' }, update: { ...S, description: 'name or id of an existing app to change' } }, ['request']) },
+  { name: 'list_my_apps', tier: 'read', description: 'The custom apps built for the user: {apps:[{id, name, description, uses}]}.', schema: obj({}) },
   { name: 'remove_app', tier: 'act', description: 'Remove one of the user\'s custom apps by name or id (only when they ask).', schema: obj({ app: S }, ['app']) },
 ];
 
-// The generator's whole brief: what a micro-app is, the runtime it may use (web/apps/ui.css + ui.js), and the look.
-export const GEN = `You write one self-contained micro-app for AgentOS, an AI-native phone OS with a calm dark iOS-like design. The user asked for it in one sentence; you build the whole thing, no questions.
-Output ONLY the complete HTML file. No code fences, no commentary before or after.
+// Capabilities an app may declare; the owner sees these labels once at install and grants or skips them.
+export const CAPS = { 'calendar.read': 'Calendar (read only)', 'health.read': 'Watch health data (read only)', 'energy.read': 'Energy prices', ai: 'AI text answers', notify: 'Reminders (notifications)' };
+const THEMES = ['ember', 'ocean', 'forest', 'grape', 'rose', 'gold', 'mint', 'sky', 'coffee', 'night'];
+
+// Step 1: the designer's brief. A short spec the code step builds from (never shown to the user).
+export const SPEC = `You are the product designer for AgentOS micro-apps: small self-contained phone apps, each one HTML file, run in a sandbox on the user's phone (no server, no network). From the user's request write a short build spec for the engineer. Plain text under 35 lines, no code, no markdown headings. Think like a great indie app designer: useful, specific, a little delightful, never generic.
+Name: 2-3 words.  Icon: one emoji.  Theme: one of ${THEMES.join('|')} (match the subject and mood).
+For: who opens this and in what moment (one line).
+Features: the 3-5 core features as "- feature: how it works". Real, specific features that make the app genuinely useful: search/filter, edit + undo, history with a detail page, stats (averages, streaks, best), a timer with sound, reminders, a calendar heatmap, categories/tags, goals and limits with gentle nudges, drag to reorder, flashcard review with spaced repetition, a plan generated by AI, data from the watch or calendar... Only what fits the request.
+Layout: the screens and how they connect: "bottom nav: Today | History | Stats" or "one screen + sheets for add/edit" or "list → detail page". For each screen: what it shows first and which components (big number, ring, donut, heatmap, line chart, bar chart, timeline list, flip cards, timer dial, stepper, segmented control). Pick the layout the job needs; do not default to a big number on top of a tinted card.
+Data: the state object with its fields (and ids), the derived numbers, and what is seeded on first run: sensible defaults the user can edit, and for content apps (flashcards, recipes, quotes, workouts, checklists) a useful starter set of 8-12 real items so the first screen is alive (AI or the user adds more later). Never seed fake history or fake measurements.
+Capabilities: which of calendar.read, health.read, energy.read, ai, notify the app truly needs, each with its purpose (usually none or one or two; "none" otherwise).
+First run: what the first screen shows before any data (it must not be mostly empty: the app's shape, starter content, the goal with 0 progress, a preview of what will appear) and the first tap.`;
+
+// Step 2: the engineer's brief: what a micro-app is, the runtime it may use (web/apps/ui.css + ui.js), and the look.
+export const GEN = `You write one self-contained micro-app for AgentOS, an AI-native phone OS with a calm dark iOS-like design. You get the user's request and a spec; build the whole thing, no questions. Output ONLY the complete HTML file. No code fences, no commentary before or after.
 
 # File shape
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Name</title>                                  (2-3 words, e.g. "Workout Tracker", "Water", "Plant Care")
-<meta name="agentos-icon" content="🏋️">            (exactly one emoji, shown as the app icon)
+<title>Name</title>                                  (2-3 words)
+<meta name="agentos-icon" content="🏋️">            (exactly one emoji, the app icon)
 <meta name="description" content="one short line">
-<link rel="stylesheet" href="/ui.css"><style>/* at most ~20 lines of your own CSS, only if needed */</style></head>
-<body class="acc-blue">...markup...<script src="/ui.js"></script><script>/* your code */</script></body></html>
+<meta name="agentos-uses" content="health.read, notify">   (only the capabilities the spec needs, comma separated; omit the tag if none)
+<link rel="stylesheet" href="/ui.css"><style>/* up to ~40 lines of your own CSS for this app's special pieces */</style></head>
+<body class="t-ocean">...markup...<script src="/ui.js"></script><script>/* your code */</script></body></html>
 
-# Runtime (already there; do not reimplement)
-- Storage: AOS.load(key, default) / AOS.save(key, value) — JSON, persists forever, private to this app. Keep one state object (e.g. {entries:[...]}), save after every change.
-- Home widget: AOS.summary("3 workouts this week") — one short line shown under the app on the home screen. Call it on load and after every change, always with a real number/status.
-- AOS.haptic() on every tap that changes data. AOS.toast("Logged") for confirmation. Never alert/prompt/confirm (they do nothing here): use inline inputs, and a two-tap "Sure?" for deletes.
-- AOS.dayKey(date) -> "YYYY-MM-DD" local; AOS.lastDays(7) -> Date[]; AOS.dayName(d) -> "Mo"; AOS.esc(s) escapes text for innerHTML.
-- Charts: AOS.bars(svgOrDiv, [values], [labels], {unit}) draws a bar chart (last bar highlighted); AOS.ring(el, 0..1) draws a progress ring around el's children.
+# Runtime (window.AOS, already there; use it, do not reimplement)
+Storage: AOS.load(key, default) / AOS.save(key, value): JSON, persists, private to this app. One state object (e.g. {entries:[], settings:{}}), save after every change.
+Home widget: AOS.summary("3 workouts this week"): one short line under the icon on the home screen. Call on load and after every change, always with a real number/status.
+Feedback: AOS.haptic() on data-changing taps ('tick' light, 'heavy' strong); AOS.toast("Logged"); AOS.undo("Deleted", () => restore()) shows Undo for 4 s. Never alert/prompt/confirm (they do nothing): use AOS.sheet for forms and a two-tap "Sure?" or AOS.undo for deletes.
+Helpers: AOS.esc(text) for innerHTML, AOS.el(html) -> element, AOS.uid(), AOS.dayKey(date) "YYYY-MM-DD" local, AOS.lastDays(n) -> Date[], AOS.dayName(d) "Mo", AOS.clock(sec) "2:05", AOS.time(ts) "3:35 PM", AOS.ago(ts) "2 h ago".
+Navigation: views are <div class="view on" data-view="home"> siblings; <nav class="nav"><button data-view="home" class="on"><i>🏠</i>Home</button>…</nav> (2-4 tabs, emoji icon in <i>) switches them by itself; AOS.view("stats") from code; any element with data-goto="detail" also navigates (add data-back for the reverse slide). Detail pages: <div class="topbar"><button class="back" data-goto="home" data-back>‹</button><h2>Title</h2></div>.
+Sheets: const sh = AOS.sheet(\`<h2>New entry</h2>...inputs and buttons...\`) returns the panel (bind with sh.querySelector); AOS.sheet.close(). Use for add/edit forms and pickers.
+Lists: AOS.swipe(listEl, (id, row) => …) makes rows <div class="item swipe" data-id="…"><div class="sw">…content…</div><div class="del">Delete</div></div> swipe-to-delete.
+Inputs: AOS.stepper(el, {value, min, max, step, unit, onChange}); AOS.slider(inputRange, onChange) for <input type="range" class="slider">; .seg>button(.on) segmented control; .search > input for search/filter.
+Charts (into any element or <svg class="chart">): AOS.bars(el, values, labels, {unit}); AOS.line(el, values, labels, {area:true, unit, min, max}); AOS.donut(el, [{v, label, color?}], {center:"68%", sub:"of goal"}); AOS.heatmap(el, {"YYYY-MM-DD": n}, {weeks:16}); AOS.ring(el, 0..1) draws a progress ring around el's children.
+Timer: const t = AOS.timer(seconds, (left) => el.textContent = AOS.clock(left), () => done()); t.pause()/t.resume()/t.stop(); it chimes and vibrates at zero. AOS.beep() alone for a chime.
+Empty states: AOS.empty(el, "🌱", "No plants yet", "Tap + to add your first").
+Capabilities (only those declared in agentos-uses; the owner grants them at install; each returns a Promise of {ok, ...} or {ok:false, error}, so always handle !ok with a friendly inline note, never a blank screen):
+- AOS.calendar(days) -> {ok, events:[{title, start:"YYYY-MM-DDTHH:MM", end, all_day, location}]} (next N days).
+- AOS.health(metric, days) -> {ok, rows:[...]} for metric sleep|heart_rate|steps|exercise|hrv|stress from the Galaxy Watch, one row per day (sleep/exercise: per session, ordered by day). Rows: sleep {day:"YYYY-MM-DD" (wake date), start, end (ms epoch), duration_minutes, asleep_minutes, stages:{deep, light, rem, awake} minutes, efficiency, score}; heart_rate {day, resting, avg, max}; steps {day, steps}; exercise {day, start, end, duration_minutes, type, distance_m, calories_kcal}; hrv {day, sdnn_avg, rmssd_avg}; stress {day, avg, max}. Values can be null: compute with what is there and say "no data yet" otherwise. Cache the rows in state with a fetched-at time and refresh at most every 30 min (never on every render).
+- AOS.energy() -> {ok, period, cheapest_window, cleanest_window, next_peak, ...} the local grid outlook.
+- AOS.ask(prompt) -> {ok, text}: a small model, text only, no tools, a few seconds. Ask for exactly the format you want ("Return JSON: [{front, back}] only, 12 items, no prose") and parse defensively (strip fences, try/catch, fall back to a message). Rate limited: batch requests, cache results in state, never call it on every render or in a loop.
+- AOS.notify(text, {inMinutes} | {at: ms}) -> {ok, id}: a phone notification at that time (max 5 pending). AOS.can("notify") tells you if it was granted.
 
 # Components (classes from /ui.css; combine, don't restyle)
-Layout: .hdr (h1 + .sub), .k eyebrow, .card (glass), .card.tint (accent-tinted), .card.center, .stack, .row/.row.between, .grid2/.grid3, .grow.
-Numbers: .big (huge number, <small> unit), .stat (b + span), .ring, .bar>i (width %), .week>.d(.on/.today)>i+span (7-day dots).
-Controls: .btn (.primary .ghost .danger .wide .lg .round), .chips>.chip(.on), .tabs>button(.on), .input (wrap an <input>), .toggle(.on), .check(.on), .fab (bottom fixed bar; .fab.right = round +).
-Lists: .list>.item (div.grow with .t and .s, .val on the right, .ic emoji square, .tag/.tag.acc/.g/.a/.c, .dot), .item.done.
-Other: .empty>.emo+text+small (empty state), .muted, .tiny, .pop / .rise animations. Accent: body class acc-blue|green|orange|red|pink|purple|teal (pick one that fits: water=teal, plants=green, fitness=orange or pink, dice=purple, habits=green).
-Chart: <svg class="chart"></svg> then AOS.bars(el, values, labels).
+Layout: .hdr (h1 + .sub) or .hdr.row, .k eyebrow label, .card (glass) .card.tint (accent-tinted) .card.center, .stack, .row/.row.between/.row.wrap, .grid2/.grid3, .grow, .view, .nav, .topbar/.back.
+Numbers: .big (huge number, <small> unit), .clock (timer digits), .stat (b + span) in a .grid2/.grid3, .ring, .bar>i (width %), .week>.d(.on/.today)>i+span (7-day dots), .pill(.g/.a/.c) status pill, .badge count.
+Controls: .btn (.primary .ghost .danger .wide .lg .round), .chips>.chip(.on), .seg>button(.on), .input (wrap an <input> or <select>), .toggle(.on), .check(.on), .stepper, .slider, .search, .fab (fixed bottom bar; .fab.right = round +; never together with .nav: put the main action inside the view instead).
+Lists: .list>.item (div.grow with .t title and .s subline, .val on the right, .ic emoji square (.ic.acc), .tag/.tag.acc/.g/.a/.c, .dot), .item.done, .item.swipe.
+Cards for content: .flip>.fc>(.f + .b) flashcard that flips with .flip.on; .legend after a donut; .empty>.emo+b+small; .muted, .tiny, .pop / .rise animations.
+Theme: body class t-ember|t-ocean|t-forest|t-grape|t-rose|t-gold|t-mint|t-sky|t-coffee|t-night (the spec picked one; it sets the accent and the background glow).
 
 # Product rules
-- Phone, portrait, 360 px wide, thumbs: touch targets >= 44 px, the main action big and at the bottom (.fab), one screen, no scrolling needed for the main action. Never restyle body padding or .fab: the runtime keeps the last block (empty states too) clear of the bar.
-- Open with the most useful thing: today's number/status at the top (.big in a .card.tint), then the one-tap actions, then history/chart. Good empty state with a hint.
-- Sensible defaults from the request (units, goals, presets as chips). Editing a goal or preset: inline, no dialogs. Everything local time; show relative dates ("Today", "Mon").
-- Instant feedback: re-render after every change (one render() function from state), haptic + toast on logs. No page reloads.
-- Vanilla JS only, no modules, no imports, no fetch, no external URLs, no images (emoji and inline SVG only), no frameworks. Keep the file under ~220 lines. Use innerHTML with AOS.esc for user text.
-- Be a product designer: clear hierarchy, few words, delightful details (streaks, totals, a small chart) but nothing that distracts from the main action.`;
+- Phone, portrait, 360 px wide, thumbs: touch targets >= 44 px, the main action reachable at the bottom, scrolling fine for history. Never restyle body padding, .fab or .nav (the runtime keeps the last block clear of them).
+- Follow the spec's layout. Open on the most useful screen for this moment. Every screen has a clear hierarchy: one headline element, then actions, then detail. Fill a 360x780 screen: after the headline and actions, add the secondary layer (what's next, recent activity, quick stats, a tip, a small chart); a page that is half empty black is a bug. Good empty states with the first step. Relative dates ("Today", "Mon", "2 h ago"). Local time.
+- Real features, fully working: every button does something, every list item can be opened or edited, deletes can be undone, settings persist. Seed what the spec says: defaults (goals, categories, presets) the user can change in a sheet, and the starter content for content apps (real items, not lorem ipsum). The first screen is never mostly empty: show the shape of the app with 0 progress, the starter content, or a preview, plus one obvious first tap.
+- Capabilities: ask for the data at startup (show a quiet "Reading your watch…" state), keep the last result in state so the app is useful offline, and when a capability is not granted show one friendly line with what the app can still do (never a dead end).
+- One render() from state per view (or one for all), called after every change; no page reloads. Keep handlers delegated (one listener per list) so re-render never loses them. Use innerHTML with AOS.esc for user text.
+- Vanilla JS only, no modules, no imports, no fetch/XHR, no external URLs, no images (emoji and inline SVG only), no frameworks. Up to ~600 lines total. Valid, complete JS: balance every brace and template literal; test mentally that the first render works with empty state.
+- Be a product designer: few words, generous spacing, delightful details (streaks, totals, a small chart, a celebratory toast when a goal lands), nothing that distracts from the main job. Make this app look like itself, not like a template.`;
 
-const view = (m) => ({ id: m.id, name: m.name, icon: m.icon, description: m.description, updated: m.updated });
+// Capability "ai": a tool-less text answer for an app (flashcards, a meal plan, a tip). The app's prompt is data, not instructions to agentd.
+const AI_PROMPT = 'You answer one small request from a micro-app on the user\'s phone (a flashcard set, a meal plan, a short tip, a rewrite). Reply with the content only, in exactly the format the request asks for (plain text or bare JSON), no preamble, no markdown fences, no questions. You have no tools, no memory and no access to anything on the phone; never claim to have done or checked something. Keep it under 1500 words.';
+
+const view = (m) => ({ id: m.id, name: m.name, icon: m.icon, description: m.description, updated: m.updated, uses: m.uses || [], granted: m.granted || [], asked: !!m.asked });
 export function list() {
   if (!existsSync(DIR)) return [];
   return readdirSync(DIR).map((id) => { try { return JSON.parse(readFileSync(join(DIR, id, 'manifest.json'), 'utf8')); } catch { return null; } })
     .filter((m) => m?.id).sort((a, b) => b.updated - a.updated);
 }
 export const html = (id) => readFileSync(join(DIR, id, 'index.html'), 'utf8');
+export const manifest = (id) => list().find((a) => a.id === id) || null;
+export { view };
 const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'app';
 const find = (q) => { // by id, exact name, or either containing the other ("workout" ~ "Workout Tracker")
   const w = String(q || '').toLowerCase().trim(), apps = list();
-  return apps.find((a) => a.id === w || a.name.toLowerCase() === w) || apps.find((a) => a.name.toLowerCase().includes(w) || w.includes(a.name.toLowerCase().replace(/\s+(tracker|log|logger|app|counter)$/, '')));
+  return apps.find((a) => a.id === w || a.name.toLowerCase() === w) || apps.find((a) => a.name.toLowerCase().includes(w) || w.includes(a.name.toLowerCase().replace(/\s+(tracker|log|logger|app|counter|coach)$/, '')));
 };
-const strip = (s) => String(s || '').replace(/^\s*```(?:html)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+const strip = (s) => String(s || '').replace(/^[\s\S]*?(?=<!doctype|<html)/i, '').replace(/\s*```\s*$/, '').trim();
 const meta = (page, name) => (page.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]*>`, 'i'))?.[0].match(/content=["']([^"']*)["']/i)?.[1] || '').trim();
 const EMOJI = /\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*/u;
+const uses = (page) => [...new Set(meta(page, 'agentos-uses').toLowerCase().split(/[,\s]+/).filter((u) => CAPS[u]))];
+// The syntax check: every inline script must parse. Returns the first error with its line, or null.
+const check = (page) => {
+  if (!/<html[\s>]/i.test(page) || !/<\/html>\s*$/i.test(page) || !/<script/i.test(page)) return 'not a complete HTML file (must start at <!doctype html> and end with </html>)';
+  for (const m of page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) { try { new Function(m[1]); } catch (e) { return e.message; } }
+  return null;
+};
+const save = (id, page, m) => { const d = join(DIR, id); mkdirSync(d, { recursive: true }); writeFileSync(join(d, 'index.html.tmp'), page); renameSync(join(d, 'index.html.tmp'), join(d, 'index.html')); writeFileSync(join(d, 'manifest.json'), JSON.stringify(m, null, 1)); };
 
-let codex = null, io = null; // io: {publish}
+let codex = null, io = null; // io: {publish, rpc, lease, endTurn, memory, grid, schedule}
 export const init = (c, deps) => { codex = c; io = deps; mkdirSync(DIR, { recursive: true }); log(`apps: ${list().length} micro-apps (${DIR})`); };
 
 export async function call(name, args, ctx) {
-  if (name === 'list_my_apps') return { ok: true, apps: list().map(({ id, name, description }) => ({ id, name, description })) };
+  if (name === 'list_my_apps') return { ok: true, apps: list().map(({ id, name, description, uses }) => ({ id, name, description, uses })) };
   if (name === 'remove_app') {
     const a = find(args.app);
     if (!a) return { ok: false, error: `no app matching "${args.app}"`, apps: list().map((x) => x.name) };
     rmSync(join(DIR, a.id), { recursive: true, force: true });
+    io?.schedule?.cancelBy(`app:${a.id}`); // its pending reminders go with it
     io?.publish({ type: 'apps.changed', why: 'removed', id: a.id, app: view(a) });
     return { ok: true, removed: view(a) };
   }
@@ -88,28 +136,82 @@ export async function call(name, args, ctx) {
   const prev = args.update ? find(args.update) : null;
   if (args.update && !prev) return { ok: false, error: `no app matching "${args.update}"; call again without update to build a new one`, apps: list().map((x) => x.name) };
   const t0 = Date.now(), progress = (text) => ctx.emit({ type: 'tool.progress', name: 'build_app', text, ms: Date.now() - t0 });
-  progress(prev ? `Updating ${prev.name}` : 'Designing');
-  const input = prev ? `Update this app. Change requested: ${req}\n\nCurrent index.html:\n${html(prev.id)}\n\nOutput the complete updated file (keep the stored data compatible).` : `Build this app: ${req}`;
-  let out, bytes = 0, shown = 0;
+  const job = (prompt, effort) => ({ model: cfg.appsModel, effort, prompt, rotate: 1 });
+  const stream = (label) => { let bytes = 0, shown = 0; return (d) => { bytes += d.length; if (bytes - shown > 1500) { shown = bytes; progress(`${label} · ${Math.round(bytes / 1024)} KB`); } }; };
+  let spec = '', page = '';
   try {
-    out = await codex.quick('apps', { model: cfg.appsModel, effort: cfg.appsEffort, prompt: GEN, rotate: 1 }, input, ctx.signal,
-      (d) => { bytes += d.length; if (bytes - shown > 1200) { shown = bytes; progress(`Building · ${Math.round(bytes / 1024)} KB`); } });
+    if (prev) { progress(`Reading ${prev.name}`); spec = prev.spec || ''; }
+    else { progress('Planning screens'); spec = String(await codex.quick('apps-spec', job(SPEC, cfg.appsSpecEffort), `Request: ${req}`, ctx.signal)).trim().slice(0, 4000); progress('Writing the app'); }
+    const input = prev
+      ? `Update this app. Change requested: ${req}\n\nOriginal request: ${prev.request}\n${spec ? `\nSpec:\n${spec}\n` : ''}\nCurrent index.html:\n${html(prev.id)}\n\nOutput the complete updated file (keep the stored data compatible: same keys, migrate if you must).`
+      : `Request: ${req}\n\nSpec from the designer:\n${spec}\n\nBuild the complete app from this spec.`;
+    page = strip(await codex.quick('apps', job(GEN, cfg.appsEffort), input, ctx.signal, stream(prev ? 'Updating' : 'Writing')));
+    let bad = check(page);
+    if (bad) { // one repair turn with the exact error; a typo must not replace a working app
+      progress('Fixing a typo');
+      log(`apps: repair (${bad})`);
+      page = strip(await codex.quick('apps', job(GEN, cfg.appsEffort), `${input}\n\nYour previous file failed the syntax check: ${bad}\nHere is that file; output the complete corrected file (fix the error, keep everything else):\n${page}`, ctx.signal, stream('Fixing')));
+      bad = check(page);
+      if (bad) return { ok: false, error: `the generated script still has a syntax error (${bad}); call build_app once more` };
+    }
   } catch (e) { return { ok: false, error: `build failed: ${e.message}` }; }
-  const page = strip(out);
-  if (!/<html[\s>]/i.test(page) || !/<\/html>\s*$/i.test(page) || !/<script/i.test(page)) return { ok: false, error: 'the generator did not return a complete HTML file; call build_app once more' };
-  const bad = [...page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => { try { new Function(m[1]); } catch (e) { return e.message; } }).find(Boolean); // a typo must not replace a working app
-  if (bad) return { ok: false, error: `the generated script has a syntax error (${bad}); call build_app once more` };
   const title = (page.match(/<title>([^<]*)<\/title>/i)?.[1] || '').trim();
   const label = (prev?.name || title || 'App').slice(0, 32);
-  let id = prev?.id || slug(label);
-  if (!prev) for (let n = 2; existsSync(join(DIR, id)); n++) id = `${slug(label)}-${n}`;
+  const id = prev?.id || `${slug(label)}-${Date.now().toString(36).slice(-4)}`; // never reused: a new app never inherits a removed app's localStorage (same origin)
+  const want = uses(page), granted = (prev?.granted || []).filter((u) => want.includes(u)), fresh = want.filter((u) => !granted.includes(u));
   const m = { id, name: label, icon: meta(page, 'agentos-icon').match(EMOJI)?.[0] || prev?.icon || '✨', description: (meta(page, 'description') || prev?.description || req).slice(0, 90),
-    request: prev ? `${prev.request}\n+ ${req}`.slice(0, 2000) : req, created: prev?.created || Date.now(), updated: Date.now(), bytes: page.length, gen_ms: Date.now() - t0 };
+    request: prev ? `${prev.request}\n+ ${req}`.slice(0, 2000) : req, spec, uses: want, granted, asked: !!prev?.asked && !fresh.length, // a new capability asks the owner again
+    created: prev?.created || Date.now(), updated: Date.now(), bytes: page.length, lines: page.split('\n').length, gen_ms: Date.now() - t0 };
   progress('Installing');
-  const d = join(DIR, id); mkdirSync(d, { recursive: true });
-  writeFileSync(join(d, 'index.html.tmp'), page); renameSync(join(d, 'index.html.tmp'), join(d, 'index.html'));
-  writeFileSync(join(d, 'manifest.json'), JSON.stringify(m, null, 1));
-  log(`apps: ${prev ? 'updated' : 'built'} ${id} (${page.length} B, ${Date.now() - t0} ms)`);
+  save(id, page, m);
+  log(`apps: ${prev ? 'updated' : 'built'} ${id} (${page.length} B, ${m.lines} lines, uses ${want.join(',') || 'none'}, ${Date.now() - t0} ms)`);
   io?.publish({ type: 'apps.changed', why: prev ? 'updated' : 'built', id, app: view(m) });
-  return { ok: true, ...view(m), ms: Date.now() - t0, note: `${label} is on the home screen now.` };
+  return { ok: true, ...view(m), ms: Date.now() - t0, note: `${label} is on the home screen now.${fresh.length ? ` It asks the owner once for: ${fresh.map((u) => CAPS[u]).join(', ')} (a card on the home screen; they can allow or skip).` : ''}` };
+}
+
+// The owner's answer to the install card (WS apps.grant from the launcher): granted = allowed ∩ declared. asked stays true either way.
+export function grant(id, allowed) {
+  const m = manifest(id); if (!m) return { ok: false, error: 'no such app' };
+  m.granted = (m.uses || []).filter((u) => (Array.isArray(allowed) ? allowed : []).includes(u)); m.asked = true;
+  writeFileSync(join(DIR, id, 'manifest.json'), JSON.stringify(m, null, 1));
+  log(`apps: ${id} granted ${m.granted.join(',') || 'nothing'}`);
+  io?.publish({ type: 'apps.changed', why: 'granted', id, app: view(m) });
+  return { ok: true, ...view(m) };
+}
+
+// A capability call from a running app (POST /apps/<id>/cap, launcher only). Checked here even though the bridge checked too.
+const rate = new Map(); // app id -> timestamps of recent calls (60 per 10 min; ai 20 per 10 min)
+const allow = (key, max) => { const now = Date.now(), a = (rate.get(key) || []).filter((t) => now - t < 600_000); rate.set(key, a); if (a.length >= max) return false; a.push(now); return true; };
+const dk = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export async function cap(id, name, args = {}) {
+  const m = manifest(id); if (!m) return { ok: false, error: 'no such app' };
+  if (!m.granted?.includes(name)) return { ok: false, error: `${name} was not granted by the owner` };
+  if (!allow(id, 60) || (name === 'ai' && !allow(`${id}:ai`, 20))) return { ok: false, error: 'rate limit: too many calls, try again in a few minutes' };
+  const t0 = Date.now(), n = (v, lo, hi, d) => Math.min(hi, Math.max(lo, Number(v) || d));
+  try {
+    let r;
+    if (name === 'calendar.read') { // through the broker like any read: a lease in the app's name (the owner's grant is the user_asked), audited
+      const days = n(args.days, 1, 60, 7), ctx = { turn: { goal: `${m.name} app reads your calendar`, origin: 'typed' }, emit() {} }, l = await io.lease(ctx, ['calendar']);
+      const from = new Date(), to = new Date(); to.setDate(to.getDate() + days);
+      const x = await io.rpc('calendar.find', { from: `${dk(from)}T00:00`, to: `${dk(to)}T23:59`, task_id: l.task_id }).finally(() => io.endTurn(ctx.turn, Date.now() - t0)); // the lease ends with the read (no lingering task on Home)
+      const iso = (v) => { const d = new Date(String(v || '').replace(/^[A-Za-z]{3} /, '')); return isNaN(d) ? String(v || '') : `${dk(d)}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }; // the broker says "Thu 2026-10-29 22:45"; apps get "2026-10-29T22:45"
+      r = { ok: true, events: (x.items || []).map((e) => ({ title: String(e.text || '').slice(0, 120), start: iso(e.start), end: iso(e.end), all_day: !!e.all_day, location: String(e.location || '').slice(0, 80) })) };
+    } else if (name === 'health.read') {
+      const metric = ['sleep', 'heart_rate', 'steps', 'exercise', 'hrv', 'stress'].includes(args.metric) ? args.metric : 'sleep', days = n(args.days, 1, 90, 14);
+      const to = new Date(), from = new Date(); from.setDate(from.getDate() - (days - 1));
+      const x = await io.memory.call('health_query', { metric, from: dk(from), to: dk(to) }, { cloud: false, actor: 'user:owner' });
+      r = x.ok === false ? x : { ok: true, metric, ...x, rows: x.rows || x.items || x.sessions || x.days || x.data || [] };
+    } else if (name === 'energy.read') r = { ok: true, ...(await io.grid.call()) };
+    else if (name === 'ai') {
+      const prompt = String(args.prompt || '').slice(0, 4000); if (!prompt) return { ok: false, error: 'prompt is required' };
+      const text = await codex.quick('apps-ai', { model: cfg.suggestModel, effort: 'low', prompt: AI_PROMPT, rotate: 20 }, prompt, AbortSignal.timeout(60_000));
+      r = { ok: true, text: String(text).replace(/^\s*```[a-z]*\s*|\s*```\s*$/g, '').trim().slice(0, 12000) };
+    } else if (name === 'notify') {
+      const text = String(args.text || '').trim().slice(0, 200), at = Number(args.at); if (!text) return { ok: false, error: 'text is required' };
+      if (!(at > Date.now() - 1000) || at > Date.now() + 30 * 864e5) return { ok: false, error: 'at must be a time within the next 30 days' };
+      r = io.schedule.remind({ title: m.name, text, at: Math.max(at, Date.now() + 15_000), by: `app:${id}`, max: 5 });
+    } else return { ok: false, error: `unknown capability ${name}` };
+    log(`apps: ${id} ${name} ${Date.now() - t0} ms${r.ok === false ? ` (${r.error})` : ''}`);
+    return r;
+  } catch (e) { log(`apps: ${id} ${name} failed: ${e.message}`); return { ok: false, error: e.message.slice(0, 200) }; }
 }

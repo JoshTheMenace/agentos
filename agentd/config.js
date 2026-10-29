@@ -29,8 +29,9 @@ export const cfg = {
   suggestEffort: env.SUGGEST_EFFORT || 'low',
   suggestHedge: +(env.SUGGEST_HEDGE ?? 3000), // keyboard: no answer after this many ms -> same request on a 2nd warm thread, first one wins (0 = off; keyboard/LATENCY.md)
   suggestProvider: env.SUGGEST_PROVIDER || 'codex', // 'local' = llama-server for mode "reply" (fix/rewrite stay on Codex)
-  appsModel: env.APPS_MODEL || env.CODEX_MODEL || 'gpt-6.1-terra', // micro-app generator (apps.js): the fast model writes one HTML file
-  appsEffort: env.APPS_EFFORT || 'low',
+  appsModel: env.APPS_MODEL || env.CODEX_MODEL || 'gpt-6.1-terra', // micro-app generator (apps.js): writes the spec, then the HTML file
+  appsEffort: env.APPS_EFFORT || 'medium', // the code step: medium = real multi-screen apps in ~40-60 s (low gave one template in ~10 s)
+  appsSpecEffort: env.APPS_SPEC_EFFORT || 'low', // the short spec step (~5 s)
   reviewModel: env.REVIEW_MODEL || 'codex-auto-review', // approval reviewer (what Codex's own Auto-review uses)
   reviewMs: Number(env.REVIEW_MS || 4000),             // slower than this -> the human decides
   codexCwd: env.CODEX_CWD || join(STATE, 'codex-cwd'),

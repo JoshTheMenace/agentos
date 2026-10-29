@@ -46,7 +46,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     // current field
     private String pkg = "", app = "", hint = "";
     private int enterAction = EditorInfo.IME_ACTION_NONE, inputType;
-    private boolean privateField, capSentences;
+    private boolean privateField, capSentences, assistant; // assistant: the AgentOS launcher's own ask box (a command line, not a chat: no reply suggestions)
     private int mode = MODE_REPLY;
     private int gen; // request generation: late answers for older generations are dropped
     private List<String> shown = new ArrayList<>(); // last reply items on the strip: typing a prefix of one shows it instantly
@@ -82,6 +82,7 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
             || cls == InputType.TYPE_CLASS_NUMBER && var == InputType.TYPE_NUMBER_VARIATION_PASSWORD;
         boolean incognito = (info.imeOptions & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0;
         privateField = password || incognito;
+        assistant = "local.agentos.home".equals(info.packageName);
         capSentences = cls == InputType.TYPE_CLASS_TEXT && (it & InputType.TYPE_TEXT_FLAG_CAP_SENTENCES) != 0;
         pkg = info.packageName == null ? "" : info.packageName;
         hint = info.hintText == null ? "" : info.hintText.toString();
@@ -285,6 +286,9 @@ public final class Keys extends InputMethodService implements KeyboardView.Liste
     // ---- suggestions ----
     private void request() {
         if (privateField) return;
+        if (assistant && mode == MODE_REPLY) { // the launcher's ask bar: the user is talking to AgentOS, so "Hi! / How can I help?" replies make no sense here
+            ++gen; agent.cancel(); lastKey = ""; strip.setContext("AgentOS", Theme.IDLE); strip.setItems(new ArrayList<>(), false); return;
+        }
         final int g = ++gen;
         final String b = before(MAX_BEFORE), a = after(MAX_AFTER);
         String warn = sendSafety(b + a, hint);
