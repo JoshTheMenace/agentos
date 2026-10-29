@@ -1,0 +1,18 @@
+{
+  "raw": "raw/take-a2.mp4",
+  "out": "final.mp4",
+  "poster": "poster.png",
+  "title": "I asked my phone for an app.",
+  "segments": [
+    { "from": 3.0, "to": 11.5, "speed": 2, "caption": "I ask for *an app*.", "zoom": { "k": 1.5, "y": 990 } },
+    { "from": 12.0, "to": 24.5, "speed": 4, "caption": "It designs it and writes the code." },
+    { "from": 24.5, "to": 28.5, "caption": "Done in *13 seconds*.", "zoom": { "k": 1.5, "y": 1050 } },
+    { "from": 30.0, "to": 33.0, "caption": "It's already on my *home screen*." },
+    { "raw": "raw/take-b3.mp4", "from": 3.4, "to": 5.0, "caption": "And it *works*." },
+    { "raw": "raw/take-b3.mp4", "from": 7.6, "to": 14.5, "caption": "And it *works*." },
+    { "raw": "raw/take-b3.mp4", "from": 14.5, "to": 17.8, "caption": "It even knows my *limit*." },
+    { "raw": "raw/take-b3.mp4", "from": 18.2, "to": 21.5, "caption": "The widget updates *live*." }
+  ],
+  "end": { "mark": "AgentOS", "sub": "Ask your phone for any app." },
+  "posterAt": 21.5
+}

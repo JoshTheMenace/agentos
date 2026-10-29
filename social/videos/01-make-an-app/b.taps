@@ -1,0 +1,9 @@
+sleep 1.5
+tap 360 1427
+sleep 1.4
+tap 360 1427
+sleep 1.4
+tap 360 1427
+sleep 3
+home
+sleep 3
