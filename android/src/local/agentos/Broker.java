@@ -123,6 +123,8 @@ final class Broker {
     static Vault vault() { Broker b = self; return b == null ? null : b.vault; }
     /** A card is up or an agent task is running: the vault's sign-in offer stays out of the way. */
     static boolean busy() { Broker b = self; return b == null || b.current != null || b.leaseAsk != null || b.lease != null; }
+    /** A task holds a lease (ApprovalCard won't bring back the pill of a task that ended under its "Auto-approved" moment). */
+    boolean running() { return lease != null; }
     /** Apps whose lease always needs the card (money, installs, passwords), even when the user asked by name. */
     private static final java.util.regex.Pattern SENSITIVE = java.util.regex.Pattern.compile(
             "(?i)(bank|pay|wallet|finance|credit|crypto|trading|broker|vending|packageinstaller|password|vault|bitwarden|lastpass|keepass|authenticator)");
@@ -315,6 +317,9 @@ final class Broker {
                     .put("caller", caller).put("user_granted", granted).put("by_request", asked).put("by_paired_remote", remote).put("carried_over", same).put("full_access", skipped));
             Events.emit("task.state", task(l).put("state", "started"));
             island(l, "Starting");
+            // An orphan (agentd died or lost the task) ends with its lease: the island can't stay on "working" forever
+            svc.main.postDelayed(() -> new Thread(() -> { try { stop(l.id, "lease expired"); } catch (JSONException ignored) {} }).start(),
+                    Math.max(0, l.expires - System.currentTimeMillis()));
             awake(l); // a scheduled task on a locked phone: open it now, so the first screen read is the real one
             return ok(true).put("task_id", l.id).put("apps", new JSONArray(apps)).put("expires", l.expires).put("max_steps", l.maxSteps)
                     .put("refused_apps", refused).put("steps", l.h.steps).put("untrusted", l.h.untrusted).put("carried_over", same)
@@ -355,7 +360,10 @@ final class Broker {
         Lease l = lease;
         Approvals.Pending c = current; // the kill switch (no task id) denies any open card, even a lease-free one (a reply)
         if (c != null && (taskId.isEmpty() || l != null && taskId.equals(l.id) && c.model.task.startsWith(l.id))) c.finish(null, "task stopped");
-        if (l == null) return ok(true).put("reason", "no active task");
+        if (l == null) {
+            if (taskId.isEmpty()) svc.main.post(svc.island::hide); // island Stop / kill switch with no task: clear a stale pill too
+            return ok(true).put("reason", "no active task");
+        }
         if (!taskId.isEmpty() && !taskId.equals(l.id)) return ok(false).put("reason", "task " + taskId + " is not the active task (" + l.id + ")");
         lease = null;
         l.granted = false; // a stopped grant can't be reused by a later task.start

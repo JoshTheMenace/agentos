@@ -156,10 +156,10 @@ final class ApprovalCard {
         i.postDelayed(this::restore, 2600);
     }
 
-    /** Back to the task pill (or let the "done" pill auto-hide when there was no task). */
+    /** Back to the task pill (or let the "done" pill auto-hide when there was no task, or the task ended meanwhile). */
     private void restore() {
         if (autoLabel == null) return;
-        if (!"idle".equals(autoState) && !"done".equals(autoState)) svc.island.set(autoState, autoLabel, autoPct);
+        if (svc.broker.running() && !"idle".equals(autoState) && !"done".equals(autoState)) svc.island.set(autoState, autoLabel, autoPct);
         autoLabel = null;
     }
     private void why() {
