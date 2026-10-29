@@ -1,0 +1,17 @@
+{
+  "raw": "raw/take-a2.mp4",
+  "out": "casual.mp4",
+  "poster": "casual-poster.png",
+  "camera": "follow",
+  "segments": [
+    { "from": 1.9, "to": 11.0, "speed": 2, "caption": "asking my phone for an app", "focus": { "at": 3.6, "until": 10.6, "x": 360, "y": 990 } },
+    { "from": 11.0, "to": 24.8, "speed": 4, "caption": "it designs it and writes the code" },
+    { "from": 24.8, "to": 29.0, "caption": "done. 13 seconds", "focus": { "at": 25.0, "until": 28.4, "x": 360, "y": 1060, "zoom": 1.6 } },
+    { "from": 29.5, "to": 33.0, "caption": "it's on the home screen", "focus": { "at": 30.4, "until": 32.4, "x": 195, "y": 634 } },
+    { "raw": "raw/take-b3.mp4", "from": 1.9, "to": 5.0, "caption": "opening it" },
+    { "raw": "raw/take-b3.mp4", "from": 7.4, "to": 14.5, "caption": "logging a few cups", "camera": { "zoom": 1.4 } },
+    { "raw": "raw/take-b3.mp4", "from": 14.5, "to": 17.8, "caption": "it knows the 3 cup limit" },
+    { "raw": "raw/take-b3.mp4", "from": 18.2, "to": 21.5, "caption": "the widget already updated", "focus": { "at": 18.7, "until": 20.9, "x": 195, "y": 634 } }
+  ],
+  "posterAt": 21.5
+}

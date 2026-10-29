@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- One page draws every layer of a social asset. The spec is URI-encoded JSON in the hash (render.mjs builds it).
-     mode: still (bg + label + phone + screenshot) | pair (bg + two phones side by side, a small plain tag over each) | bg (wallpaper only) | fg (phone bezel with a see-through screen, transparent page) | cap (caption + speed badge [+ scrim], transparent page) | card (wallpaper + big text) -->
+     mode: still (bg + label + phone + screenshot) | pair (bg + two phones side by side, a small plain tag over each) | bg (wallpaper only) | fg (phone bezel with a see-through screen, transparent page) | cap (caption + speed badge [+ scrim], transparent page) | card (wallpaper + big text)
+         | ripple (a strip of n cells, one tap-ring phase per cell; render.mjs picks the cell by time) -->
 <meta charset="utf-8">
 <style>
 @font-face { font-family: Inter; src: url(InterVariable.woff2) format("woff2"); font-weight: 100 900; }
@@ -43,7 +44,7 @@ body { font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; font
 const s = JSON.parse(decodeURIComponent(location.hash.slice(1)));
 const W = s.w || 1080, H = s.h || 1350, el = (t, c, p = document.body) => p.appendChild(Object.assign(document.createElement(t), c ? { className: c } : {}));
 document.documentElement.style.cssText = `--W:${W}px;--H:${H}px`;
-if (!['fg', 'cap'].includes(s.mode)) { const w = el('div', 'wall'); for (const k of 'abc') el('i', k, w); }
+if (!['fg', 'cap', 'ripple'].includes(s.mode)) { const w = el('div', 'wall'); for (const k of 'abc') el('i', k, w); }
 if (s.mode === 'card') {
   const c = el('div', 'card');
   if (s.mark) c.innerHTML = '<div class="mark"><div class="orb"></div><span></span></div>', c.querySelector('span').textContent = s.mark;
@@ -72,8 +73,8 @@ if (s.mode === 'pair') { // s.phones: [{shot, src, label, redact, geo}]
 }
 if (s.mode === 'ripple') { // n cells of S px: a ring that grows and fades, over a soft dot that fades faster
   for (let i = 0; i < s.n; i++) { const p = i / (s.n - 1), c = el('div', 'cell'), S = s.size; Object.assign(c.style, { left: i * S + 'px', width: S + 'px', height: S + 'px' });
-    const d = el('i', '', c), r = el('i', '', c), rd = S * (0.14 + 0.1 * p), rr = S * (0.12 + 0.34 * p);
-    Object.assign(d.style, { width: 2 * rd + 'px', height: 2 * rd + 'px', background: `rgba(255,255,255,${(0.5 * (1 - p) ** 2).toFixed(3)})` });
+    const d = el('i', '', c), r = el('i', '', c), rd = S * (0.1 + 0.06 * p), rr = S * (0.1 + 0.26 * p);
+    Object.assign(d.style, { width: 2 * rd + 'px', height: 2 * rd + 'px', background: `rgba(255,255,255,${(0.35 * (1 - p) ** 2).toFixed(3)})` });
     Object.assign(r.style, { width: 2 * rr + 'px', height: 2 * rr + 'px', border: `${(5 - 3 * p).toFixed(1)}px solid rgba(255,255,255,${(0.95 * (1 - p)).toFixed(3)})`, boxShadow: `0 0 ${12 + 20 * p}px rgba(255,255,255,${(0.5 * (1 - p)).toFixed(3)})` }); }
 }
 if (['still', 'fg', 'cap'].includes(s.mode)) {
