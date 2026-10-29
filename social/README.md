@@ -50,11 +50,19 @@ Two shots of the same screen position, side by side in phone frames, a plain "Be
    phone pixels; `until` optional, `zoom` optional). If a log's times are off against the footage, `"tapShift": -0.2` moves them all.
    Title and end cards are off unless you add `title` (2 s hook) or `end` (`mark`, `sub`); `"captions": "bold"` brings back the big teal-accent style.
    To find cut points, make a contact sheet: `ffmpeg -i raw/take.mp4 -vf fps=1,scale=180:-1,tile=10x4 sheet.png`.
+   A take ends at its last screen change (screenrecord writes no frames while the screen is still), so a final screen you want to
+   linger on gets `"hold": 2` on its segment: the last frame stays that long.
+   Scene changes line up with the tap log within ~0.15 s: `ffmpeg -i raw/take.mp4 -vf "select='gt(scene,0.015)',showinfo" -f null -`
+   lists them (pts_time) if a log looks off.
 4. `node social/kit/render.mjs video social/videos/02-<feature>/edit.json` (about half a minute), then watch it muted. Check: 20–40 s,
    captions readable on a phone, each zoom lands on the thing that changes (`fps=30,trim=…` strips around a tap), no private data in any
    frame (scrub with the contact sheet again), ≤ 100 MB.
 5. Clean up the phone: delete anything the video created, by its exact id. A micro-app's data outlives `apps.remove` (WebView storage
    per app id), so first run `localStorage.clear()` in it with devtools.mjs, or the next app with that id starts with old data.
+   To put an app back to first-run for a retake (`record-japanese.sh reset`): a micro-app saves on every change and its activity stays
+   alive across HOME, and reload/navigation are blocked in its WebView, so clear the storage with `Storage.prototype.setItem` stubbed out,
+   call `AgentOSApp.close()`, then reopen it from Home (its tile summary refreshes on that open). devtools.mjs talks to the page that is on
+   screen: a finished app activity keeps its WebView around for a while, so one app can show several pages.
 
 ## Style rules
 - 4:5, 1080×1350, H.264, no voiceover. Music only if royalty-free and quiet.

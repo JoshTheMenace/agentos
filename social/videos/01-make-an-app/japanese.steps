@@ -1,0 +1,37 @@
+sleep 1
+tap 360 751
+sleep 1.4
+tap 360 650
+sleep 1.6
+tap 619 1260
+sleep 1.0
+tap 360 650
+sleep 1.4
+tap 619 1260
+sleep 0.8
+tap 360 650
+sleep 1.4
+label Start quiz
+sleep 1.4
+pick wrong
+sleep 2.2
+label Continue
+sleep 1.0
+pick right
+sleep 1.6
+label Continue
+sleep 0.8
+pick right
+sleep 1.0
+label Continue
+sleep 0.8
+pick right
+sleep 1.0
+label Continue
+sleep 0.8
+pick right
+sleep 1.2
+label See results
+sleep 2.6
+tap 576 1422
+sleep 3

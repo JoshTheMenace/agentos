@@ -1,0 +1,222 @@
+{
+  "raw": "raw/take-j1.mp4",
+  "out": "japanese.mp4",
+  "poster": "japanese-poster.png",
+  "camera": "follow",
+  "segments": [
+    {
+      "from": 1.6,
+      "to": 3.0,
+      "speed": 2,
+      "caption": "asking my phone for an app",
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        },
+        {
+          "x": 36,
+          "y": 828,
+          "w": 648,
+          "h": 165,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 3.0,
+      "to": 11.0,
+      "speed": 2,
+      "caption": "asking my phone for an app",
+      "focus": {
+        "at": 4.4,
+        "until": 10.6,
+        "x": 360,
+        "y": 990
+      },
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 12.2,
+      "to": 22.0,
+      "speed": 4,
+      "caption": "it designs the app and writes the code",
+      "redact": [
+        {
+          "x": 36,
+          "y": 535,
+          "w": 648,
+          "h": 110,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 60.0,
+      "to": 68.0,
+      "speed": 4,
+      "caption": "found a bug in its own code, fixing it",
+      "redact": [
+        {
+          "x": 36,
+          "y": 535,
+          "w": 648,
+          "h": 110,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 100.0,
+      "to": 110.9,
+      "speed": 4,
+      "caption": "installing",
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        },
+        {
+          "x": 36,
+          "y": 535,
+          "w": 648,
+          "h": 110,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 110.9,
+      "to": 114.5,
+      "caption": "done. about a minute and a half",
+      "focus": {
+        "at": 111.6,
+        "until": 114.2,
+        "x": 360,
+        "y": 1130,
+        "zoom": 1.5
+      },
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        },
+        {
+          "x": 36,
+          "y": 535,
+          "w": 648,
+          "h": 110,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 116.6,
+      "to": 119.6,
+      "caption": "and it's on the home screen",
+      "focus": {
+        "at": 117.3,
+        "until": 119.2,
+        "x": 194,
+        "y": 876
+      },
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        },
+        {
+          "x": 36,
+          "y": 1075,
+          "w": 648,
+          "h": 140,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "raw": "raw/take-j3.mp4",
+      "from": 1.6,
+      "to": 4.8,
+      "caption": "opening it",
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        },
+        {
+          "x": 36,
+          "y": 1075,
+          "w": 648,
+          "h": 140,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "raw": "raw/take-j3.mp4",
+      "from": 7.3,
+      "to": 13.0,
+      "caption": "flashcards, hiragana first"
+    },
+    {
+      "raw": "raw/take-j3.mp4",
+      "from": 24.3,
+      "to": 30.9,
+      "caption": "a quiz. got one wrong"
+    },
+    {
+      "raw": "raw/take-j3.mp4",
+      "from": 30.9,
+      "to": 35.6,
+      "caption": "and one right",
+      "camera": {
+        "zoom": 1.45
+      },
+      "focus": {
+        "at": 32.1,
+        "until": 33.3,
+        "x": 360,
+        "y": 600
+      }
+    },
+    {
+      "raw": "raw/take-j3.mp4",
+      "from": 53.7,
+      "to": 58.4,
+      "hold": 1.6,
+      "caption": "80%. the streak starts",
+      "focus": {
+        "at": 58.3,
+        "until": 59.8,
+        "x": 360,
+        "y": 663,
+        "zoom": 1.4
+      }
+    }
+  ],
+  "posterAt": 23.0
+}

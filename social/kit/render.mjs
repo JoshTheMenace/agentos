@@ -60,7 +60,7 @@ if (cmd === 'still') {
     .map((l) => l.trim().split(/\s+/)).filter((w) => w[0] === 'tap' || w[0] === 'swipe').map(([, t, x, y]) => ({ t: +t + (spec.tapShift || 0), x: +x, y: +y }));
   const looks = [], caps = [], segs = []; let body = 0;
   spec.segments.forEach((s, i) => {
-    const sp = s.speed || 1, d = (s.to - s.from) / sp, start = body, r = s.raw || spec.raw, k = s.camera?.zoom || CAM.zoom, ot = (t) => start + (t - s.from) / sp;
+    const sp = s.speed || 1, d = (s.to - s.from) / sp + (s.hold || 0), start = body, r = s.raw || spec.raw, k = s.camera?.zoom || CAM.zoom, ot = (t) => start + (t - s.from) / sp;
     const f = `${tmp}/cap${i}.png`; shoot({ mode: 'cap', caption: s.caption, style: spec.captions, badge: s.speed > 1 ? `${s.speed}×` : '', scrim: !!s.caption && (follow || !!s.zoom), geo: g }, f);
     if (follow && s.camera !== 'off') {
       tapsOf(r).filter((t) => t.t >= s.from && t.t <= s.to).forEach((t) => { const a = ot(t.t); looks.push({ a, b: a + CAM.hold, z: k, p: canvas(t.x, t.y) }); caps.push({ i, A: a - start, p: canvas(t.x, t.y) }); });
@@ -99,7 +99,7 @@ if (cmd === 'still') {
   segs.forEach((s) => {
     const { i, sp, d } = s, dur = `trim=duration=${d.toFixed(3)},setpts=PTS-STARTPTS,fps=${FPS}`;
     // fps before trim: screenrecord writes no frames while the screen is still, so a cut that starts on a still screen ran late
-    let v = `[${s.raw ? N0 + raws.indexOf(s.raw) : 1}:v]fps=${FPS},trim=${s.from}:${s.to},setpts=(PTS-STARTPTS)/${sp},fps=${FPS}`;
+    let v = `[${s.raw ? N0 + raws.indexOf(s.raw) : 1}:v]fps=${FPS},trim=${s.from}:${s.to},setpts=(PTS-STARTPTS)/${sp},fps=${FPS}${s.hold ? `,tpad=stop_mode=clone:stop_duration=${s.hold}` : ''}`; // hold: the last frame stays that long (a still screen at the end of a take has no frames to cut)
     (s.redact || spec.redact || []).forEach((r, j) => { // blur a box (source px) on the recording
       f.push(`${v},split[m${i}_${j}][c${i}_${j}]`, `[c${i}_${j}]crop=${r.w}:${r.h}:${r.x}:${r.y},boxblur=${r.blur || 18}:3[b${i}_${j}]`);
       v = `[m${i}_${j}][b${i}_${j}]overlay=${r.x}:${r.y}`; });
