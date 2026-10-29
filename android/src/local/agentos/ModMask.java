@@ -74,15 +74,6 @@ final class ModMask {
         out.add(r); return true;
     }
 
-    static boolean scroll(AccessibilityNodeInfo n, int x, int y, boolean forward, int[] budget, int depth) {
-        if (n == null || --budget[0] < 0 || depth > 40) return false;
-        Rect r = new Rect(); n.getBoundsInScreen(r);
-        if (!r.contains(x, y)) return false;
-        if (n.isScrollable()) return n.performAction(forward ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
-        for (int i = 0; i < Math.min(n.getChildCount(), 100); i++) if (scroll(n.getChild(i), x, y, forward, budget, depth + 1)) return true;
-        return false;
-    }
-
     static void paint(View v, JSONObject spec, boolean preview) {
         GradientDrawable d = new GradientDrawable();
         d.setColor(preview ? 0x2238BDF8 : fill(spec, 0xFF101820));

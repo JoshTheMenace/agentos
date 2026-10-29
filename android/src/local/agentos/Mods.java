@@ -61,7 +61,7 @@ final class Mods {
         JSONObject spec; String id, pkg, by; long created;
         TextView btn; WindowManager.LayoutParams lp; Style style; boolean shown;
         LinearLayout chips; WindowManager.LayoutParams clp; final List<TextView> chipViews = new ArrayList<>(); double value = Double.NaN;
-        volatile String disabled = ""; final List<View> masks = new ArrayList<>(); long peekUntil; boolean peeking; // peek: the chip alone, item visible
+        volatile String disabled = ""; final List<View> masks = new ArrayList<>(); long peekUntil; boolean peeking; // peek: the box goes clear for 6 s, item visible under the chip
         final List<AccessibilityNodeInfo[]> track = new ArrayList<>(); // matched nodes, re-read mid-scroll (ModMask.bounds)
         long t0; CompletableFuture<Long> onScreen, secure; int sampleFails; // secure: FLAG_SECURE check started when the chips open
     }
@@ -538,19 +538,18 @@ final class Mods {
                 if (fill == null) { hide(m); continue; } // nothing to cover, or the app's background is still being sampled
                 clip(rects);
                 boolean peek = m.peekUntil > SystemClock.uptimeMillis();
-                if (m.masks.size() != rects.size() || m.peeking != peek) { ModMask.clear(wm, m.masks); m.peeking = peek; }
+                if (m.masks.size() != rects.size() || m.peeking != peek) { clearMasks(m); m.peeking = peek; }
                 for (int i = 0; i < rects.size(); i++) {
                     Rect r = rects.get(i);
                     boolean fresh = i >= m.masks.size(); // membership, not isAttachedToWindow(): a view added this frame is not attached yet
-                    View v = fresh ? mask(m, peek) : m.masks.get(i);
-                    WindowManager.LayoutParams lp = (WindowManager.LayoutParams) v.getTag();
-                    ((GradientDrawable) v.getBackground()).setColor(peek ? 0 : fill);
-                    int w = r.width(), hh = r.height(), x = r.left, y = r.top;
-                    if (peek) { v.measure(0, 0); w = v.getMeasuredWidth(); hh = v.getMeasuredHeight(); x = r.centerX() - w / 2; y = r.centerY() - hh / 2; }
-                    boolean changed = move(lp, x, y, w, hh);
-                    ((android.widget.FrameLayout) v).getChildAt(0).setVisibility(!peek && hh < px(28) ? View.GONE : View.VISIBLE); // a sliver above the bar: no chip
-                    if (fresh) { wm.addView(v, lp); m.masks.add(v); }
-                    else if (changed) wm.updateViewLayout(v, lp);
+                    Box v = fresh ? mask(m, peek) : (Box) m.masks.get(i);
+                    ((GradientDrawable) v.getBackground()).setColor(peek ? 0 : fill); // peek: the box goes clear, the item shows through it
+                    boolean moved = move(v.lp, r.left, r.top, r.width(), r.height());
+                    v.chip.measure(0, 0); int w = v.chip.getMeasuredWidth(), hh = v.chip.getMeasuredHeight();
+                    boolean chipMoved = move(v.clp, r.centerX() - w / 2, r.centerY() - hh / 2, w, hh);
+                    v.chip.setVisibility(!peek && r.height() < px(28) ? View.GONE : View.VISIBLE); // a sliver above the bar: no chip (a GONE root hides its window)
+                    if (fresh) { wm.addView(v, v.lp); wm.addView(v.chip, v.clp); m.masks.add(v); }
+                    else { if (moved) wm.updateViewLayout(v, v.lp); if (chipMoved) wm.updateViewLayout(v.chip, v.clp); }
                     v.postOnAnimation(() -> {
                         if (v.isAttachedToWindow() && m.shown && m.onScreen != null) { m.onScreen.complete(SystemClock.uptimeMillis() - m.t0); m.onScreen = null; }
                     });
@@ -568,11 +567,15 @@ final class Mods {
         finally { prefs().edit().remove("rendering").commit(); }
     }
 
-    /** One mask window: the app's own background with a small centred A2 chip ("Ad hidden" + AgentOS dot). Tap the chip to peek
-     *  (the item shows for 6 s under a chip-sized window), long-press to remove, swipe to scroll the list underneath. */
-    private View mask(Mod m, boolean peek) {
-        android.widget.FrameLayout v = new android.widget.FrameLayout(svc);
-        GradientDrawable d = new GradientDrawable(); v.setBackground(d);
+    /** One mask: a box window painted with the app's own background, and a small centred A2 chip ("Ad hidden" + AgentOS dot) in a
+     *  window of its own. The box is not touchable, so a finger that lands on it reaches the app: a swipe scrolls the feed natively
+     *  (the old box took the touch and only paged the list on finger-up, when it found a scrollable node at all). Only the chip
+     *  takes touches: tap to peek (the box goes clear for 6 s, "Tap to hide"), long-press to remove. */
+    private static final class Box extends View {
+        final TextView chip; final WindowManager.LayoutParams lp = params(), clp = params();
+        Box(android.content.Context c, TextView chip) { super(c); this.chip = chip; lp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; }
+    }
+    private Box mask(Mod m, boolean peek) {
         TextView chip = new TextView(svc); chip.setSingleLine(); chip.setGravity(Gravity.CENTER_VERTICAL);
         String what = m.spec.optJSONObject("action").optJSONObject("match").optString("text").toLowerCase();
         chip.setText(peek ? "Tap to hide" : Arrays.asList("promoted", "sponsored", "ad", "suggested").contains(what) ? "Ad hidden" : m.spec.optString("label"));
@@ -586,28 +589,13 @@ final class Mods {
         chip.setContentDescription((peek ? "hide again" : "peek at the hidden item") + " (AgentOS mod)");
         chip.setOnClickListener(c -> { if (m.disabled.isEmpty() && !approving) { m.peekUntil = peek ? 0 : SystemClock.uptimeMillis() + 6000; refresh(); } });
         chip.setOnLongClickListener(c -> { new Thread(() -> { try { remove(m.id, "long-press"); } catch (Exception ignored) {} }).start(); return true; });
-        android.widget.FrameLayout.LayoutParams cl = new android.widget.FrameLayout.LayoutParams(-2, -2); cl.gravity = Gravity.CENTER;
-        v.addView(chip, cl);
-        WindowManager.LayoutParams lp = params(); v.setTag(lp);
-        float[] down = new float[2];
-        android.view.GestureDetector gestures = new android.view.GestureDetector(svc, new android.view.GestureDetector.SimpleOnGestureListener() {
-            @Override public void onLongPress(android.view.MotionEvent e) { if (!m.shown || !m.disabled.isEmpty() || approving) return; new Thread(() -> { try { remove(m.id, "long-press"); } catch (Exception ignored) {} }).start(); }
-        });
-        v.setOnTouchListener((view, event) -> {
-            gestures.onTouchEvent(event);
-            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) { down[0] = event.getRawX(); down[1] = event.getRawY(); }
-            if (event.getAction() == android.view.MotionEvent.ACTION_UP && Math.abs(event.getRawY() - down[1]) > px(48)) {
-                try {
-                    AccessibilityNodeInfo now = svc.getRootInActiveWindow();
-                    if (now != null && m.pkg.contentEquals(now.getPackageName()) && ModMask.scroll(now, (int) down[0], (int) down[1], event.getRawY() < down[1], new int[]{600}, 0)) {
-                        scrollUntil = SystemClock.uptimeMillis() + 700; svc.main.removeCallbacks(refreshR); svc.main.post(refreshR); // the page animates: follow it
-                    }
-                }
-                catch (RuntimeException error) { fail(m, "scroll exception"); }
-            }
-            return true; // consume taps; only an owner's swipe may scroll the underlying collection
-        });
+        Box v = new Box(svc, chip); v.setBackground(new GradientDrawable());
         return v;
+    }
+
+    private void clearMasks(Mod m) {
+        for (View v : m.masks) try { wm.removeViewImmediate(((Box) v).chip); } catch (RuntimeException ignored) {}
+        ModMask.clear(wm, m.masks);
     }
 
     /** The mask colour: the spec's explicit color, else the app's background sampled once per theme/orientation around the item (cached). Null while sampling. */
@@ -758,7 +746,7 @@ final class Mods {
     }
 
     private void hide(Mod m) {
-        ModMask.clear(wm, m.masks);
+        clearMasks(m);
         hideChips(m);
         if (m.btn != null) try { wm.removeViewImmediate(m.btn); } catch (RuntimeException ignored) {}
         m.shown = false;

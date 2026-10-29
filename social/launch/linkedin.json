@@ -1,7 +1,0 @@
-{ "shot": "src/linkedin.png", "label": "Ads? *Hidden.*", "out": "linkedin.png",
-  "redact": [
-    { "x": 18, "y": 180, "w": 88, "h": 88, "r": 44, "blur": 30 },
-    { "x": 112, "y": 180, "w": 480, "h": 88, "blur": 30 },
-    { "x": 10, "y": 278, "w": 704, "h": 66, "blur": 30 },
-    { "x": 0, "y": 355, "w": 720, "h": 240, "blur": 45 }
-  ] }
