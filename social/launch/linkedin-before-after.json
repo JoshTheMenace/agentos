@@ -1,0 +1,10 @@
+{ "out": "linkedin-before-after.png", "geo": { "sw": 500, "gap": 140 },
+  "phones": [ { "shot": "src/linkedin-before.png", "label": "Before" }, { "shot": "src/linkedin-after.png", "label": "After" } ],
+  "redact": [
+    { "x": 16, "y": 1076, "w": 94, "h": 94, "r": 47, "blur": 40 },
+    { "x": 112, "y": 1078, "w": 470, "h": 96, "blur": 40 },
+    { "x": 0, "y": 1172, "w": 720, "h": 52, "blur": 70 },
+    { "x": 18, "y": 1239, "w": 68, "h": 68, "r": 34, "blur": 40 },
+    { "x": 86, "y": 1243, "w": 380, "h": 70, "blur": 40 },
+    { "x": 86, "y": 1308, "w": 620, "h": 130, "blur": 70 }
+  ] }

@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- One page draws every layer of a social asset. The spec is URI-encoded JSON in the hash (render.mjs builds it).
-     mode: still (bg + label + phone + screenshot) | bg (wallpaper only) | fg (phone bezel with a see-through screen, transparent page) | cap (caption + speed badge [+ scrim], transparent page) | card (wallpaper + big text) -->
+     mode: still (bg + label + phone + screenshot) | pair (bg + two phones side by side, a small plain tag over each) | bg (wallpaper only) | fg (phone bezel with a see-through screen, transparent page) | cap (caption + speed badge [+ scrim], transparent page) | card (wallpaper + big text) -->
 <meta charset="utf-8">
 <style>
 @font-face { font-family: Inter; src: url(InterVariable.woff2) format("woff2"); font-weight: 100 900; }
@@ -15,7 +15,11 @@ body { font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; font
 .label, .cap { position: absolute; left: 60px; right: 60px; text-align: center; font-weight: 700; letter-spacing: -.04em; line-height: 1.08; text-wrap: balance; }
 .label { font-size: 84px; }
 .cap { font-size: 62px; display: flex; align-items: center; justify-content: center; }
+.cap.plain { font-size: 40px; font-weight: 500; letter-spacing: -.015em; color: rgba(255,255,255,.88); } /* casual: small, lowercase is fine */
 .cap b, .label b { color: var(--acc, #64D2FF); font-weight: 700; }
+.cap.plain b { color: #fff; font-weight: 600; }
+.cell { position: absolute; top: 0; display: flex; align-items: center; justify-content: center; }
+.cell i { position: absolute; border-radius: 50%; }
 .body { position: absolute; border-radius: var(--R); border: var(--B) solid #0d0d0f;
   box-shadow: 0 0 0 1.5px rgba(255,255,255,.16), inset 0 0 0 1.5px rgba(255,255,255,.06), 0 40px 90px rgba(0,0,0,.55); }
 .screen { position: absolute; overflow: hidden; border-radius: calc(var(--R) - var(--B)); background: #000; }
@@ -24,6 +28,7 @@ body { font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; font
 .r img { position: absolute; filter: blur(var(--blur, 14px)); }
 .r.text { display: flex; align-items: center; white-space: nowrap; }
 .scrim { position: absolute; left: 0; right: 0; top: 0; height: 420px; background: linear-gradient(#050506 0, rgba(5,5,6,.92) 55%, transparent); }
+.tag { position: absolute; text-align: center; font-size: 34px; font-weight: 500; letter-spacing: -.01em; color: rgba(235,235,245,.72); }
 .badge { position: absolute; padding: 10px 22px; border-radius: 999px; background: #FF9F0A; color: #000; font-size: 38px; font-weight: 800; letter-spacing: -.02em;
   box-shadow: 0 6px 20px rgba(255,159,10,.4); }
 .card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 90px; }
@@ -45,25 +50,40 @@ if (s.mode === 'card') {
   if (s.title) el('h1', '', c).textContent = s.title;
   if (s.sub) el('p', '', c).textContent = s.sub;
 }
+function screen(shot, src, redact, g) { // the screenshot in the phone's screen, with its blur/fill/text boxes (source px -> canvas px)
+  const sc = el('div', 'screen'); Object.assign(sc.style, { left: g.sx + 'px', top: g.sy + 'px', width: g.sw + 'px', height: g.sh + 'px' });
+  const img = el('img', '', sc); img.src = shot;
+  const k = g.sw / src.w;
+  for (const r of redact || []) {
+    const d = el('div', 'r' + (r.text ? ' text' : ''), sc);
+    Object.assign(d.style, { left: r.x * k + 'px', top: r.y * k + 'px', width: r.w * k + 'px', height: r.h * k + 'px', borderRadius: (r.r || 0) * k + 'px' });
+    if (r.fill) d.style.background = r.fill;
+    if (r.blur) { const b = el('img', '', d); b.src = shot; Object.assign(b.style, { width: g.sw + 'px', left: -r.x * k + 'px', top: -r.y * k + 'px', '--blur': r.blur * k + 'px' }); }
+    if (r.text) { d.textContent = r.text; Object.assign(d.style, { color: r.color || '#fff', fontSize: (r.size || 28) * k + 'px', fontWeight: r.weight || 600, letterSpacing: '-.02em', paddingLeft: (r.pad || 0) * k + 'px' }); }
+  }
+}
+function bezel(g, B) { const b = el('div', 'body'); Object.assign(b.style, { left: g.sx - B + 'px', top: g.sy - B + 'px', width: g.sw + 2 * B + 'px', height: g.sh + 2 * B + 'px' }); }
+if (s.mode === 'pair') { // s.phones: [{shot, src, label, redact, geo}]
+  for (const p of s.phones) {
+    const g = p.geo, B = g.bezel; document.body.style.setProperty('--B', B + 'px'); document.body.style.setProperty('--R', g.radius + 'px');
+    screen(p.shot, p.src, p.redact, g); bezel(g, B);
+    const t = el('div', 'tag'); t.textContent = p.label; Object.assign(t.style, { left: g.sx + 'px', width: g.sw + 'px', top: g.sy - B - 78 + 'px' });
+  }
+}
+if (s.mode === 'ripple') { // n cells of S px: a ring that grows and fades, over a soft dot that fades faster
+  for (let i = 0; i < s.n; i++) { const p = i / (s.n - 1), c = el('div', 'cell'), S = s.size; Object.assign(c.style, { left: i * S + 'px', width: S + 'px', height: S + 'px' });
+    const d = el('i', '', c), r = el('i', '', c), rd = S * (0.14 + 0.1 * p), rr = S * (0.12 + 0.34 * p);
+    Object.assign(d.style, { width: 2 * rd + 'px', height: 2 * rd + 'px', background: `rgba(255,255,255,${(0.5 * (1 - p) ** 2).toFixed(3)})` });
+    Object.assign(r.style, { width: 2 * rr + 'px', height: 2 * rr + 'px', border: `${(5 - 3 * p).toFixed(1)}px solid rgba(255,255,255,${(0.95 * (1 - p)).toFixed(3)})`, boxShadow: `0 0 ${12 + 20 * p}px rgba(255,255,255,${(0.5 * (1 - p)).toFixed(3)})` }); }
+}
 if (['still', 'fg', 'cap'].includes(s.mode)) {
   const g = s.geo, B = g.bezel, R = g.radius;
   document.body.style.setProperty('--B', B + 'px'); document.body.style.setProperty('--R', R + 'px');
-  if (s.mode === 'still') {
-    const sc = el('div', 'screen'); Object.assign(sc.style, { left: g.sx + 'px', top: g.sy + 'px', width: g.sw + 'px', height: g.sh + 'px' });
-    const img = el('img', '', sc); img.src = s.shot;
-    const k = g.sw / s.src.w; // source px -> canvas px
-    for (const r of s.redact || []) {
-      const d = el('div', 'r' + (r.text ? ' text' : ''), sc);
-      Object.assign(d.style, { left: r.x * k + 'px', top: r.y * k + 'px', width: r.w * k + 'px', height: r.h * k + 'px', borderRadius: (r.r || 0) * k + 'px' });
-      if (r.fill) d.style.background = r.fill;
-      if (r.blur) { const b = el('img', '', d); b.src = s.shot; Object.assign(b.style, { width: g.sw + 'px', left: -r.x * k + 'px', top: -r.y * k + 'px', '--blur': r.blur * k + 'px' }); }
-      if (r.text) { d.textContent = r.text; Object.assign(d.style, { color: r.color || '#fff', fontSize: (r.size || 28) * k + 'px', fontWeight: r.weight || 600, letterSpacing: '-.02em', paddingLeft: (r.pad || 0) * k + 'px' }); }
-    }
-  }
+  if (s.mode === 'still') screen(s.shot, s.src, s.redact, g);
   if (s.scrim) el('div', 'scrim');
-  if (s.mode !== 'cap') { const b = el('div', 'body'); Object.assign(b.style, { left: g.sx - B + 'px', top: g.sy - B + 'px', width: g.sw + 2 * B + 'px', height: g.sh + 2 * B + 'px' }); }
+  if (s.mode !== 'cap') bezel(g, B);
   const txt = s.label || s.caption;
-  if (txt) { const t = el('div', s.label ? 'label' : 'cap'); Object.assign(t.style, { top: g.capTop + 'px', height: g.capH + 'px' }); if (s.label) t.style.lineHeight = g.capH + 'px';
+  if (txt) { const t = el('div', s.label ? 'label' : 'cap' + (s.style === 'bold' ? '' : ' plain')); Object.assign(t.style, { top: g.capTop + 'px', height: g.capH + 'px' }); if (s.label) t.style.lineHeight = g.capH + 'px';
     t.innerHTML = '<span>' + txt.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]).replace(/\*(.+?)\*/g, '<b>$1</b>') + '</span>'; }
   if (s.badge) { const t = el('div', 'badge'); t.textContent = s.badge; Object.assign(t.style, { right: W - (g.sx + g.sw + B) - 18 + 'px', top: g.sy - B - 26 + 'px' }); }
 }

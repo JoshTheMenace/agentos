@@ -1,5 +1,6 @@
 // Social asset renderer. Two commands, both driven by one JSON file next to the asset:
 //   node social/kit/render.mjs still <spec.json>   -> 1080x1350 PNG: wallpaper + label + phone frame + screenshot (+ redactions)
+//   node social/kit/render.mjs pair <spec.json>    -> wide PNG (1600x1000): two framed screenshots side by side, a small "Before"/"After" tag over each
 //   node social/kit/render.mjs video <edit.json>   -> MP4 (H.264) + poster: title card, cut phone recording in a frame with captions, end card
 // Layers are drawn by frame.html in headless Chrome; ffmpeg stacks and cuts them. Paths in a spec are relative to the spec file.
 import { execFileSync } from 'node:child_process';
@@ -11,7 +12,7 @@ const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/M
 const FRAME = resolve(dirname(new URL(import.meta.url).pathname), 'frame.html');
 const [cmd, specPath] = process.argv.slice(2);
 const spec = JSON.parse(readFileSync(specPath, 'utf8')), dir = dirname(resolve(specPath)), at = (p) => resolve(dir, p);
-const W = spec.w || 1080, H = spec.h || 1350, FPS = 30;
+const W = spec.w || (cmd === 'pair' ? 1600 : 1080), H = spec.h || (cmd === 'pair' ? 1000 : 1350), FPS = 30;
 
 // Phone geometry on the canvas. "bleed": a big phone that runs off the bottom (stills); "full": the whole phone fits (video).
 function geometry(src, kind, o = {}) {
@@ -32,6 +33,13 @@ const probe = (f) => { const [w, h, d] = execFileSync('ffprobe', ['-v', 'error',
 if (cmd === 'still') {
   const shot = at(spec.shot), src = probe(shot);
   shoot({ mode: 'still', shot: pathToFileURL(shot).href, src, label: spec.label, redact: spec.redact, geo: geometry(src, 'bleed', spec.geo) }, at(spec.out));
+  console.log(spec.out);
+} else if (cmd === 'pair') { // spec: {w, h, phones: [{shot, label, redact?}], redact? (shared), geo?: {sw, sy, gap}, out}
+  const o = { sw: 460, sy: 120, gap: 160, ...spec.geo }, phones = spec.phones.map((p, i) => {
+    const shot = at(p.shot), src = probe(shot), g = geometry(src, 'bleed', { sw: o.sw, sy: o.sy, bezel: 12, radius: 58 });
+    g.sx = Math.round(W / 2 + (i - (spec.phones.length - 1) / 2) * (o.sw + o.gap) - o.sw / 2);
+    return { shot: pathToFileURL(shot).href, src, label: p.label, redact: p.redact || spec.redact, geo: g }; });
+  shoot({ mode: 'pair', phones }, at(spec.out));
   console.log(spec.out);
 } else if (cmd === 'video') {
   const raw = at(spec.raw), src = probe(raw), g = geometry(src, 'full', spec.geo), tmp = at('.build');
@@ -74,4 +82,4 @@ if (cmd === 'still') {
   execFileSync('ffmpeg', ['-y', '-v', 'error', '-ss', String(spec.posterAt ?? T + body * 0.8), '-i', out, '-frames:v', '1', at(spec.poster || basename(out, '.mp4') + '-poster.png')]);
   if (!spec.keepBuild) rmSync(tmp, { recursive: true, force: true });
   console.log(`${spec.out}: ${p.w}x${p.h}, ${p.d.toFixed(1)} s (title ${T} + body ${body.toFixed(1)} + end ${E})`);
-} else { console.error('usage: render.mjs still|video <spec.json>'); process.exit(1); }
+} else { console.error('usage: render.mjs still|pair|video <spec.json>'); process.exit(1); }

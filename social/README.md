@@ -5,9 +5,9 @@ one small JSON "order" (which screenshot or recording, what words, what to blur)
 
 ```
 kit/frame.html     draws every layer: A2 wallpaper, phone frame, label/caption, speed badge, title and end cards
-kit/render.mjs     still <spec.json> → 1080×1350 PNG     video <edit.json> → MP4 + poster PNG
+kit/render.mjs     still <spec.json> → 1080×1350 PNG     pair <spec.json> → 1600×1000 before/after PNG     video <edit.json> → MP4 + poster PNG
 kit/devtools.mjs   asks the launcher's WebViews where things are (tap targets in phone pixels)
-launch/            the two launch images (home.json, linkedin.json → home.png, linkedin.png; src/ = raw phone shots, not in git)
+launch/            the launch images (home.json → home.png; linkedin-before-after.json → linkedin-before-after.png; src/ = raw phone shots, not in git)
 videos/NN-name/    one folder per video: raw/ (phone recordings, not in git), record.sh (how the takes were driven), edit.json, out .mp4 + cover
 ```
 
@@ -22,6 +22,13 @@ Needs: Google Chrome (headless, for drawing), ffmpeg/ffprobe, Node 22+. Nothing 
    `"r"` rounds the corners (avatars: r = w/2).
 4. `node social/kit/render.mjs still social/launch/<name>.json`, then open the PNG and check every area again.
    `geo` overrides the phone size/position, e.g. `{"sw": 660, "sy": 250}`.
+
+## Make a before/after (a mod, off and on)
+Two shots of the same screen position, side by side in phone frames, a plain "Before"/"After" over each, no title: build-in-public, not an ad.
+1. Shoot "after" with the mod on. Then switch the accessibility service off, shoot "before", switch it back on (the mod spec is saved in
+   prefs and comes back enabled); don't remove the mod, re-applying needs the owner's tap. `linkedin-before-after.json` shows the shape:
+   `phones: [{shot, label}]`, one shared `redact` list (same pixels in both shots), `geo: {sw, gap}`.
+2. `node social/kit/render.mjs pair social/launch/<name>.json`, then check both phones for faces and names.
 
 ## Make the next video (about 30 minutes)
 1. `mkdir social/videos/02-<feature>/raw` and copy `01-make-an-app/record.sh` and `edit.json` in.
