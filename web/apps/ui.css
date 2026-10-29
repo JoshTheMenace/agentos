@@ -7,7 +7,8 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{height:100%;background:var(--bg)}
 body{min-height:100%;color:var(--l1);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-size:15px;font-weight:500;
-  font-feature-settings:"cv11","ss03";padding:18px 16px 110px;background:var(--bg) radial-gradient(circle at 15% -10%,var(--glow),transparent 55%) fixed;user-select:none;-webkit-user-select:none}
+  font-feature-settings:"cv11","ss03";padding:56px 16px 110px; /* top: clears the island pill (8 + 37 dp below the status bar) like a safe area, so a header never sits under "Checking Calendar" */
+  background:var(--bg) radial-gradient(circle at 15% -10%,var(--glow),transparent 55%) fixed;user-select:none;-webkit-user-select:none}
 button,input,select,textarea{font:inherit;color:inherit;background:none;border:0;outline:0;-webkit-appearance:none}
 button{cursor:pointer}
 svg{display:block}
