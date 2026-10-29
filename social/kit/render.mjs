@@ -42,15 +42,17 @@ if (cmd === 'still') {
   shoot({ mode: 'fg', geo: g }, `${tmp}/phone.png`);
   const segs = spec.segments.map((s, i) => { const f = `${tmp}/cap${i}.png`; shoot({ mode: 'cap', caption: s.caption, badge: s.speed > 1 ? `${s.speed}×` : '', scrim: !!s.zoom, geo: g }, f); return { ...s, f }; });
 
-  // Inputs: 0 wallpaper, 1 raw, 2 title, 3 end, 4 phone bezel, 5.. one caption layer per segment.
+  // Inputs: 0 wallpaper, 1 raw, 2 title, 3 end, 4 phone bezel, 5.. one caption layer per segment, then any other takes (segment "raw").
   // Per segment: wallpaper + recording (trimmed, sped up, blurred boxes, scaled into the screen) + bezel [+ push-in zoom] + caption.
   const T = spec.titleSec || 2, E = spec.end?.sec || 2.5, X = 0.35; // card lengths, crossfade
   const inputs = ['-loop', '1', '-i', `${tmp}/bg.png`, '-i', raw, '-loop', '1', '-t', T + X, '-i', `${tmp}/title.png`, '-loop', '1', '-t', E, '-i', `${tmp}/end.png`, '-loop', '1', '-i', `${tmp}/phone.png`];
   const f = [], cuts = []; let body = 0;
+  const raws = [...new Set(segs.map((s) => s.raw).filter(Boolean))]; // a segment may cut from another take: "raw" on the segment
+  segs.forEach((s) => inputs.push('-loop', '1', '-i', s.f)); raws.forEach((r) => inputs.push('-i', at(r)));
   segs.forEach((s, i) => {
-    inputs.push('-loop', '1', '-i', s.f);
     const sp = s.speed || 1, d = (s.to - s.from) / sp, dur = `trim=duration=${d.toFixed(3)},setpts=PTS-STARTPTS,fps=${FPS}`; body += d;
-    let v = `[1:v]trim=${s.from}:${s.to},setpts=(PTS-STARTPTS)/${sp},fps=${FPS}`;
+    // fps before trim: screenrecord writes no frames while the screen is still, so a cut that starts on a still screen ran late
+    let v = `[${s.raw ? 5 + segs.length + raws.indexOf(s.raw) : 1}:v]fps=${FPS},trim=${s.from}:${s.to},setpts=(PTS-STARTPTS)/${sp},fps=${FPS}`;
     (s.redact || spec.redact || []).forEach((r, j) => { // blur a box (source px) on the recording
       f.push(`${v},split[m${i}_${j}][c${i}_${j}]`, `[c${i}_${j}]crop=${r.w}:${r.h}:${r.x}:${r.y},boxblur=${r.blur || 18}:3[b${i}_${j}]`);
       v = `[m${i}_${j}][b${i}_${j}]overlay=${r.x}:${r.y}`; });

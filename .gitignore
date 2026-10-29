@@ -22,3 +22,8 @@ agentos-private/
 jsons.zip
 samsunghealth*.zip
 DownloadPersonalData*.zip
+
+# Social: raw phone captures stay local (big, and unblurred other people); only the finished, redacted assets are committed.
+social/videos/*/raw/
+social/launch/src/
+social/**/.build/

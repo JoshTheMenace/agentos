@@ -1,11 +1,11 @@
 #!/bin/sh
 # How the raw takes of video 01 were driven. Run each phase inside the phone lock, from the repo root:
 #   scripts/withphone sh social/videos/01-make-an-app/record.sh pre     # DND + touch dots on, remember the app list, Home
-#   scripts/withphone sh social/videos/01-make-an-app/record.sh a       # take A: type the ask, build, the app lands on Home
-#   scripts/withphone sh social/videos/01-make-an-app/record.sh b       # take B: open the new app and log a set (taps from b.taps)
+#   scripts/withphone sh social/videos/01-make-an-app/record.sh a a2    # take A -> raw/take-a2.mp4: type the ask, build, the app lands on Home
+#   scripts/withphone sh social/videos/01-make-an-app/record.sh b b3    # take B -> raw/take-b3.mp4: open the new app and log cups (taps from b.taps)
 #   scripts/withphone sh social/videos/01-make-an-app/record.sh post    # put DND/touch dots back; prints the new app id to delete
-set -eu; cd "$(dirname "$0")"; S=${ANDROID_SERIAL:-ZY22J3TK8S}; A="adb -s $S"; ST=/tmp/social-01; mkdir -p "$ST" raw
-ASK="make me a workout tracker with sets, reps and a weekly chart"
+set -eu; cd "$(dirname "$0")"; N=${2:-$1}; S=${ANDROID_SERIAL:-ZY22J3TK8S}; A="adb -s $S"; ST=/tmp/social-01; mkdir -p "$ST" raw
+ASK="make me a coffee tracker with a 3 cup daily limit and a weekly chart" # a new name: an old app id keeps its WebView storage
 DT="node ../../kit/devtools.mjs"
 apps() { $A shell "su -c 'ls /data/data/com.termux/files/home/.agentos/apps'" | tr -d '\r' | sort; }
 tapq() { xy=$($DT "$1" "(r => r && r.x + ' ' + r.y)(rect($2))" | tr -d '"'); [ "$xy" != null ] || { echo "no $2" >&2; exit 1; }; $A shell input tap $xy; }
@@ -21,18 +21,19 @@ pre)
   apps > "$ST/apps-before"; $A shell "su -c 'tar -C /data/data/com.termux/files/home/.agentos -cf - apps'" > "$ST/apps-backup.tar" # in case the model edits an old app
   $A shell input keyevent HOME; echo "apps before: $(tr '\n' ' ' < "$ST/apps-before")" ;;
 a)
-  $A shell input keyevent HOME; sleep 1; rec a
-  sleep 1.5; tapq 'agentos\.home' "'#askIn'"; sleep 1.5
-  type_slow "$ASK"; sleep 1.2; $A shell input keyevent 66
+  $A shell input keyevent HOME; $DT 'agentos\.home/index' 'location.reload()' >/dev/null || true; sleep 4; rec $N # reload: an empty ask sheet
+  sleep 1.5; tapq 'agentos\.home/index' "'#cmd span'"; sleep 1.5
+  type_slow "$ASK"; sleep 1.2; $A shell input keyevent 66; sleep 1; $A shell input keyevent BACK # hide the keyboard, show the build
   t=0; until [ "$(apps | comm -13 "$ST/apps-before" -)" ] || [ $t -ge 150 ]; do sleep 2; t=$((t+2)); done
-  echo "built after ~${t}s: $(apps | comm -13 "$ST/apps-before" -)"; sleep 8
-  $A shell input keyevent BACK; sleep 5; stop a ;;
+  echo "built after ~${t}s: $(apps | comm -13 "$ST/apps-before" -)"
+  until [ "$($DT 'agentos\.home/index' 'S.turn' || echo true)" = false ] || [ $t -ge 180 ]; do sleep 1; t=$((t+1)); done; sleep 4 # the answer lands
+  $A shell input keyevent BACK; sleep 4; stop $N ;; # BACK closes the sheet: the new app is on Home
 b) # b.taps: one step per line: "tap <x> <y>" | "text <word>" | "sleep <s>" | "home" (written after looking at the app)
-  $A shell input keyevent HOME; sleep 1; rec b; sleep 1.5
-  tapq 'agentos\.home' "'#myapps > *'"; sleep 3
-  while read -r op x y; do case "$op" in tap) $A shell input tap "$x" "$y";; text) $A shell input text "$x";; sleep) sleep "$x";; home) $A shell input keyevent HOME;; esac; sleep 0.6; done < b.taps
-  sleep 2; stop b ;;
+  $A shell input keyevent HOME; sleep 1; rec $N; sleep 1.5
+  tapq 'agentos\.home/index' "'#myapps > *'"; sleep 3
+  while read -r op x y <&3; do case "$op" in tap) $A shell input tap "$x" "$y";; text) $A shell input text "$x";; sleep) sleep "$x";; home) $A shell input keyevent HOME;; esac; sleep 0.6; done 3< b.taps # fd 3: adb shell would eat stdin
+  sleep 2; stop $N ;;
 post)
-  [ "$(cat "$ST/zen")" = 0 ] && $A shell cmd notification set_dnd off; $A shell settings put system show_touches "$(cat "$ST/touches")"
+  [ "$(cat "$ST/zen")" = 0 ] && $A shell cmd notification set_dnd off; t=$(tr -d "\r" < "$ST/touches"); if [ "$t" = null ]; then $A shell settings delete system show_touches; else $A shell settings put system show_touches "$t"; fi
   echo "new app ids (delete by exact id): $(apps | comm -13 "$ST/apps-before" - | tr '\n' ' ')" ;;
 esac
