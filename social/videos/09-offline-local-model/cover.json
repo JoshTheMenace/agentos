@@ -1,0 +1,2 @@
+{ "shot": "raw/cover-src.png", "label": "No internet. *Still works.*", "out": "cover.png", "geo": { "sw": 470, "sy": 236 },
+  "redact": [ { "x": 36, "y": 395, "w": 648, "h": 120, "blur": 24 } ] }

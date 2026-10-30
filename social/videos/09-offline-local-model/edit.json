@@ -1,0 +1,131 @@
+{
+  "raw": "raw/take-o1.mp4",
+  "out": "offline.mp4",
+  "poster": "offline-poster.png",
+  "camera": "follow",
+  "tapShift": -0.3,
+  "segments": [
+    {
+      "from": 0.8,
+      "to": 2.1,
+      "caption": "airplane mode on. no internet at all",
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        },
+        {
+          "x": 36,
+          "y": 828,
+          "w": 648,
+          "h": 165,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 2.1,
+      "to": 5.9,
+      "caption": "airplane mode on. no internet at all"
+    },
+    {
+      "from": 7.3,
+      "to": 8.8,
+      "caption": "asking anyway",
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        },
+        {
+          "x": 36,
+          "y": 828,
+          "w": 648,
+          "h": 165,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 8.8,
+      "to": 14.2,
+      "caption": "a small model runs on the phone itself",
+      "focus": {
+        "at": 10.0,
+        "until": 13.9,
+        "x": 360,
+        "y": 990,
+        "zoom": 1.4
+      },
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 14.2,
+      "to": 17.8,
+      "caption": "done in 1.5 s, tagged on device",
+      "focus": {
+        "at": 14.6,
+        "until": 17.5,
+        "x": 330,
+        "y": 980,
+        "zoom": 1.5
+      },
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 19.4,
+      "to": 22.3,
+      "caption": "flashlight's on",
+      "focus": {
+        "at": 19.7,
+        "until": 22.0,
+        "x": 190,
+        "y": 840,
+        "zoom": 1.6
+      }
+    },
+    {
+      "from": 22.3,
+      "to": 26.1,
+      "caption": "flashlight off, airplane mode off"
+    },
+    {
+      "from": 27.0,
+      "to": 28.18,
+      "hold": 2.2,
+      "caption": "back online",
+      "redact": [
+        {
+          "x": 36,
+          "y": 395,
+          "w": 648,
+          "h": 120,
+          "blur": 24
+        }
+      ]
+    }
+  ],
+  "posterAt": 15.0
+}
