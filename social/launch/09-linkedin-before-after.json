@@ -1,5 +1,5 @@
-{ "out": "09-linkedin-before-after.png", "geo": { "sw": 500, "gap": 140 },
-  "phones": [ { "shot": "src/linkedin-before.png", "label": "Before" }, { "shot": "src/linkedin-after.png", "label": "After" } ],
+{ "out": "09-linkedin-before-after.png", "label": "asked: \"hide the promoted posts in LinkedIn\"", "h": 1350, "geo": { "sw": 460, "sy": 230, "gap": 160 },
+  "phones": [ { "shot": "src/linkedin-before.png", "label": "before" }, { "shot": "src/linkedin-after.png", "label": "after: ad covered" } ],
   "redact": [
     { "x": 16, "y": 1076, "w": 94, "h": 94, "r": 47, "blur": 40 },
     { "x": 112, "y": 1078, "w": 470, "h": 96, "blur": 40 },
