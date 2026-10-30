@@ -1,4 +1,4 @@
-{ "out": "linkedin-before-after.png", "geo": { "sw": 500, "gap": 140 },
+{ "out": "09-linkedin-before-after.png", "geo": { "sw": 500, "gap": 140 },
   "phones": [ { "shot": "src/linkedin-before.png", "label": "Before" }, { "shot": "src/linkedin-after.png", "label": "After" } ],
   "redact": [
     { "x": 16, "y": 1076, "w": 94, "h": 94, "r": 47, "blur": 40 },

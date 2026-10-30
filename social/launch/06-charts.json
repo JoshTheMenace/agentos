@@ -1,0 +1,38 @@
+{
+ "out": "06-charts.png",
+ "label": "asked: \"show me my sleep for the last 7 days\" \u00b7 \"when should I turn on my christmas tree?\"",
+ "h": 1350,
+ "geo": {
+  "sw": 460,
+  "sy": 230,
+  "gap": 160
+ },
+ "phones": [
+  {
+   "shot": "src/06-sleep.png",
+   "label": "galaxy watch data",
+   "redact": [
+    {
+     "x": 130,
+     "y": 400,
+     "w": 540,
+     "h": 82,
+     "blur": 30
+    }
+   ]
+  },
+  {
+   "shot": "src/06-tree.png",
+   "label": "clean-power window",
+   "redact": [
+    {
+     "x": 130,
+     "y": 418,
+     "w": 540,
+     "h": 78,
+     "blur": 30
+    }
+   ]
+  }
+ ]
+}

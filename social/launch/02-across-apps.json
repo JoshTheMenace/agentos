@@ -1,0 +1,3 @@
+{ "out": "02-across-apps.png", "label": "asked: \"open Pigeon and read the last message from Alex, then look the place up in the Google Maps app\"",
+  "h": 1350, "geo": { "sw": 460, "sy": 230, "gap": 160 },
+  "phones": [ { "shot": "src/02-pigeon.png", "label": "reads the message" }, { "shot": "src/02-maps.png", "label": "finds the place · 25.9 s" } ] }

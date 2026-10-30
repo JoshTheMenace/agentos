@@ -1,0 +1,2 @@
+{ "out": "08-security.png", "label": "asked: \"install Firefox Focus\" · then opened a message with hidden instructions for the AI", "h": 1350, "geo": { "sw": 460, "sy": 230, "gap": 160 },
+  "phones": [ { "shot": "src/08-lease.png", "label": "store apps need my tap", "redact": [ {"x":130,"y":550,"w":520,"h":78,"blur":30} ] }, { "shot": "src/08-scam.png", "label": "prompt guard caught it" } ] }

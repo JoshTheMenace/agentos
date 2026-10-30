@@ -32,14 +32,14 @@ const probe = (f) => { const [w, h, d] = execFileSync('ffprobe', ['-v', 'error',
 
 if (cmd === 'still') {
   const shot = at(spec.shot), src = probe(shot);
-  shoot({ mode: 'still', shot: pathToFileURL(shot).href, src, label: spec.label, redact: spec.redact, geo: geometry(src, 'bleed', spec.geo) }, at(spec.out));
+  shoot({ mode: 'still', shot: pathToFileURL(shot).href, src, label: spec.label, style: spec.style, redact: spec.redact, geo: geometry(src, 'bleed', spec.geo) }, at(spec.out));
   console.log(spec.out);
-} else if (cmd === 'pair') { // spec: {w, h, phones: [{shot, label, redact?}], redact? (shared), geo?: {sw, sy, gap}, out}
+} else if (cmd === 'pair') { // spec: {w, h, label? (the ask, across the top), phones: [{shot, label, redact?}], redact? (shared), geo?: {sw, sy, gap}, out}
   const o = { sw: 460, sy: 120, gap: 160, ...spec.geo }, phones = spec.phones.map((p, i) => {
     const shot = at(p.shot), src = probe(shot), g = geometry(src, 'bleed', { sw: o.sw, sy: o.sy, bezel: 12, radius: 58 });
     g.sx = Math.round(W / 2 + (i - (spec.phones.length - 1) / 2) * (o.sw + o.gap) - o.sw / 2);
     return { shot: pathToFileURL(shot).href, src, label: p.label, redact: p.redact || spec.redact, geo: g }; });
-  shoot({ mode: 'pair', phones }, at(spec.out));
+  shoot({ mode: 'pair', phones, label: spec.label }, at(spec.out));
   console.log(spec.out);
 } else if (cmd === 'video') {
   const raw = at(spec.raw), src = probe(raw), g = geometry(src, 'full', spec.geo), tmp = at('.build');

@@ -1,0 +1,2 @@
+{ "shot": "src/01-home.png", "style": "plain", "geo": { "sw": 470, "sy": 236 }, "label": "asked: \"what smart home devices do I have?\"", "out": "01-home-ask.png",
+  "redact": [ {"x":130,"y":418,"w":540,"h":78,"blur":30} ] }

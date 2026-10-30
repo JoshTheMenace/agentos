@@ -8,7 +8,8 @@ kit/frame.html     draws every layer: A2 wallpaper, phone frame, caption, speed 
 kit/render.mjs     still <spec.json> → 1080×1350 PNG     pair <spec.json> → 1600×1000 before/after PNG     video <edit.json> → MP4 + poster PNG
 kit/devtools.mjs   asks the launcher's WebViews where things are (tap targets in phone pixels)
 kit/rec.sh         sourced by record.sh: rec/stop, and tap/swipe that log every touch with its time to take-N.taps (the camera reads it)
-launch/            the launch images (home.json → home.png; linkedin-before-after.json → linkedin-before-after.png; src/ = raw phone shots, not in git)
+launch/            the launch images (01-home-ask.json → 01-home-ask.png … 09; sheet.png = all nine for review; src/ = raw phone shots, not in git;
+                   shoot.sh = how each raw shot was driven, one phase per image, asks sent through the launcher's own sheet)
 videos/NN-name/    one folder per video: raw/ (phone recordings, not in git), record.sh (how the takes were driven), edit.json, out .mp4 + cover
 ```
 
@@ -16,7 +17,9 @@ Needs: Google Chrome (headless, for drawing), ffmpeg/ffprobe, Node 22+. Nothing 
 
 ## Make a still
 1. Take a fresh shot: `scripts/withphone adb -s ZY22J3TK8S exec-out screencap -p > social/launch/src/<name>.png`
-2. Copy `launch/home.json`, set `shot`, `label` (3 words max), `out`.
+2. Copy `launch/01-home-ask.json`, set `shot`, `label`, `out`. `"style": "plain"` is the casual look: a small `asked: "…"` line that wraps;
+   without it the label is the big bold headline (3 words max). `geo: {"sw": 470, "sy": 236}` fits the whole phone (an answer or a keyboard
+   at the bottom); the default bleeds off the bottom.
 3. **Privacy:** list every real person's name, face, avatar, message text, email and phone number in `redact`, in the shot's
    own pixels (open it at full size and read the coordinates off). Each box is `{x,y,w,h}` plus one of:
    `"blur": 30` (frosted copy of what's under it), `"fill": "#1c1c1e"` (solid block), or `"text": "Alex", "size": 40` (a stand-in).
@@ -24,8 +27,9 @@ Needs: Google Chrome (headless, for drawing), ffmpeg/ffprobe, Node 22+. Nothing 
 4. `node social/kit/render.mjs still social/launch/<name>.json`, then open the PNG and check every area again.
    `geo` overrides the phone size/position, e.g. `{"sw": 660, "sy": 250}`.
 
-## Make a before/after (a mod, off and on)
-Two shots of the same screen position, side by side in phone frames, a plain "Before"/"After" over each, no title: build-in-public, not an ad.
+## Make a pair (two moments of one ask, or a mod off and on)
+Two shots side by side in phone frames, a small plain tag over each, and an optional `label` across the top (the ask; wraps). `"h": 1350`
+fits whole phones at `sw` 460 (the 1000-tall default bleeds). `redact` on a phone, or shared. Before/after of a mod:
 1. Shoot "after" with the mod on. Then switch the accessibility service off, shoot "before", switch it back on (the mod spec is saved in
    prefs and comes back enabled); don't remove the mod, re-applying needs the owner's tap. `linkedin-before-after.json` shows the shape:
    `phones: [{shot, label}]`, one shared `redact` list (same pixels in both shots), `geo: {sw, gap}`.

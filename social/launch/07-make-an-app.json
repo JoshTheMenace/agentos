@@ -1,0 +1,29 @@
+{
+ "out": "07-make-an-app.png",
+ "label": "asked: \"make me an app to learn Japanese, hiragana first, with quizzes and a streak\"",
+ "h": 1350,
+ "geo": {
+  "sw": 460,
+  "sy": 230,
+  "gap": 160
+ },
+ "phones": [
+  {
+   "shot": "src/07-building.png",
+   "label": "40 s in",
+   "redact": [
+    {
+     "x": 130,
+     "y": 550,
+     "w": 520,
+     "h": 78,
+     "blur": 30
+    }
+   ]
+  },
+  {
+   "shot": "src/07-kana.png",
+   "label": "94 s later"
+  }
+ ]
+}

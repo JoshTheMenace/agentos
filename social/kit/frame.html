@@ -15,6 +15,7 @@ body { font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; font
 .wall .c { width: 900px; height: 900px; left: -260px; bottom: -420px; background: radial-gradient(closest-side, rgba(230,90,150,.22), transparent); }
 .label, .cap { position: absolute; left: 60px; right: 60px; text-align: center; font-weight: 700; letter-spacing: -.04em; line-height: 1.08; text-wrap: balance; }
 .label { font-size: 84px; }
+.label.plain { font-size: 40px; font-weight: 500; letter-spacing: -.015em; color: rgba(255,255,255,.88); display: flex; align-items: center; justify-content: center; line-height: 1.15; } /* casual: asked: "…", wraps */
 .cap { font-size: 62px; display: flex; align-items: center; justify-content: center; }
 .cap.plain { font-size: 40px; font-weight: 500; letter-spacing: -.015em; color: rgba(255,255,255,.88); } /* casual: small, lowercase is fine */
 .cap b, .label b { color: var(--acc, #64D2FF); font-weight: 700; }
@@ -70,6 +71,7 @@ if (s.mode === 'pair') { // s.phones: [{shot, src, label, redact, geo}]
     screen(p.shot, p.src, p.redact, g); bezel(g, B);
     const t = el('div', 'tag'); t.textContent = p.label; Object.assign(t.style, { left: g.sx + 'px', width: g.sw + 'px', top: g.sy - B - 78 + 'px' });
   }
+  if (s.label) { const t = el('div', 'label plain'); t.textContent = s.label; Object.assign(t.style, { top: '24px', height: '100px' }); } // the ask, across the top
 }
 if (s.mode === 'ripple') { // n cells of S px: a ring that grows and fades, over a soft dot that fades faster
   for (let i = 0; i < s.n; i++) { const p = i / (s.n - 1), c = el('div', 'cell'), S = s.size; Object.assign(c.style, { left: i * S + 'px', width: S + 'px', height: S + 'px' });
@@ -84,7 +86,7 @@ if (['still', 'fg', 'cap'].includes(s.mode)) {
   if (s.scrim) el('div', 'scrim');
   if (s.mode !== 'cap') bezel(g, B);
   const txt = s.label || s.caption;
-  if (txt) { const t = el('div', s.label ? 'label' : 'cap' + (s.style === 'bold' ? '' : ' plain')); Object.assign(t.style, { top: g.capTop + 'px', height: g.capH + 'px' }); if (s.label) t.style.lineHeight = g.capH + 'px';
+  if (txt) { const t = el('div', s.label ? 'label' + (s.style === 'plain' ? ' plain' : '') : 'cap' + (s.style === 'bold' ? '' : ' plain')); Object.assign(t.style, { top: g.capTop + 'px', height: g.capH + 'px' }); if (s.label && s.style !== 'plain') t.style.lineHeight = g.capH + 'px';
     t.innerHTML = '<span>' + txt.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]).replace(/\*(.+?)\*/g, '<b>$1</b>') + '</span>'; }
   if (s.badge) { const t = el('div', 'badge'); t.textContent = s.badge; Object.assign(t.style, { right: W - (g.sx + g.sw + B) - 18 + 'px', top: g.sy - B - 26 + 'px' }); }
 }

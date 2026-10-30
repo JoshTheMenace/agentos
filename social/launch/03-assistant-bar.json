@@ -1,0 +1,8 @@
+{ "shot": "src/03-bar.png", "style": "plain", "geo": { "sw": 470, "sy": 236 }, "label": "in LinkedIn, asked: \"what is this post about? give me a one-line reply\"", "out": "03-assistant-bar.png",
+  "redact": [
+    { "x": 18, "y": 172, "w": 44, "h": 44, "r": 22, "blur": 30 },
+    { "x": 74, "y": 178, "w": 165, "h": 32, "blur": 30 },
+    { "x": 20, "y": 240, "w": 86, "h": 86, "r": 43, "blur": 30 },
+    { "x": 116, "y": 242, "w": 220, "h": 60, "blur": 30 },
+    { "x": 60, "y": 470, "w": 400, "h": 160, "blur": 30 },
+    { "x": 465, "y": 498, "w": 255, "h": 152, "blur": 24 } ] }

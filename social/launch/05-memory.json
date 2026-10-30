@@ -1,0 +1,2 @@
+{ "out": "05-memory.png", "label": "asked: \"what do I know about Sam?\"", "h": 1350, "geo": { "sw": 460, "sy": 230, "gap": 160 },
+  "phones": [ { "shot": "src/05-know.png", "label": "the answer", "redact": [ {"x":130,"y":418,"w":540,"h":78,"blur":30} ] }, { "shot": "src/05-graph.png", "label": "the people graph" } ] }
