@@ -15,7 +15,9 @@ wait_turn() { t=0; until [ "$($DT "$H" 'S.turn' || echo true)" = false ] || [ $t
 case "$1" in
 pre) $A shell settings get global zen_mode > "$ST/zen"; $A shell settings get system show_touches > "$ST/touches"
   $A shell cmd notification set_dnd priority; $A shell settings put system show_touches 1; $A shell input keyevent HOME ;;
-a) $A shell input keyevent HOME; $DT "$H" 'location.reload()' >/dev/null || true; sleep 4; rec $N; sleep 1.5
+a) $A shell input keyevent WAKEUP; sleep 1; $A shell input keyevent HOME; $DT "$H" 'location.reload()' >/dev/null || true; sleep 4
+  $DT "$H" "document.head.appendChild(Object.assign(document.createElement('style'), { textContent: '#sheet{background:#161618}' })); 1" >/dev/null # the sheet is glass: Home (the calendar card) ghosts through it on video. Opaque for the take; gone on the next reload
+  rec $N; sleep 1.5
   qs; tap $AIR; sleep 2.5; $A shell cmd statusbar collapse; sleep 1.5              # airplane mode on
   tapq "$H" "'#cmd span'"; sleep 1.5; type_slow "$ASK"; sleep 1; $A shell input keyevent 66; sleep 0.8; $A shell input keyevent BACK # ask; hide the keyboard
   wait_turn 60; sleep 3.5

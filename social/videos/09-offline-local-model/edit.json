@@ -1,5 +1,5 @@
 {
-  "raw": "raw/take-o1.mp4",
+  "raw": "raw/take-o2.mp4",
   "out": "offline.mp4",
   "poster": "offline-poster.png",
   "camera": "follow",
@@ -7,7 +7,7 @@
   "segments": [
     {
       "from": 0.8,
-      "to": 2.1,
+      "to": 2.5,
       "caption": "airplane mode on. no internet at all",
       "redact": [
         {
@@ -27,13 +27,13 @@
       ]
     },
     {
-      "from": 2.1,
-      "to": 5.9,
+      "from": 2.95,
+      "to": 6.6,
       "caption": "airplane mode on. no internet at all"
     },
     {
       "from": 7.3,
-      "to": 8.8,
+      "to": 9.1,
       "caption": "asking anyway",
       "redact": [
         {
@@ -53,12 +53,33 @@
       ]
     },
     {
-      "from": 8.8,
-      "to": 14.2,
+      "from": 9.1,
+      "to": 9.4,
+      "caption": "a small model runs on the phone itself",
+      "redact": [
+        {
+          "x": 36,
+          "y": 380,
+          "w": 648,
+          "h": 270,
+          "blur": 24
+        },
+        {
+          "x": 36,
+          "y": 828,
+          "w": 648,
+          "h": 165,
+          "blur": 24
+        }
+      ]
+    },
+    {
+      "from": 9.4,
+      "to": 14.6,
       "caption": "a small model runs on the phone itself",
       "focus": {
-        "at": 10.0,
-        "until": 13.9,
+        "at": 10.3,
+        "until": 14.3,
         "x": 360,
         "y": 990,
         "zoom": 1.4
@@ -66,20 +87,20 @@
       "redact": [
         {
           "x": 36,
-          "y": 395,
+          "y": 380,
           "w": 648,
-          "h": 120,
+          "h": 270,
           "blur": 24
         }
       ]
     },
     {
-      "from": 14.2,
-      "to": 17.8,
-      "caption": "done in 1.5 s, tagged on device",
+      "from": 14.6,
+      "to": 18.2,
+      "caption": "done in 1.2 s, tagged on device",
       "focus": {
-        "at": 14.6,
-        "until": 17.5,
+        "at": 15.0,
+        "until": 17.9,
         "x": 330,
         "y": 980,
         "zoom": 1.5
@@ -87,33 +108,33 @@
       "redact": [
         {
           "x": 36,
-          "y": 395,
+          "y": 380,
           "w": 648,
-          "h": 120,
+          "h": 270,
           "blur": 24
         }
       ]
     },
     {
-      "from": 19.4,
-      "to": 22.3,
+      "from": 19.6,
+      "to": 22.0,
       "caption": "flashlight's on",
       "focus": {
-        "at": 19.7,
-        "until": 22.0,
+        "at": 20.2,
+        "until": 21.7,
         "x": 190,
         "y": 840,
         "zoom": 1.6
       }
     },
     {
-      "from": 22.3,
-      "to": 26.1,
+      "from": 22.0,
+      "to": 26.4,
       "caption": "flashlight off, airplane mode off"
     },
     {
-      "from": 27.0,
-      "to": 28.18,
+      "from": 27.2,
+      "to": 28.5,
       "hold": 2.2,
       "caption": "back online",
       "redact": [
@@ -127,5 +148,5 @@
       ]
     }
   ],
-  "posterAt": 15.0
+  "posterAt": 15.5
 }
