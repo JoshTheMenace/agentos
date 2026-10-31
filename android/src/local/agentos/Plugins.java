@@ -42,7 +42,7 @@ final class Plugins {
         for (String m : new String[]{"intent:navigate", "intent:url"}) MAP.put(m, "web"); // intent:search is core
         // trackers.* / firewall.*: owner settings (Blockers), not a plugin; Broker.call() refuses changes from anyone but the owner or adb
         for (String m : new String[]{"vault.list", "vault.fill"}) MAP.put(m, "vault");
-        for (String m : new String[]{"app.mod.apply", "app.mod.targets", "app.mod.list", "app.mod.remove", "app.mod.preview", "app.mod.disable"}) MAP.put(m, "mods");
+        for (String m : new String[]{"app.mod.apply", "app.mod.targets", "app.mod.list", "app.mod.remove", "app.mod.preview", "app.mod.disable", "app.mod.set_enabled", "app.mod.install_builtin"}) MAP.put(m, "mods");
     }
     private static File file;
     private static volatile Set<String> off = Collections.emptySet();

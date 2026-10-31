@@ -50,6 +50,23 @@ svg{display:block}
 .toggle{width:46px;height:28px;border-radius:14px;background:rgba(120,120,128,.32);position:relative;transition:background .3s;flex:none}
 .toggle::after{content:"";position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.3);transition:transform .35s var(--spring)}
 .toggle.on{background:var(--green)}.toggle.on::after{transform:translateX(18px)}
+.mod-info{flex:1;min-width:0}.mods-error{color:var(--orange);padding:0 0 10px}
+.mods-intro{color:var(--l2);font-size:12px;line-height:1.5}
+.mod-app{display:flex;align-items:center;gap:14px;padding:18px;text-align:left;flex:none}
+.mod-app .appic{width:46px;height:46px;border-radius:13px}.mod-app b{font-size:16px;font-weight:650}
+.mod-app .s,.mod-preview{display:block;color:var(--l2);font-size:12px;line-height:1.5;margin-top:3px}.mod-preview{color:var(--l3)}
+.mod-app .chev{flex:none;color:var(--l3)}.mod-app:active{background:var(--grp2)}
+.mod-card{padding:18px;flex:none}.mod-heading,.mod-footer{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.mod-heading h3{font-size:16px;line-height:1.4;letter-spacing:-.02em}.mod-card .toggle{min-width:48px;height:32px;border-radius:18px}
+.mod-card .toggle::after{width:28px;height:28px}.mod-card .toggle.on::after{transform:translateX(18px)}
+.mod-card .toggle::before{content:"";position:absolute;inset:-8px 0}.mod-app b{overflow-wrap:anywhere}
+.mod-description,.mod-hint{color:var(--l2);font-size:13px;line-height:1.55;margin-top:10px}.mod-hint{color:var(--orange);font-size:12px}
+.mod-footer{border-top:1px solid var(--hair);margin-top:16px;padding-top:10px}.mod-card .remove{min-height:44px;padding:0 14px;color:var(--l2);background:rgba(255,255,255,.06)}
+.mod-status{display:flex;align-items:center;gap:7px;color:var(--l2);font-size:12px;line-height:1.4;min-width:0;overflow-wrap:anywhere}
+.mod-status i{width:6px;height:6px;border-radius:50%;background:var(--idle);flex:none}.mod-status.on i{background:var(--green)}.mod-status.pending i,.mod-status.paused i{background:var(--orange)}
+.mod button:disabled,.mod-card button:disabled{opacity:.4}.mod-app:focus-visible,.mod-card button:focus-visible,#appModsBack:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+#appMods .bar .appic{width:28px;height:28px;border-radius:8px;margin-right:3px}#appModsCount{margin-left:auto;white-space:nowrap}
+#appModsTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .appic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3);overflow:hidden;background:var(--grp3)}
 .appic img{width:100%;height:100%;object-fit:cover}
 .rowi{display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:14px;font-weight:600;letter-spacing:-.01em}

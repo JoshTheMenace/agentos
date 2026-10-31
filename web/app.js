@@ -126,6 +126,7 @@ const auditLine = (e) => { // one human line per audit entry: what happened, in 
     case 'app.mod.apply': return [bad ? `Refused a mod · ${short(e.reason, 40)}` : `Added "${e.label || ''}" to ${app_}`, c];
     case 'app.mod.press': return [`You used "${e.id || 'a mod'}"${inApp}`, ''];
     case 'app.mod.remove': return ['Removed a mod', ''];
+    case 'app.mod.set_enabled': return [e.enabled ? 'Turned a mod on' : 'Turned a mod off', c];
     case 'audit.break': return ['Audit chain break marked', 'c'];
     case 'screen.capture': return [bad ? `Didn't look at ${app_ || 'the screen'} · ${short(e.reason, 34)}` : `Looked at your screen${inApp}${/blacked/.test(e.reason || '') ? ' · private parts hidden' : ''}`, bad ? 'c' : 'a'];
     case 'image.sent': return [`${{ camera: 'Camera photo', photos: 'Your photo', live: 'Live camera frame' }[e.target] || 'A picture'} sent to ${e.model || 'the AI'}${e.bytes ? ` · ${Math.round(e.bytes / 1024)} KB` : ''}`, 'b'];
@@ -355,6 +356,7 @@ $('#toBlockers').onclick = $('#toBlockers2').onclick = () => { hap(); openBlocke
 $('#blockersBack').onclick = () => close('blockers');
 $('#toMods').onclick = () => { hap(); openMods(); };
 $('#modsBack').onclick = () => close('mods');
+$('#appModsBack').onclick = () => close('appMods');
 $('#toPlugins').onclick = () => { hap(); open('plugins'); renderPlugins(); send({ type: 'plugins.list' }); };
 $('#pluginsBack').onclick = () => close('plugins');
 $('#toRemote').onclick = () => { hap(); open('remote'); renderRemote(); send({ type: 'remote', action: 'status' }); };
@@ -393,7 +395,8 @@ function renderCenter() {
   $('#recent').replaceChildren(...recent.map((e) => { const [txt, c] = auditLine(e); const tg = e.tool === 'guard.flag' ? 'Caught' : /blocked|refused/.test(e.decision || '') ? 'Blocked' : e.decision === 'denied' ? 'Denied' : e.decision === 'approved' ? (/^(reviewer|policy|full access)$/.test(e.approver || e.channel) ? 'Auto' : 'Approved') : '';
     return el('li', c === 'c' ? 'flag' : '', `<time>${fmtT(e.ts)}</time><i class="${c}"></i><span>${esc(txt)}</span>${tg ? `<em class="tg ${c === 'g' ? 'g' : ''}">${tg}</em>` : ''}`); }));
   if (!recent.length) $('#recent').replaceChildren(el('li', '', `<span class="empty">Nothing yet</span>`));
-  $('#modNote').textContent = S.mods?.length ? `${S.mods.length} added` : 'none yet';
+  const modApps = new Set((S.mods || []).map(m => m.package)).size;
+  $('#modNote').textContent = modApps ? `${modApps} app${modApps === 1 ? '' : 's'}` : 'none yet';
   $('#vaultNote').textContent = S.vault?.length ? `${S.vault.length} saved` : 'none yet';
   $('#permNote').textContent = S.full ? 'Full access' : t ? `${(t.apps || []).length} app${t.apps?.length === 1 ? '' : 's'} granted` : 'no grants';
   $('#accessNote').textContent = S.full ? 'Full access' : '';
@@ -507,17 +510,55 @@ function renderVault() {
     return r; }));
 }
 on('vault.changed', () => { if ($('#vault').classList.contains('on')) loadVault(); });
-// ---------- mods: buttons agents added to apps ({mods:[{id, package, app, label, shown, created, by}]}) ----------
+// ---------- mods: saved app customizations ----------
 async function openMods() { open('mods'); renderMods(); await loadMods(); }
-async function loadMods() { const r = await own('app.mod.list', {}); if (r?.mods) S.mods = r.mods; renderMods(); renderCenter(); }
+function openAppMods(pkg) { S.modApp = pkg; renderMods(); $('#appModList').scrollTop = 0; open('appMods'); }
+async function loadMods() { if (S.modBusy) return; const r = await own('app.mod.list', {}); if (r?.mods) S.mods = r.mods; renderMods(); renderCenter(); }
+async function changeMod(method, params) {
+  S.modBusy = true; S.modError = ''; renderMods(); hap();
+  try { const r = await own(method, params); if (!r?.ok) S.modError = r?.reason || r?.error || 'Could not update mod'; }
+  catch (error) { S.modError = 'Could not reach the mod service'; }
+  finally { S.modBusy = false; await loadMods(); }
+}
+const modEnabled = m => m.enabled !== false && !m.disabled;
+const modCount = mods => `${mods.length} mod${mods.length === 1 ? '' : 's'} · ${mods.filter(modEnabled).length} enabled`;
+let modsView;
 function renderMods() {
   const box = $('#mlist'), mods = S.mods || [];
-  $('#modsNote').textContent = mods.length ? `${mods.length} added` : '';
-  if (!mods.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring blue"><svg width="30" height="30"><use href="#i-mod"/></svg></span>Ask to add a button to any app<small>“Add a tip button to Calculator”</small>`));
-  box.replaceChildren(...mods.map((m) => { const r = el('div', 'rowi mod', `<span class="appic">${ICOHTML(m.package)}</span><div>${esc(m.label)}<span class="s">${esc(m.app || appName(m.package))}${m.shown ? '' : ' · hidden'}</span></div><div class="r"><button class="tag">Remove</button></div>`);
-    $('button', r).onclick = async () => { hap(); r.style.opacity = .4; await own('app.mod.remove', { id: m.id, by: 'settings' }); loadMods(); }; return r; }));
+  const view = JSON.stringify([mods, S.modApp, S.modBusy, S.modError]);
+  if (view === modsView) return;
+  modsView = view;
+  const groups = new Map();
+  for (const m of mods) { if (!groups.has(m.package)) groups.set(m.package, []); groups.get(m.package).push(m); }
+  $('#modsNote').textContent = groups.size ? `${groups.size} app${groups.size === 1 ? '' : 's'}` : '';
+  for (const id of ['#modsError', '#appModsError']) { $(id).textContent = S.modError || ''; $(id).hidden = !S.modError; }
+  const selected = groups.get(S.modApp);
+  if (!selected && $('#appMods').classList.contains('on')) close('appMods');
+  if (!mods.length) return box.replaceChildren(el('div', 'bempty', `<span class="ring blue"><svg width="30" height="30"><use href="#i-mod"/></svg></span>Ask to customize an app<small>“Hide promoted posts”</small>`));
+  const appLabel = list => list[0].app || appName(list[0].package);
+  box.replaceChildren(...[...groups].sort((a, b) => appLabel(a[1]).localeCompare(appLabel(b[1]))).map(([pkg, list]) => {
+    const r = el('button', 'glass mod-app', `<span class="appic">${ICOHTML(pkg)}</span><div class="mod-info"><b>${esc(appLabel(list))}</b><span class="s">${modCount(list)}</span><span class="mod-preview">${esc(list.slice(0, 2).map(m => m.label).join(' · '))}${list.length > 2 ? ` +${list.length - 2} more` : ''}</span></div><svg width="18" height="18" class="chev"><use href="#i-chev"/></svg>`);
+    r.onclick = () => openAppMods(pkg);
+    return r;
+  }));
+  if (!selected) return;
+  $('#appModsTitle').textContent = appLabel(selected);
+  $('#appModsCount').textContent = `${selected.filter(modEnabled).length} enabled`;
+  $('#appModsIcon').innerHTML = ICOHTML(S.modApp);
+  $('#appModList').replaceChildren(...selected.map((m, i) => {
+    const enabled = modEnabled(m), status = m.disabled ? 'Paused' : enabled ? m.status || 'On' : 'Off';
+    const state = !enabled ? m.disabled ? 'paused' : 'off' : status === 'On' ? 'on' : 'pending';
+    const hint = m.disabled === 'target crash/ANR' ? 'Paused after the app stopped unexpectedly. Turn on to retry.'
+      : m.disabled || (status === 'Waiting for app' ? `Ready when ${appLabel(selected)} opens.` : '');
+    const r = el('article', 'glass mod-card', `<div class="mod-heading"><h3 id="mod-title-${i}">${esc(m.label)}</h3><button class="toggle${enabled ? ' on' : ''}" role="switch" aria-checked="${enabled}" aria-labelledby="mod-title-${i}" aria-describedby="mod-desc-${i}"></button></div><p class="mod-description" id="mod-desc-${i}">${esc(m.description || 'A saved customization for this app. Turn it off to restore the app’s normal behavior.')}</p>${hint ? `<p class="mod-hint">${esc(hint)}</p>` : ''}<div class="mod-footer"><span class="mod-status ${state}"><i></i>${esc(status)}</span><button class="tag remove" aria-label="Remove ${esc(m.label)}">Remove</button></div>`);
+    $$('button', r).forEach(b => b.disabled = !!S.modBusy);
+    $('.toggle', r).onclick = () => changeMod('app.mod.set_enabled', {id: m.id, enabled: !enabled});
+    $('.remove', r).onclick = () => changeMod('app.mod.remove', {id: m.id, by: 'settings'});
+    return r;
+  }));
 }
 on('mod.changed', () => loadMods());
+setInterval(() => { if ($('#mods').classList.contains('on')) loadMods(); }, 2000);
 // ---------- promises (agentd proactive.js, PROACTIVE=1): tap = help me with it (a normal task; sends need approval) ----------
 const PKIND = { commitment: 'You promised', request: 'Asked of you', reply: 'Waiting on you' };
 on('ws.open', () => send({ type: 'promises.list' }));

@@ -50,3 +50,13 @@ Runs on a real $200 Moto G 5G (2023), Android 13. Built for the Nucleus Institut
 - [ARCHITECTURE.md](ARCHITECTURE.md): how the pieces fit together
 - [pitch/FEATURES.md](pitch/FEATURES.md): every feature, with timings · [pitch/SECURITY-FEATURES.md](pitch/SECURITY-FEATURES.md)
 - [STATUS.md](STATUS.md): what's working right now
+
+## Mod pack
+
+The per-app mod manager lives here. Runtime adapters and their catalog live in the private [agentos-mods](https://github.com/JoshTheMenace/agentos-mods) repository, pinned as `android/runtime-mods`. With access, initialize it before building:
+
+```sh
+git submodule update --init android/runtime-mods
+```
+
+AgentOS also builds without the private pack, with custom overlays and an empty built-in catalog. See [Android build and API notes](android/README.md) for details.

@@ -101,7 +101,9 @@ It always has `ok`; errors are `{ok:false, error}`.
 | `trackers.block` / `trackers.unblock` | `{pkg?, domains?[]}` | T3, ordinary | Default: every tracker seen for the app (unblock: every blocked one). Only domains on the bundled tracker list; anything else is `firewall.set`. Tap, voice or reviewer approval (no fingerprint), no lease needed. |
 | `app.mod.apply` | `{spec, approval_timeout_s?}` | T2 UI change, **person only** (tap or voice; never the reviewer) | Strict spec check (see "App mods"), the card says "Add “Tip” to Calculator?" + what it reads and presses, then the app opens and the mod shows. → `{id, shown, ms?, app}`. Audited with the full spec and its sha256. No lease needed. |
 | `app.mod.remove` | `{id, by?}` | free | Always allowed, audited. Also: long-press the mod. |
-| `app.mod.list` | | T0 | `{mods:[{id, package, app, label, shown, created, by}]}` |
+| `app.mod.list` | | T0 | `{mods:[{id, package, app, label, description, shown, enabled, disabled, status?, created?, by?}]}` |
+| `app.mod.set_enabled` | `{id, enabled}` | owner line or adb only | Saves enabled state independently of removal. Disabling removes overlays or releases runtime callbacks. Existing saved overlay mods default to enabled. |
+| `app.mod.install_builtin` | `{id:"duolingo-promotions"}` or `{id:"linkedin-glass"}` or `{id:"linkedin-promoted-aws"}` | owner line or adb only | Installs a fixed adapter. No caller-supplied code, commands, paths, or packages. |
 | `bar.rect` | `{left, top, right, bottom}` or `{}` | owner line only (launcher uid, or adb) | The assistant bar's window rect; app-mod masks stop at its top edge (`Mods.clip`). `{}` = closed. Not audited. |
 | `app.mod.targets` | | T0 | For writing a spec: the foreground app's buttons/displays with a view id, `"vid role \"text\" [l,t,r,b] flags"`, under `untrusted_app_data`. Refused in forbidden/private apps. |
 | `notifications.list {n?=20}` | | T0 | `{listener, notifications:[{key, pkg, app, conversation, sender, text, when, group, from_me, message, can_reply, removed, guard:{score, label}}] (newest first), foreground:{pkg, app}}`. The text is untrusted: reading it marks the active task untrusted (and flagged if Prompt Guard flagged one). |
@@ -362,3 +364,5 @@ Known limits:
 - Taint is coarse. Any `screen.read` during a task marks it untrusted (honest for a phone agent, which is almost always A+B+C).
 - The provenance index and P1/P2 copy checks from `research/04` 3d aren't built. Only P3 (secrets) and P4 (tainted + outward) are.
 - Settle detection waits for the first accessibility event, then 300 ms of quiet (max 2 s). Slow apps may need an extra `wait`.
+
+Runtime implementations and their catalog live in the private [agentos-mods](https://github.com/JoshTheMenace/agentos-mods) repository, pinned at `android/runtime-mods`. With access, run `git submodule update --init android/runtime-mods` before building. The mod pack generates APK assets and `BuiltinMods.java`; the broker keeps generic management, owner checks, independent switches, crash handling and legacy preference migration. Builds without the private checkout include the manager and custom overlay support with an empty built-in catalog. Generated mod assets are cleared on each build and ignored by Git.

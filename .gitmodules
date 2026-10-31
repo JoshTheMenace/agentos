@@ -1,0 +1,3 @@
+[submodule "android/runtime-mods"]
+	path = android/runtime-mods
+	url = https://github.com/JoshTheMenace/agentos-mods.git
