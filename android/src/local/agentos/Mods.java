@@ -59,7 +59,7 @@ final class Mods {
     static final class Style { int bg, fg; float round, textPx; Typeface tf; }
     static final class Mod {
         JSONObject spec; String id, pkg, by; long created;
-        TextView btn; WindowManager.LayoutParams lp; Style style; boolean shown;
+        TextView btn; WindowManager.LayoutParams lp; Style style; boolean shown; volatile boolean enabled = true;
         LinearLayout chips; WindowManager.LayoutParams clp; final List<TextView> chipViews = new ArrayList<>(); double value = Double.NaN;
         volatile String disabled = ""; final List<View> masks = new ArrayList<>(); long peekUntil; boolean peeking; // peek: the box goes clear for 6 s, item visible under the chip
         final List<AccessibilityNodeInfo[]> track = new ArrayList<>(); // matched nodes, re-read mid-scroll (ModMask.bounds)
@@ -67,6 +67,7 @@ final class Mods {
     }
 
     private final AgentA11y svc;
+    private final List<RuntimeMods> runtimes = new ArrayList<>();
     private final Audit audit;
     private final Map<String, Mod> mods = new LinkedHashMap<>();
     private final Map<String, Style> styles = new HashMap<>(); // pkg|selector|orientation|night -> sampled look (saved: warm after restarts)
@@ -87,15 +88,24 @@ final class Mods {
 
     Mods(AgentA11y svc, Audit audit) {
         this.svc = svc; this.audit = audit;
+        for (RuntimeMods.Kind kind : BuiltinMods.VALUES) runtimes.add(new RuntimeMods(svc, audit, kind));
         wm = svc.getSystemService(WindowManager.class);
         dp = svc.getResources().getDisplayMetrics().density;
         try {
             JSONObject saved = new JSONObject(prefs().getString("mods", "{}"));
+            String legacyId = "linkedin-promoted-aws";
+            JSONObject legacy = saved.optJSONObject(legacyId);
+            if (RuntimeMods.known(legacyId) && legacy != null && "com.linkedin.android".equals(legacy.getJSONObject("spec").optString("package"))) {
+                for (RuntimeMods runtime : runtimes) if (runtime.kind.id.equals(legacyId)) runtime.migrate(legacy);
+                saved.remove(legacyId);
+                if (!prefs().edit().putString("mods", saved.toString()).commit()) throw new IllegalStateException("Could not retire legacy overlay");
+            }
             for (Iterator<String> it = saved.keys(); it.hasNext(); ) {
                 JSONObject r = saved.getJSONObject(it.next());
                 try {
                     Mod m = put(validate(r.getJSONObject("spec")), r.optString("by"), r.optLong("created"));
                     m.disabled = r.optString("disabled");
+                    m.enabled = r.optBoolean("enabled", true);
                 } catch (IllegalArgumentException e) { Log.w(TAG, "refused saved mod", e); }
             }
             JSONObject st = new JSONObject(prefs().getString("styles", "{}"));
@@ -138,10 +148,11 @@ final class Mods {
         Log.i(TAG, "approval overlay hold=" + on);
         if (!on) refresh();
     }
-    void close() { closed = true; watching = false; if (watcher != null) watcher.destroy(); svc.main.removeCallbacks(refreshR); clearPreview(); hideAll(); }
+    void close() { closed = true; for (RuntimeMods runtime : runtimes) runtime.close(); watching = false; if (watcher != null) watcher.destroy(); svc.main.removeCallbacks(refreshR); clearPreview(); hideAll(); }
     private void clearPreview() { ModMask.clear(wm, highlights); }
 
     JSONObject disable(String pkg, String reason) throws Exception {
+        for (RuntimeMods runtime : runtimes) runtime.disable(pkg, reason);
         if ((pkg.isEmpty() || pkg.equals(local.agentos.deep.Contract.PKG)) && DeepMods.instance != null) DeepMods.instance.disable(reason);
         CompletableFuture<Integer> f = new CompletableFuture<>();
         svc.main.post(() -> {
@@ -240,6 +251,7 @@ final class Mods {
 
     /** Removes a mod. by: "long-press", "settings", a task id. */
     JSONObject remove(String id, String by) throws Exception {
+        for (RuntimeMods runtime : runtimes) if (runtime.kind.id.equals(id)) return runtime.remove();
         CompletableFuture<Boolean> f = new CompletableFuture<>();
         svc.main.post(() -> { previews.clear(); Mod m = mods.remove(id); if (m != null) { m.disabled = "removed"; hide(m); save(); } f.complete(m != null); });
         boolean ok = f.get(2, TimeUnit.SECONDS);
@@ -250,14 +262,48 @@ final class Mods {
         return new JSONObject().put("ok", ok).put("removed", id).put("reason", ok ? "removed" : "no mod " + id);
     }
 
+    JSONObject setEnabled(String id, boolean enabled) throws Exception {
+        need(!enabled || watching && !closed, "crash watchdog unavailable");
+        for (RuntimeMods runtime : runtimes) if (runtime.kind.id.equals(id)) return runtime.setEnabled(enabled);
+        CompletableFuture<JSONObject> f = new CompletableFuture<>();
+        svc.main.post(() -> {
+            try {
+                Mod m = mods.get(id);
+                need(m != null, "no mod " + id);
+                need(!enabled || watching && !closed, "crash watchdog unavailable");
+                m.enabled = enabled;
+                if (enabled) m.disabled = "";
+                previews.clear(); hide(m); save(); refresh(); emit("toggled", id);
+                audit.log(new JSONObject().put("tool", "app.mod.set_enabled").put("id", id).put("enabled", enabled).put("decision", "human"));
+                f.complete(new JSONObject().put("ok", true).put("enabled", enabled));
+            } catch (Exception e) { f.completeExceptionally(e); }
+        });
+        return f.get(3, TimeUnit.SECONDS);
+    }
+
+    JSONObject installBuiltin(String id) throws Exception {
+        need(watching && !closed, "crash watchdog unavailable");
+        for (RuntimeMods runtime : runtimes) if (runtime.kind.id.equals(id)) return runtime.install();
+        throw new IllegalArgumentException("unknown built-in mod");
+    }
+
     JSONArray list() throws Exception {
         CompletableFuture<JSONArray> f = new CompletableFuture<>();
         svc.main.post(() -> {
             JSONArray a = new JSONArray();
             try {
-                for (Mod m : mods.values())
+                for (Mod m : mods.values()) {
+                    String description = ModMask.is(m.spec) ? "Covers matching content while you use this app."
+                            : "compute".equals(m.spec.getJSONObject("action").optString("type")) ? "Adds a calculation shortcut on top of this app."
+                            : "Adds a shortcut that presses this app’s buttons for you.";
                     a.put(new JSONObject().put("id", m.id).put("package", m.pkg).put("app", label(m.pkg)).put("label", m.spec.optString("label"))
-                            .put("shown", m.shown).put("disabled", m.disabled).put("created", m.created).put("by", m.by));
+                            .put("description", description)
+                            .put("shown", m.shown).put("enabled", m.enabled).put("disabled", m.disabled).put("created", m.created).put("by", m.by));
+                }
+                for (RuntimeMods runtime : runtimes) {
+                    JSONObject entry = runtime.entry();
+                    if (entry != null) a.put(entry);
+                }
             } catch (JSONException ignored) {}
             f.complete(a);
         });
@@ -342,6 +388,7 @@ final class Mods {
     static JSONObject validate(JSONObject s) {
         keys(s, TOP, "spec");
         String id = s.optString("id"), pkg = s.optString("package"), label = s.optString("label");
+        need(!RuntimeMods.known(id), "id is reserved for a built-in mod");
         need(MOD_ID.matcher(id).matches(), "id must be 1-32 chars of a-z 0-9 _ -");
         need(pkg.matches("[A-Za-z0-9_.]{3,100}"), "package is required (e.g. com.google.android.calculator)");
         boolean mask = s.optJSONObject("action") != null && ModMask.is(s);
@@ -481,7 +528,7 @@ final class Mods {
 
     private void save() {
         JSONObject o = new JSONObject();
-        try { for (Mod m : mods.values()) o.put(m.id, new JSONObject().put("spec", m.spec).put("by", m.by).put("created", m.created).put("disabled", m.disabled)); } catch (JSONException ignored) {}
+        try { for (Mod m : mods.values()) o.put(m.id, new JSONObject().put("spec", m.spec).put("by", m.by).put("created", m.created).put("disabled", m.disabled).put("enabled", m.enabled)); } catch (JSONException ignored) {}
         prefs().edit().putString("mods", o.toString()).apply();
     }
 
@@ -529,7 +576,7 @@ final class Mods {
         if (!pkg.equals(fgPkg)) { fgPkg = pkg; fgSince = SystemClock.uptimeMillis(); }
         List<Rect> keys = null;
         for (Mod m : mods.values()) try {
-            if (approving || !watching || !m.disabled.isEmpty() || !pkg.equals(m.pkg) || !whenOk(root, m)) { hide(m); continue; }
+            if (approving || !watching || !m.enabled || !m.disabled.isEmpty() || !pkg.equals(m.pkg) || !whenOk(root, m)) { hide(m); continue; }
             prefs().edit().putString("rendering", m.id).commit();
             if (ModMask.is(m.spec)) {
                 if (!safeWindow(root)) { hide(m); continue; }
@@ -764,6 +811,7 @@ final class Mods {
     // ---------------------------------------------------------------- behaviours
 
     private void act(Mod m) {
+        if (!m.enabled || !m.disabled.isEmpty()) return;
         JSONObject a = m.spec.optJSONObject("action");
         if ("press".equals(a.optString("type"))) press(m, a.optJSONArray("press"), "", null);
         else if (m.chips != null) hideChips(m);
@@ -796,7 +844,7 @@ final class Mods {
                     nodes.add(n);
                 }
             }
-            if (no == null) for (AccessibilityNodeInfo n : nodes) if (m.disabled.isEmpty() && n.refresh() && n.isEnabled()) n.performAction(AccessibilityNodeInfo.ACTION_CLICK); // live state (Start enables after the digits); a disabled key is a no-op
+            if (no == null) for (AccessibilityNodeInfo n : nodes) if (m.enabled && m.disabled.isEmpty() && n.refresh() && n.isEnabled()) n.performAction(AccessibilityNodeInfo.ACTION_CLICK); // live state (Start enables after the digits); a disabled key is a no-op
             long ms = SystemClock.uptimeMillis() - t;
             Log.i(TAG, "press " + m.id + ": " + (no == null ? nodes.size() + " keys in " + ms + " ms" : "refused, " + no));
             try {

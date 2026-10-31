@@ -207,6 +207,9 @@ final class Broker {
             case "app.mod.preview": return mods.preview(p.getJSONObject("spec"));
             case "app.mod.disable": return mods.disable(p.optString("package"), "kill switch");
             case "app.mod.remove": return mods.remove(p.getString("id"), p.optString("by", "agent"));
+            case "app.mod.set_enabled": case "app.mod.install_builtin":
+                if (uid != 2000 && !callerIn(uid, "owner_callers")) return ok(false).put("reason", m + " only from the owner's Mods screen or adb");
+                return m.equals("app.mod.set_enabled") ? mods.setEnabled(p.getString("id"), p.getBoolean("enabled")) : mods.installBuiltin(p.getString("id"));
             case "app.mod.apply": synchronized (actLock) { return mod(p, uid); }
             case "approval.confirm": return confirm(p, uid);
             case "vault.list": return vault.list();

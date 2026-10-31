@@ -135,7 +135,16 @@
 <!-- MODS -->
 <section class="over slide" id="mods">
   <div class="bar"><button class="back" id="modsBack"><svg width="24" height="24"><use href="#i-back"/></svg></button><h2 class="title">Mods</h2><span class="k" id="modsNote"></span></div>
+  <p id="modsError" class="mods-error" role="alert" hidden></p>
+  <p class="mods-intro">Choose an app to manage its customizations.</p>
   <div class="scroll body" id="mlist"></div>
+</section>
+
+<section class="over slide" id="appMods">
+  <div class="bar"><button class="back" id="appModsBack" aria-label="Back to apps"><svg width="24" height="24"><use href="#i-back"/></svg></button><span class="appic" id="appModsIcon"></span><h2 class="title" id="appModsTitle"></h2><span class="k" id="appModsCount"></span></div>
+  <p id="appModsError" class="mods-error" role="alert" hidden></p>
+  <div class="scroll body" id="appModList"></div>
+  <p class="mods-intro">Turn a mod off to keep it for later. Remove deletes it from your list.</p>
 </section>
 
 <!-- PLUGINS (owner-only switches for the agent's API tools) -->
